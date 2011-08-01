@@ -1,0 +1,116 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+.adEditor {
+    border-top: 1px solid #b3b3b3;
+}
+
+.adEditor-nav {
+    border-right: 1px solid #d8dfea;
+    padding-top: 10px !important;
+}
+
+.adEditor-editor {
+    overflow: auto;
+    position: absolute;
+    left: 0; top: 0;
+    right: 0; bottom: 0;
+    padding-right: 180px;
+    z-index: 200;
+}
+
+.adEditor_loading {
+    display: none;
+}
+
+.adEditor-container {
+    overflow: auto;
+}
+
+.addClass-message {
+    text-align: center;
+    line-height: 200px;
+    background: white;
+    z-index: 201;
+    font-size: 14px;
+}
+
+.adEditor-creative .creative-toggle-a {
+  display: block;
+}
+
+.adEditor-counter_error {
+  color: #900;
+}
+
+.adEditor-creative #creative-facebook {
+    position: relative;
+    z-index: 2;
+}
+
+.adEditor-editor .textField {
+  width: 328px;
+}
+
+.adEditor-editor .select_wide {
+  width: 336px;
+}
+
+.adEditor-editor .optional {
+    color: #777;
+}
+
+.adEditor-editor .extra {
+    padding-top: 4px;
+}
+
+.adEditor .locDem-regionSubtext {
+    margin-left: 0.3em;
+    color: #777;
+}
+
+.adEditor .interests-tokenizer {
+    width: 458px;
+    margin-left: 10px;
+    margin-top: 9px;
+}
+
+.adEditor .pricing-bid {
+    width: 70px;
+}
+
+
+.adEditor .max-bid {
+    width: 70px;
+    display: inline;
+}
+
+.adEditor .suggested-price {
+  display: inline;
+  margin-left: 5px;
+}
+
+.addClass-adlink {
+    z-index: 201;
+}

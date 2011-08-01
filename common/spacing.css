@@ -1,0 +1,207 @@
+/**
+ * Copyright (c) 2011, Facebook, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ *   * Neither the name Facebook nor the names of its contributors may be used to
+ *     endorse or promote products derived from this software without specific
+ *     prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+.pas {
+  padding: 5px;
+}
+
+.pam {
+  padding: 10px;
+}
+
+.pal {
+  padding: 20px;
+}
+
+.pts {
+  padding-top: 5px;
+}
+
+.ptm {
+  padding-top: 10px;
+}
+
+.ptl {
+  padding-top: 20px;
+}
+
+.prs {
+  padding-right: 5px;
+}
+
+.prm {
+  padding-right: 10px;
+}
+
+.prl {
+  padding-right: 20px;
+}
+
+.pbs {
+  padding-bottom: 5px;
+}
+
+.pbm {
+  padding-bottom: 10px;
+}
+
+.pbl {
+  padding-bottom: 20px;
+}
+
+.pls {
+  padding-left: 5px;
+}
+
+.plm {
+  padding-left: 10px;
+}
+
+.pll {
+  padding-left: 20px;
+}
+
+.phs {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.phm {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.phl {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.pvs {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.pvm {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.pvl {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.mas {
+  margin: 5px;
+}
+
+.mam {
+  margin: 10px;
+}
+
+.mal {
+  margin: 20px;
+}
+
+.mts {
+  margin-top: 5px;
+}
+
+.mtm {
+  margin-top: 10px;
+}
+
+.mtl {
+  margin-top: 20px;
+}
+
+.mrs {
+  margin-right: 5px;
+}
+
+.mrm {
+  margin-right: 10px;
+}
+
+.mrl {
+  margin-right: 20px;
+}
+
+.mbs {
+  margin-bottom: 5px;
+}
+
+.mbm {
+  margin-bottom: 10px;
+}
+
+.mbl {
+  margin-bottom: 20px;
+}
+
+.mls {
+  margin-left: 5px;
+}
+
+.mlm {
+  margin-left: 10px;
+}
+
+.mll {
+  margin-left: 20px;
+}
+
+.mhs {
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.mhm {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.mhl {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.mvs {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.mvm {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.mvl {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}

@@ -1,0 +1,238 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+var fun = require("../../uki-core/function");
+var utils = require("../../uki-core/utils");
+var env = require("../../uki-core/env");
+
+var uniqName = require("../lib/uniqName").uniqName;
+var Job = require("./base").Job;
+var Campaign = require("../model/campaign").Campaign;
+var Topline = require("../model/topline").Topline;
+var AdError = require("../lib/error").Error;
+var AdImporter = require("./adImporter").Importer;
+
+
+var Importer = fun.newClass(Job, {
+
+  // in params
+  account: fun.newProp('account'),
+  camps: fun.newProp('camps'),
+  propsToCopy: fun.newProp('propsToCopy'),
+
+  // optional in params
+  useNameMatching: fun.newProp('useNameMatching'),
+  ads: fun.newProp('ads'),
+  adPropsToCopy: fun.newProp('adPropsToCopy'),
+
+  // out params
+  results: fun.newProp('results'),
+
+  // private
+  mapById: fun.newProp('mapById'),
+  mapByName: fun.newProp('mapByName'),
+
+  init: function(account, camps, propsToCopy) {
+    Job.prototype.init.call(this);
+
+    this
+      .results([])
+
+      .useNameMatching(true)
+      .account(account)
+      .camps(camps)
+      .propsToCopy(propsToCopy);
+  },
+
+  start: function() {
+    this._prepare();
+  },
+
+  _prepare: function() {
+    Campaign.findAllBy(
+      'account_id',
+      this.account().id(),
+      fun.bind(this._create, this));
+  },
+
+  _create: function(existingCamps) {
+    var mapById = {};
+    var mapByName = {};
+    existingCamps.forEach(function(camp) {
+      mapById[camp.id()] = camp;
+      mapByName[camp.name().toLowerCase()] = camp;
+    });
+    this
+      .mapById(mapById)
+      .mapByName(mapByName);
+
+    require("../../storage/lib/async").forEach(
+      this.camps(),
+      this._routeCamp,
+      this._importAds,
+      this);
+  },
+
+  _importAds: function() {
+    var ads = this.ads();
+    var adsToImport = [];
+
+    if (ads && ads.length) {
+      this.results().forEach(function(result, index) {
+        var ad = ads[index];
+        if (result.action == 'create' || result.action == 'update') {
+          ad.muteChanges(true);
+          if (result.action == 'create') { ad.id(''); }
+          ad.campaign_id(result.id);
+          ad.muteChanges(false);
+          adsToImport.push(ad);
+        }
+      });
+    }
+
+    if (adsToImport.length) {
+      var importer = new AdImporter(
+        this.account(),
+        adsToImport,
+        this.adPropsToCopy()
+      );
+      importer.useNameMatching(this.useNameMatching());
+      this._startChild(importer);
+    } else {
+      this._complete();
+    }
+  },
+
+  /**
+   * campaign_id present, campaign found
+   *  + any campaign_name
+   *  = OK - update
+   *
+   * campaign_id present, campaign not found
+   *  + any campaign_name
+   *  = ERROR - trying to update campaign that does not exist,
+   *    all ads associated with this campaign are skipped
+   *
+   * campaign_id not present
+   *  + campaign found by campaign_name
+   *  = OK - update
+   *
+   * campaign_id not present
+   *  + campaign not found by campaign_name
+   *  = OK - create
+   *
+   * campaign_id not present
+   *  + campaign_name not present
+   *  = OK - create
+   *
+   * This code is deliberetely explict. I tryed to avoid merging cases for
+   * better readability and consistence with ads.
+   */
+  _routeCamp: function(newCamp, index, callback) {
+    var mapById = this.mapById();
+    var mapByName = this.mapByName();
+    var name = (newCamp.name() || '').toLowerCase();
+    if (!this.useNameMatching()) { name = ''; }
+
+    if (newCamp.id() && mapById[newCamp.id()]) {
+      this._updateCamp(mapById[newCamp.id()], newCamp, callback);
+
+    } else if (newCamp.id() && !mapById[newCamp.id()]) {
+      this._failCamp(new MissingCampaignUpdateError(newCamp));
+      callback();
+
+    } else if (!newCamp.id() && name && mapByName[name]) {
+      this._updateCamp(mapByName[name], newCamp, callback);
+
+    } else if (!newCamp.id() && name && !mapByName[name]) {
+      this._createCamp(newCamp, callback);
+
+    } else {
+      this._createCamp(newCamp, callback);
+
+    }
+  },
+
+  _failCamp: function(error) {
+    this.results().push({ action: 'fail' });
+
+    this._error(error);
+  },
+
+  _updateCamp: function(existingCamp, newCamp, callback) {
+    this.results().push({ action: 'update', id: existingCamp.id() });
+
+    var updated = false;
+    // remove camp from the name map in case we update the name
+    delete this.mapByName()[existingCamp.name().toLowerCase()];
+
+    this.propsToCopy().forEach(function(found) {
+      if (['id', 'account_id'].indexOf(found) !== -1) { return; }
+      updated = true;
+      existingCamp[found](newCamp[found]());
+    });
+
+    this.mapByName()[existingCamp.name().toLowerCase()] = existingCamp;
+
+    if (updated) {
+      existingCamp.store(callback);
+    } else {
+      callback();
+    }
+  },
+
+  _createCamp: function(newCamp, callback) {
+    // enforce parent
+    newCamp
+      .id(- new Date() - (env.guid++))
+      .account_id(this.account().id());
+
+
+    // attach the newCamp with its declared line_id (unique)
+    if (newCamp.line_number()) {
+      var line_id =
+        Topline.getIdbyLineNumber(newCamp.account_id(), newCamp.line_number());
+      newCamp.line_id(line_id);
+    }
+    if (!this.useNameMatching()) {
+      newCamp.name(uniqName(newCamp.name(), this.mapByName()));
+    }
+    this.mapByName()[newCamp.name().toLowerCase()] = newCamp;
+
+    // update map with new campaign name
+    this.mapById()[newCamp.id()] = newCamp;
+    this.results().push({ action: 'create', id: newCamp.id() });
+    newCamp.validateAll();
+
+    newCamp.store(callback);
+  }
+
+});
+
+var MissingCampaignUpdateError = AdError.newClass(
+  1305338182794,
+  'Trying to update campaign ({{id}}) that does not exist'
+);
+
+exports.Importer = Importer;

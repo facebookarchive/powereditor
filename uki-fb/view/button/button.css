@@ -1,0 +1,209 @@
+/**
+* Copyright (c) 2011, Facebook, Inc.
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*   * Redistributions of source code must retain the above copyright notice,
+*     this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above copyright notice,
+*     this list of conditions and the following disclaimer in the documentation
+*     and/or other materials provided with the distribution.
+*   * Neither the name Facebook nor the names of its contributors may be used to
+*     endorse or promote products derived from this software without specific
+*     prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+
+*/
+
+.ufb-button,
+.ufb-button_suppressed:active,
+.ufb-button_suppressed:focus,
+.ufb-button_suppressed:hover {
+  background: -webkit-linear-gradient(top, #EEE 0%,#DADADA 86%,#DADADA 100%);
+  border: 1px solid #999;
+  border-bottom-color: #888;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .1);
+  -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, .1);
+  -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, .1);
+  cursor: pointer;
+  display: -moz-inline-box;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: normal !important;
+  padding: 2px 6px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.ufb-button,
+.ufb-button_suppressed:active,
+.ufb-button_suppressed:focus,
+.ufb-button_suppressed:hover {
+  background: -moz-linear-gradient(top, #EEE 0%,#DADADA 86%,#DADADA 100%);
+}
+
+.ufb-button + .ufb-button {
+  margin-left: 4px;
+}
+
+.ufb-button:hover {
+  text-decoration: none;
+}
+
+.ufb-button:active,
+.ufb-button_depressed {
+  background: #ddd;
+  border-bottom-color: #999;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+  -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+  -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+}
+
+.ufb-button .ufb-button-img {
+  margin-top: 2px;
+  vertical-align: top;
+}
+
+.ufb-button_large .ufb-button-img {
+  margin-top: 4px;
+}
+
+.ufb-button .ufb-button-input {
+  background: none;
+  border: 0;
+  color: #333;
+  cursor: pointer;
+  display: -moz-inline-box;
+  display: inline-block;
+  font-family: 'Lucida Grande', Tahoma, Verdana, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  margin: 0;
+  outline: none;
+  padding: 1px 0 2px;
+  white-space: nowrap;
+}
+
+.ufb-button .ufb-button-input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* Types */
+
+.ufb-button_special {
+  background-color: #69a74e;
+  background-position: 0px -96px;
+  border-color: #3b6e22 #3b6e22 #2c5115;
+}
+
+.ufb-button_special:active {
+  background: #609946;
+  border-bottom-color: #3b6e22;
+}
+
+.ufb-button_special.ufb-button_disabled,
+.ufb-button_special.ufb-button_disabled:active,
+.ufb-button_special.ufb-button_disabled:focus,
+.ufb-button_special.ufb-button_disabled:hover {
+  background: #b4d3a7;
+  border-color: #9db791;
+}
+
+.ufb-button_confirm {
+  background: -webkit-linear-gradient(top, #777 0%,#696969 86%,#696969 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-color: #333 #333 #222;
+}
+.ufb-button_confirm {
+  background: -moz-linear-gradient(top, #777 0%,#696969 86%,#696969 100%);
+}
+
+.ufb-button_confirm:active {
+  background: #636363;
+  border-color: #333;
+}
+
+.ufb-button_confirm.ufb-button_disabled,
+.ufb-button_confirm.ufb-button_disabled:active,
+.ufb-button_confirm.ufb-button_disabled:focus,
+.ufb-button_confirm.ufb-button_disabled:hover {
+  background: #bbb;
+  border-color: #999
+}
+
+.ufb-button_special .ufb-button-input,
+.ufb-button_special.ufb-button_disabled .ufb-button-input,
+.ufb-button_confirm .ufb-button-input,
+.ufb-button_confirm.ufb-button_disabled .ufb-button-input {
+  color: #fff;
+}
+
+/* Disabled */
+
+.ufb-button_disabled,
+.ufb-button_disabled:active,
+.ufb-button_disabled:focus,
+.ufb-button_disabled:hover {
+  background: #f2f2f2;
+  border-color: #c8c8c8;
+  box-shadow: none;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+}
+
+.ufb-button_disabled .ufb-button-img {
+  opacity: 0.5;
+}
+
+.ufb-button_disabled .ufb-button-input {
+  color: #b8b8b8;
+}
+
+.ufb-button_depressed,
+.ufb-button_depressed .ufb-button-input,
+.ufb-button_disabled,
+.ufb-button_disabled .ufb-button-input {
+  cursor: default;
+}
+
+/* Sizes */
+
+.ufb-button_large,
+.ufb-button_large .ufb-button-input {
+  font-size: 13px;
+}
+
+/* Suppressed */
+
+.ufb-button_suppressed {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+}
+
+.ufb-button .ufb-button-img {
+    margin-right: 5px;
+}
+
+.ufb-button_no-text .ufb-button-img {
+  margin-left: -1px;
+  margin-right: -1px;
+}

@@ -1,0 +1,158 @@
+/**
+* Copyright (c) 2011, Facebook, Inc.
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+*
+*   * Redistributions of source code must retain the above copyright notice,
+*     this list of conditions and the following disclaimer.
+*   * Redistributions in binary form must reproduce the above copyright notice,
+*     this list of conditions and the following disclaimer in the documentation
+*     and/or other materials provided with the distribution.
+*   * Neither the name Facebook nor the names of its contributors may be used to
+*     endorse or promote products derived from this software without specific
+*     prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+* FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+* DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+* OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*
+*
+*/
+
+.ufb-selector {
+  display: -moz-inline-box;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.ufb-selector-wrapper {
+  position: relative;
+  background: -webkit-linear-gradient(top, #EEE 0%,#DADADA 86%,#DADADA 100%);
+}
+.ufb-selector-wrapper {
+  background-image: -moz-linear-gradient(top, #EEE 0%,#DADADA 86%,#DADADA 100%);
+}
+
+/* Button */
+
+.ufb-selector .ufb-selector-button:active {
+  background-color: #ddd;
+}
+
+.ufb-selector .ufb-selector-toggler .ufb-selector-button,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:active,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:focus,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:hover {
+  background-color: #666;
+  border: 1px solid #777;
+  border-bottom-color: #444;
+  box-shadow: none;
+  -moz-box-shadow: none;
+  -webkit-box-shadow: none;
+}
+
+.ufb-selector .ufb-selector-button,
+.ufb-selector .ufb-selector-button:active,
+.ufb-selector .ufb-selector-button:focus,
+.ufb-selector .ufb-selector-button:hover,
+.ufb-selector .ufb-button_suppressed:active,
+.ufb-selector .ufb-button_suppressed:focus,
+.ufb-selector .ufb-button_suppressed:hover {
+  background-image: url(./arrow.png);
+  background-position: right 0;
+  background-repeat: no-repeat;
+  max-width: 169px;
+  padding-right: 23px;
+}
+
+
+.ufb-selector .ufb-selector-toggler .ufb-selector-button,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:active,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:focus,
+.ufb-selector .ufb-selector-toggler .ufb-selector-button:hover,
+.ufb-selector .ufb-selector-toggler .ufb-button_suppressed,
+.ufb-selector .ufb-selector-toggler .ufb-button_suppressed:active,
+.ufb-selector .ufb-selector-toggler .ufb-button_suppressed:focus,
+.ufb-selector .ufb-selector-toggler .ufb-button_suppressed:hover {
+  background-position: right -48px;
+}
+
+.ufb-selector .ufb-selector-button .ufb-button-input {
+  max-width: 169px; /* Override if you want */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+
+.ufb-selector .ufb-selector-toggler .ufb-selector-button .ufb-button-input {
+  color: #fff;
+}
+
+/* Menu */
+
+.ufb-selector-menu-wrapper {
+  bottom: auto;
+  left: 0;
+  margin-top: -1px;
+  min-width: 100%;
+  position: absolute;
+  right: auto;
+  top: 100%;
+  visibility: hidden;
+}
+
+.ufb-selector-toggler .ufb-selector-menu-wrapper {
+  visibility: visible;
+  z-index: -1;
+}
+
+.ufb-selector_rigth .ufb-selector-menu-wrapper {
+  left: auto;
+  right: 0;
+}
+
+.ufb-selector .ufb-menu-item .ufb-menu-item-label {
+  max-width: 300px;
+  text-overflow: ellipsis;
+}
+
+.ufb-selector .uiSelectorBigMenuLabel .ufb-menu-item-label {
+  overflow: hidden;
+  min-width: 300px;
+}
+
+
+.ufb-selector .ufb-selector-menu {
+    display: none;
+}
+
+.ufb-selector .ufb-selector-toggler .ufb-selector-menu {
+    display: block;
+}
+
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-selector-button,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-selector-button:active,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-selector-button:focus,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-selector-button:hover,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-button_suppressed,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-button_suppressed:active,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-button_suppressed:focus,
+.ufb-selector_bottom-up .ufb-selector-toggler .ufb-button_suppressed:hover {
+  border: 1px solid #3b5998;
+  border-top-color: #6d84b4;
+}
+
+.ufb-selector_bottom-up .ufb-selector-menu-wrapper {
+  bottom: 100%;
+  margin-bottom: -2px;
+  top: auto;
+}

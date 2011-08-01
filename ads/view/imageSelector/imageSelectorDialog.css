@@ -1,0 +1,93 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+
+.imageSelectorDialog {
+  width: 565px !important;
+/*  width: 80% !important;*/
+}
+
+.imageSelectorDialog-body {
+  padding: 0;
+  position: relative;
+  z-index: 100;
+}
+
+.imageSelectorDialog-images {
+  height: 300px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.imageSelectorDialog-upload {
+  border-top: 1px solid #ccc;
+  padding: 10px;
+}
+
+.imageSelectorDialog-upload .ufb-text {
+  display: inline;
+  margin-right: 0.5em;
+}
+
+.imageSelectorDialog .ufb-dataGrid-cell {
+  width: 110px;
+  height: 100px;
+  margin: 0 15px 20px 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.imageSelectorDialog-image {
+  max-width: 110px;
+  max-height: 80px;
+}
+
+.imageSelectorDialog-count {
+  margin-top: 2px;
+  color: #777;
+  font-size: 10px;
+  text-align: right;
+}
+
+.imageSelectorDialog .ufb-dataGrid-cell_selected {
+  background-color: #555;
+  border: 7px solid #555;
+  color: #FFF;
+  border-radius: 10px;
+  padding: 1px;
+  margin: -7px 8px 13px -7px;
+}
+
+.imageSelectorDialog .ufb-dataList_blured .ufb-dataGrid-cell_selected {
+  background-color: #555;
+  border: 7px solid #555;
+  color: #FFF;
+}
+
+
+
+.ufb-dataGrid-cell_selected .imageSelectorDialog-count {
+  color: #FFF;
+}

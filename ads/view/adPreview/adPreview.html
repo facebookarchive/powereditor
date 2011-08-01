@@ -1,0 +1,18 @@
+<div class="fbEmu fbEmuVertical fbEmuLegacy fbEmuPreview" id="id_4d129e9d356846618017910">
+    <div class="adPreview-warnign mbs">Preview does not reflect actual size</div>
+    {{#ad}}
+    <div class="hover">
+        <div class="title"><a class="forceLTR fbEmuLink" href="{{link_url}}">{{#object}}{{name}}{{/object}}{{^object}}{{title}}{{/object}}</a></div>
+        {{#image_url}}<div class="image"><a class="fbEmuLink"><img class="img" src="{{image_url}}"></a></div>{{/image_url}}
+        <div class="body"><a class="forceLTR fbEmuLink">{{body}}</a></div>
+    </div>
+    {{/ad}}
+    <div class="inline">
+        {{#like}}
+        <div class="action">
+            <div class="fbEmuContext"><a class="fbEmuLink">Your User</a> likes this.</div>
+            <a class="uiIconText fbEmuLink"><img src="{{like_img}}" />Like</a>
+        </div>
+        {{/like}}
+    </div>
+</div>

@@ -1,0 +1,20 @@
+{
+  "name": "Power Editor",
+  "description": "Facebook Ad Power Editor",
+  "version": "1.1",
+  "app": {
+    "urls": [
+      "http://www.fbadsapp.com/"
+    ],
+    "launch": {
+      "web_url": "http://www.fbadsapp.com/"
+    }
+  },
+  "icons": {
+    "128": "icon_128.png"
+  },
+  "permissions": [
+    "unlimitedStorage",
+    "notifications"
+  ]
+}

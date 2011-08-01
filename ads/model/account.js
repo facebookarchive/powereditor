@@ -1,0 +1,200 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+
+var fun   = require("../../uki-core/function"),
+    utils = require("../../uki-core/utils"),
+
+    props = require("../lib/props"),
+    userRole = require("../lib/adsUserRole"),
+    FB = require("../../storage/lib/connect").FB,
+    storeUtils = require("../../storage/lib/utils"),
+
+    storage = require("../../storage/storage"),
+    pathUtils = require("../../storage/lib/pathUtils");
+
+
+/**
+* Account Model
+* @class
+*/
+var Account = storage.newStorage({
+  init: function() {
+    this._children = [];
+  },
+
+  isCorporate: function() {
+    return this.capabilities() && this.capabilities().length == 1 &&
+      this.capabilities()[0] == 1;
+  },
+
+  displayName: function() {
+    if (this.name()) {
+      return this.name() + ' (' + this.id() + ')';
+    }
+    return '' + this.id();
+  },
+
+  getUserRole: function() {
+    var cur_uid = require("../controller/app").App.userStorage().uid;
+    if (this.user_perm_map()) {
+      var obj = this.user_perm_map().filter(function(obj) {
+        return obj.uid == cur_uid;
+      });
+
+      if (obj.length === 0) {
+        return userRole.ROLE_NONE;
+      } else if (obj.length == 1) {
+        return obj[0].role;
+      } else {
+        alert('Account' + this.id() +
+          ' has more than one role for the user ' + cur_uid);
+        // My linter would not let this go. :)
+        return userRole.ROLE_NONE;
+      }
+    } else {
+      return userRole.ROLE_NONE;
+    }
+  },
+
+  children: fun.newProp('children')
+});
+
+Account
+  .defaultPropType(props.Base)
+  .tableName('account')
+  .graphEdgeName('data');
+
+Account.addProp({
+  type: props.LongNumber,
+  name: 'id',
+  remote: 'account_id',
+  indexed: 'TEXT NOT NULL PRIMARY KEY'
+});
+
+Account.addProp({
+  name: 'user_perm_map',
+  remote: 'users',
+  db: true
+});
+
+Account.addProp({
+  name: 'status',
+  remote: 'account_status',
+  db: true
+});
+
+Account.addProp({
+  name: 'currency',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'daily_spend_limit',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'name',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'timezone_id',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'timezone_name',
+  def: 'Pacific Time',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'capabilities',
+  remote: true, db: true
+});
+
+
+
+// --- Syncing with Graph API stuff ---
+
+Account.loadFromIds = function(account_ids, callback) {
+  var paths, edgeCall;
+  if (!account_ids || !account_ids.length) {
+    paths = pathUtils.join('/me', '/adaccounts');
+    edgeCall = true;
+  } else {
+    paths = storeUtils.wrapArray(account_ids).map(
+      function(account_id) {
+        return pathUtils.join('act_' + account_id);
+      }
+    );
+    if (paths.length == 1) {
+      paths = paths[0];
+    }
+    edgeCall = false;
+  }
+  Account.loadAndStore(paths, {}, edgeCall, callback);
+};
+
+// --- END Syncing with Graph API stuff ---
+
+Account._map = {};
+
+Account.byId = function(id) {
+  return this._map[id];
+};
+
+Account.cached = function() {
+  return this._cache && this._cache.length;
+};
+
+Account.prepare = function(callback, force) {
+  if (!force && this._cache) {
+    callback(this._cache);
+    return;
+  }
+  this.findAll(fun.bind(function(objects) {
+    this._cache = objects;
+    this._map = {};
+    objects.forEach(function(o) {
+      this._map[o.id()] = o;
+    }, this);
+    callback(this._cache);
+  }, this));
+};
+
+Account.hasCorpAct = function() {
+  if (Account.cached()) {
+    for (var i = 0, l = this._cache.length; i < l; i++) {
+      if (this._cache[i].isCorporate()) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+exports.Account = Account;

@@ -1,0 +1,120 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+.contractPane-date::-moz-selection {
+  background: rgba(0, 0, 0, 0);
+}
+
+.contractPane-date::-webkit-selection {
+  background: rgba(0, 0, 0, 0);
+}
+
+.contractPane-date::selection {
+  background: rgba(0, 0, 0, 0);
+}
+
+.contractPane-container {
+  overflow: auto;
+}
+
+.contractPane-valueList {
+  width: 400px;
+}
+
+.contractPane-label {
+  display: inline-block;
+  width: 100px;
+}
+
+.contractPane-value {
+  display: inline-block;
+  width: 200px;
+}
+
+.contractPane-positive {
+  color: #000000;
+  background-color: #54FF9F;
+}
+
+.contractPane-negative {
+  color: #FFFFFF;
+  background-color: #8B0000;
+}
+
+.contractPane .syncLoader {
+  position: relative;
+  top: 5px;
+}
+
+.contractPane .overDelivered {
+  font-weight: bold;
+  background-color: #FFB6C1;
+  border-radius: 10px;
+  padding: 1px;
+  border: 2px solid #FFB6C1;
+  margin-top: 2px;
+  opacity: 0.75;
+}
+
+.contractPane .underDelivered {
+  font-weight: bold;
+  background-color: #87CEEB;
+  border-radius: 10px;
+  padding: 1px;
+  border: 2px solid #87CEEB;
+  margin-top: 2px;
+  opacity: 0.75;
+}
+
+.contractPane .legend {
+  font-weight: bold;
+  font-size: 12px;
+  padding-bottom: 2px;
+}
+
+.contractPane .divider {
+  background: #eee;
+  border-top: 1px solid #777;
+}
+
+.contractPane .left {
+  font-weight: bold;
+  background-color: #54FF9F;
+  border-radius: 10px;
+  padding: 1px;
+  border: 2px solid #54FF9F;
+  margin-top: 2px;
+  opacity: 0.75;
+}
+
+.contractPane .over {
+  font-weight: bold;
+  color: #FFFFFF;
+  background-color: #8B0000;
+  border-radius: 10px;
+  padding: 1px;
+  border: 2px solid #8B0000;
+  margin-top: 2px;
+  opacity: 0.5;
+}

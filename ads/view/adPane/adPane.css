@@ -1,0 +1,156 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+.adPane {
+    min-height: 530px;
+}
+
+.adPane-cell_status {
+   text-align: center;
+}
+
+.adPane-toolbar {
+    z-index: 200;
+    position: relative;
+}
+
+.adPane-number-editor .dataList-editor-input {
+    text-align: right;
+}
+
+.adPane-status {
+    margin-top: -2px;
+    display: inline-block;
+    margin-bottom: -2px;
+}
+
+.adPane-status_1 {
+    background: url(./adstatus_active.png);
+    margin-top: 0;
+    margin-left: 3px;
+    width: 7px;
+    height: 11px;
+}
+
+.adPane-status_3 {
+    background: url(./adstatus_deleted.png);
+    width: 11px;
+    height: 11px;
+}
+
+.adPane-status_4 {
+    background: url(./adstatus_pending.png);
+    width: 12px;
+    height: 12px;
+}
+
+.adPane-status_5 {
+    background: url(./adstatus_disapproved.png);
+    width: 12px;
+    height: 12px;
+}
+
+.adPane-status_6 {
+    background: url(./adstatus_scheduled.png) 
+    width: 13px;
+    height: 12px;
+}
+
+.adPane-status_8 {
+    background: url(./adstatus_paused.png);
+    width: 10px;
+    height: 11px;
+    margin-left: 1px;
+}
+
+.adPane-status_9 {
+    background: url(./adstatus_paused.png);
+    width: 10px;
+    height: 11px;
+    margin-left: 1px;
+}
+
+.adPane-errors_yes {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-bottom: -2px;
+    background: url(./error.png);
+}
+
+.adPane-col-changes {
+    display: inline-block;
+    width: 9px;
+    height: 11px;
+    margin-bottom: -2px;
+    background: url(./changes.png);
+    background-position: -9px 0;
+}
+.ufb-dataTable-row_selected .adPane-col-changes {
+    background-position: 0 0;
+}
+.ufb-dataList_blured .adPane-col-changes {
+    background-position: -9px 0;
+}
+
+
+
+.adPane-col-new {
+    display: inline-block;
+    width: 8px;
+    height: 10px;
+    margin-bottom: -1px;
+    background: url(./new.png);
+    background-position: -8px 0;
+}
+
+.ufb-dataTable-row_selected .adPane-col-new {
+    background-position: 0 0;
+}
+.ufb-dataList_blured .adPane-col-new {
+    background-position: -8px 0;
+}
+
+
+.ufb-dataTable-row_selected .adPane-link {
+    color: #FFF;
+}
+
+.ufb-dataList_blured .adPane-link {
+    color: #3B5998;
+}
+
+.adPane-link {
+    display: inline-block;
+}
+
+.adPane-link::-moz-selection {
+    background: rgba(0, 0, 0, 0);
+}
+.adPane-link::-webkit-selection {
+    background: rgba(0, 0, 0, 0);
+}
+.adPane-link::selection {
+    background: rgba(0, 0, 0, 0);
+}

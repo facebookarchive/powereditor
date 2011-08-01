@@ -1,0 +1,231 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+var fun = require("../../uki-core/function");
+var utils = require("../../uki-core/utils");
+var Job = require("./base").Job;
+var AdError = require("../lib/error").Error;
+var async = require("../../storage/lib/async");
+
+var ESCAPED_CHAR_RE = /"(.)/g;
+var ESCAPED_CHECK_RE = /[\t\n]/;
+var LINE_BREAK_RE = /(\r\n|\r|\n)/g;
+
+// Excel is inconsistent in escaping.
+// On copy&paste it will escape only when \t or \n is the value.
+// On save it will escape in much more cases.
+//
+// The problem case is if you get something like:
+//   "string in quotes ""with a quote"
+// When c&p it will be the actual value
+// When save it will be: string in quotes "with a quote
+var CHUNKER_RE = /(\t|\n|^)(?:"((?:(?:"")*[^"]*)*)"|([^\t\n]*))/gi;
+var CHUNKER_RE_PASTE =
+  /(\t|\n|^)(?:"((?:(?:(?:"")*[^"]*)*)|(?:[^\t\n]*))"|([^\t\n]*))/gi;
+
+function parseTSV(string, excelPaste) {
+  // exit fast
+  if (!string) { return []; }
+  var re = excelPaste ? CHUNKER_RE_PASTE : CHUNKER_RE;
+  var result = [], current = [], value, match;
+  string = string.replace(LINE_BREAK_RE, '\n');
+  while (match = re.exec(string)) {
+    // new line found (either line break or start)
+    if (match[1] != '\t') {
+      result.push(current = []);
+    }
+
+    if (match[2]) {
+      value = match[2].replace(ESCAPED_CHAR_RE, '$1');
+      if (excelPaste && !value.match(ESCAPED_CHECK_RE)) {
+        value = '"' + match[2] + '"';
+      }
+    } else {
+      value = match[3];
+    }
+    current.push(value);
+  }
+  result = utils.filter(result, function(s) {
+    return s.join('').match(/\S/);
+  });
+  return result;
+}
+
+function mapProps(props, header) {
+  var found = [],
+  missed = [];
+
+  header.forEach(function(h, hi) {
+    for (var i = 0; i < props.length; i++) {
+      if (props[i].matchTSHeader(h)) {
+        found.push({
+          index: hi,
+          name: props[i].name
+        });
+        return;
+      }
+    }
+    missed.push(h);
+  });
+
+  return { found: found, missed: missed };
+}
+
+var Parser = fun.newClass(Job, {
+
+  // in params
+  imageLookup: fun.newProp('imageLookup'),
+  account: fun.newProp('account'),
+  string: fun.newProp('string'),
+
+  // optional in
+  excelPaste: fun.newProp('excelPaste'),
+
+  // out params
+  ads: fun.newProp('ads'),
+  camps: fun.newProp('camps'),
+  foundAdProps: fun.newProp('foundAdProps'),
+  foundCampProps: fun.newProp('foundCampProps'),
+
+  init: function(account, string, imageLookup) {
+    Job.prototype.init.call(this);
+
+    this
+      .ads([])
+      .camps([])
+      .foundAdProps([])
+      .foundCampProps([])
+      .account(account)
+      .string(string)
+      .imageLookup(imageLookup);
+  },
+
+  start: function() {
+    this._prepare();
+  },
+
+  _prepare: function() {
+    var next = fun.bind(this._parse, this);
+
+    require("../model/connectedObject").ConnectedObject.prepare(function() {
+      require("../model/completion").Completion.prepare(
+        ['cities', 'countries', 'regions', 'zips', 'college_majors',
+        'locales', 'workplaces', 'colleges'], next);
+    });
+  },
+
+  _parse: function() {
+    var rows = parseTSV(this.string(), this.excelPaste());
+    if (rows.length < 2) {
+      this._fail(new NotEnoughRowsError());
+      return;
+    }
+
+    // properties supporting tabSeparated
+    var adProps = require("../model/ad").Ad.props().filter(
+      function(p) { return !!p.tabSeparated; });
+    var campProps = require("../model/campaign").Campaign.props().filter(
+      function(p) { return !!p.tabSeparated; });
+
+    // support ad image lookup
+    adProps.push(require("../model/ad").Ad.prop('image'));
+
+    this.foundAdProps(mapProps(adProps, rows[0]).found);
+    this.foundCampProps(mapProps(campProps, rows[0]).found);
+
+    if (this.foundAdProps().length < 2 && this.foundCampProps().length < 2) {
+      this._fail(new InvalideHeaderError());
+      return;
+    }
+
+    var dataRows = rows.slice(1);
+    this._createAds(dataRows, function() {
+      this._createCamps(dataRows, this._complete);
+    });
+  },
+
+  _createAds: function(rows, callback) {
+    var Ad = require("../model/ad").Ad;
+    if (this.foundAdProps().length < 1) {
+      callback.call(this);
+      return;
+    }
+    async.forEach(
+      rows,
+      function(row, index, iteratorCallback) {
+        var ad = new Ad()
+          .muteChanges(true)
+          .account_id(this.account().id());
+        this.ads().push(ad);
+
+        ad.fromTabSeparatedMap(
+          row,
+          this.foundAdProps(),
+          function() {
+            ad.muteChanges(false);
+            iteratorCallback();
+          },
+          this.imageLookup() || { data: {}, hashes: {} });
+      },
+      callback,
+      this);
+  },
+
+  _createCamps: function(rows, callback) {
+    var Campaign = require("../model/campaign").Campaign;
+
+    if (this.foundCampProps().length < 1) {
+      callback.call(this);
+      return;
+    }
+
+    async.forEach(
+      rows,
+      function(row, index, iteratorCallback) {
+        var camp = new Campaign()
+          .muteChanges(true)
+          .account_id(this.account().id());
+        this.camps().push(camp);
+
+        camp.fromTabSeparatedMap(row, this.foundCampProps(), function() {
+          camp.muteChanges(false);
+          iteratorCallback();
+        });
+      },
+      callback,
+      this);
+  }
+});
+
+var NotEnoughRowsError = AdError.newClass(
+  1305338405270,
+  'Invalid data. Not enough rows.'
+);
+
+var InvalideHeaderError = AdError.newClass(
+  1305338470030,
+  'Invalid data. Cannot parse header.'
+);
+
+exports.Parser = Parser;

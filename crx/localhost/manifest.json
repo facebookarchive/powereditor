@@ -1,0 +1,20 @@
+{
+  "name": "Power Editor",
+  "description": "Facebook Ad Power Editor",
+  "version": "1.1",
+  "app": {
+    "urls": [
+      "http://localhost/"
+    ],
+    "launch": {
+      "web_url": "http://localhost:8001/"
+    }
+  },
+  "icons": {
+    "128": "icon_128.png"
+  },
+  "permissions": [
+    "unlimitedStorage",
+    "notifications"
+  ]
+}

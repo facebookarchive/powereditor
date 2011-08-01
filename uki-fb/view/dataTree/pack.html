@@ -1,0 +1,6 @@
+{{#rows}}<li class="ufb-dataTree-row ufb-dataList-row{{^even}} ufb-dataList-row_odd{{/even}}{{className}}">
+  <div class="ufb-dataTree-value"{{{style}}}>
+    {{#hasChildren}}<i class="ufb-dataTree-toggle"></i>{{/hasChildren}}
+    {{{value}}}
+  </div>
+</li>{{/rows}}

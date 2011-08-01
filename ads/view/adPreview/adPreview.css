@@ -1,0 +1,70 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+
+/* body should be same color as text, never underlines */
+.fbEmu .body .fbEmuLink {
+  color: #333333;
+}
+
+.fbEmu .body .fbEmuLink:hover {
+  text-decoration: none;
+}
+
+/* signature links in the body should act normally */
+.fbEmu .body a.signature {
+  color: #3B5998;
+  display: inline;
+}
+
+.fbEmu .body a.signature:hover {
+  text-decoration: underline;
+}
+
+/* some templates have css support for underlining title on hover */
+.fbEmu .hover:hover .title .fbEmuLink {
+  text-decoration: underline;
+}
+
+/* @noflip */
+.fbEmu .forceRTL {
+  direction: rtl;
+  text-align: right;
+}
+
+/* @noflip */
+.fbEmu .forceLTR {
+  direction: ltr;
+  text-align: left;
+}
+
+.fbEmu .adInfo a.identity{
+    color: #808080;
+    display: block;
+    white-space: nowrap;
+}
+
+.adPreview-warnign {
+    color: #777;
+}

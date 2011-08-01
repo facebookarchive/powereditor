@@ -1,0 +1,19 @@
+<table class="uiInfoTable">
+    <tbody>
+    {{#rows}}
+        <tr class="dataRow{{#className}} {{className}}{{/className}}">
+            <th class="label">
+              <label for="{{#data__view}}{{id}}{{/data__view}}">
+                {{#label}}{{{label}}}:{{/label}}
+              </label>
+            </th>
+            <td class="data">
+              {{{data}}}
+              {{#optional}}
+                <div class="optional">{{{optional}}}</div>
+              {{/optional}}
+            </td>
+        </tr>
+    {{/rows}}
+    </tbody>
+</table>

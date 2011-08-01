@@ -1,0 +1,43 @@
+/**
+*/
+
+.ufb-token {
+  background: #d6d6d6;
+  border: 1px solid #999;
+  border-radius: 2px;
+  -moz-border-radius: 2px;
+  -webkit-border-radius: 2px;
+  color: #1c2a47;
+  cursor: default;
+  display: block;
+  float: left;
+  height: 14px;
+  margin: 0 4px 4px 0;
+  padding: 0 3px;
+  position: relative;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+.ufb-token-remove {
+  margin: 2px 0 -2px 1px;
+  outline: none;
+  cursor: pointer;
+  display: inline-block;
+  _font-size: 0;
+  background: url(./close_small.png);
+  height: 11px;
+  width: 11px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 11px;
+  text-indent: -11px;
+}
+
+.ufb-token-remove:hover {
+    background-position: left -22px;
+}
+
+.ufb-token-remove:active {
+    background-position: left -33px;
+}

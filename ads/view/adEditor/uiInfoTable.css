@@ -1,0 +1,95 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+.uiInfoTable {
+  border: 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.uiInfoTable .spacer td {
+  padding: 5px 0;
+}
+
+.noBorder .spacer td {
+  padding: 0;
+  visibility: hidden;
+}
+
+.uiInfoTable .label {
+    line-height: 11px;
+}
+
+.uiInfoTable .label,
+.uiInfoTable .data,
+.uiInfoTable .rightCol {
+  padding: 3px 0 1px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.uiInfoTable .dataRow .data,
+.uiInfoTable .dataRow .rightCol {
+  padding-top: 5px;
+}
+
+/* Firefox adds left margin to radios and checkboxes
+   voloko: safari does this too, but I like how it looks
+ */
+/*.uiInfoTable .data > input,
+.uiInfoTable .data > label input,
+.uiInfoTable .rightCol > input,
+.uiInfoTable .rightCol > label input {
+  margin-left: 0;
+}
+*/
+.uiInfoTable .label {
+  color: #666;
+  font-weight: bold;
+  padding-right: 10px;
+  padding-left: 5px;
+  text-align: right;
+  width: 130px;
+}
+
+.uiInfoTable .dataRow .label {
+  padding-top: 9px;
+}
+
+.uiInfoTable .dataRow .labelText {
+  padding-top: 7px;
+}
+
+.uiInfoTable .rightCol {
+  padding: 0 0 0 20px;
+  width: 225px;
+}
+
+.uiInfoTable hr {
+    background: #D9D9D9;
+    border-width: 0px;
+    color: #D9D9D9;
+    height: 1px;
+}

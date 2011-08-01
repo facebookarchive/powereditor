@@ -1,0 +1,70 @@
+/**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
+*/
+
+var fun = require("../../../uki-core/function"),
+
+    DataSource = require("../../../uki-fb/view/typeahead/dataSource").DataSource;
+
+
+var LocalDataSource = fun.newClass(DataSource, {
+
+  _running: 0,
+
+  query: function(value, local_only) {
+    if (local_only) {
+      this.trigger({
+        type: 'respond',
+        value: value,
+        results: [],
+        isAsync: false
+      });
+      return;
+    }
+
+    this._running++;
+    setTimeout(fun.bind(function() {
+      var results = this.queryEndpoint().search(
+        value,
+        this.maxResults(),
+        this.exclusions());
+
+      this.trigger({
+        type: 'respond',
+        value: value,
+        results: results,
+        isAsync: true
+      });
+      this._running--;
+      this.trigger({ type: 'activity' });
+    }, this), 1);
+  },
+
+  activeQueries: function() {
+    return this._running;
+  }
+
+});
+
+
+exports.LocalDataSource = LocalDataSource;

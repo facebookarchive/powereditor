@@ -361,7 +361,7 @@ Ad.loadFromAccountIds = function(account_ids, callback) {
     callback([], true);
     return;
   }
-  var paths = adUtils.wrapArray(account_ids).map(
+  var paths = storeUtils.wrapArray(account_ids).map(
     function(account_id) {
       return pathUtils.join('act_' + account_id, '/adgroups');
     }

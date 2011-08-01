@@ -17,7 +17,7 @@ Open http://localhost:8001/
 
 Licensing Information
 =====================
-This source code contained is released under one of two licenses. All use of uki-js (http://ukijs.org/) is subject to its BSD license. Non-product source code such as in common, server, storage and uki-fb is also released under the BSD license.
+This source code is licensed under one of two licenses. All use of uki-js (http://ukijs.org/) is subject to its BSD license. Non-product source code such as in common, server, storage and uki-fb is also released under the BSD license.
 
-The remaining code (notably the "ads" directory) is subject to a license which allows you to use the source code under broad terms in conjunction with the Facebook Platform.
+The remaining code (notably the "ads" directory) is subject to a license that allows you to use the source code under broad terms in conjunction with the Facebook Platform.
 

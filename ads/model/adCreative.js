@@ -53,7 +53,7 @@ AdCreative.loadFromAccountIds = function(account_ids, callback) {
 };
 
 AdCreative.loadCallback = function(items, isDone, callback) {
-  callback(adUtils.wrapArray(items), isDone);
+  callback(storeUtils.wrapArray(items), isDone);
 };
 
 exports.AdCreative = AdCreative;

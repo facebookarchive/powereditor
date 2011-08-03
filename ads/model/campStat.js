@@ -25,6 +25,7 @@
 var fun       = require("../../uki-core/function"),
     utils     = require("../../uki-core/utils"),
 
+    props     = require("../lib/props"),
     storage   = require("../../storage/storage"),
     pathUtils = require("../../storage/lib/pathUtils"),
 
@@ -38,13 +39,13 @@ var CampStat = storage.newStorage(BaseStat, {
 });
 
 CampStat
-  .tableName('camp_stat')
-  .graphEdgeName('data');
+  .tableName('camp_stat');
 
 CampStat.addProp({
   name: 'object_id',
+  type: props.LongNumber,
   remote: 'campaign_id',
-  indexed: 'INTEGER NOT NULL'
+  indexed: 'TEXT NOT NULL'
 });
 
 // dates
@@ -60,19 +61,14 @@ CampStat.pathFormat = function(account_id) {
 
 CampStat.loadFromAccountsAndRange = BaseStat.loadFromAccountsAndRange;
 
-CampStat.loadCallback = function(data, isDone, callback) {
+CampStat.createFromRemote = function(data) {
   var ts = +new Date();
-  BaseStat.loadCallback.call(CampStat, data, isDone,
-    function(items, isDone) {
-      items.forEach(function(item) {
-        item
-          .muteChanges(true)
-          .last_update_time(ts)
-          .muteChanges(false);
-      });
-      callback(items, isDone);
-    }
-  );
+  var item = BaseStat.createFromRemote.call(CampStat, data);
+  item
+    .muteChanges(true)
+    .last_update_time(ts)
+    .muteChanges(false);
+  return item;
 };
 
 /*

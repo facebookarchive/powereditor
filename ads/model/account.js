@@ -83,8 +83,7 @@ var Account = storage.newStorage({
 
 Account
   .defaultPropType(props.Base)
-  .tableName('account')
-  .graphEdgeName('data');
+  .tableName('account');
 
 Account.addProp({
   type: props.LongNumber,
@@ -141,22 +140,17 @@ Account.addProp({
 // --- Syncing with Graph API stuff ---
 
 Account.loadFromIds = function(account_ids, callback) {
-  var paths, edgeCall;
   if (!account_ids || !account_ids.length) {
-    paths = pathUtils.join('/me', '/adaccounts');
-    edgeCall = true;
+    var path = pathUtils.join('/me', '/adaccounts');
+    Account.fetchAndStoreEdges(path, callback);
   } else {
-    paths = storeUtils.wrapArray(account_ids).map(
+    var paths = storeUtils.wrapArray(account_ids).map(
       function(account_id) {
         return pathUtils.join('act_' + account_id);
       }
     );
-    if (paths.length == 1) {
-      paths = paths[0];
-    }
-    edgeCall = false;
+    Account.fetchAndStoreObjects(paths, callback);
   }
-  Account.loadAndStore(paths, {}, edgeCall, callback);
 };
 
 // --- END Syncing with Graph API stuff ---

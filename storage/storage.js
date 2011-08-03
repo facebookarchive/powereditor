@@ -35,6 +35,8 @@ var fun   = require("../uki-core/function"),
     FB = require("./lib/connect").FB,
     storeUtils = require("./lib/utils"),
     urllib = require("./lib/urllib"),
+    async = require("./lib/async"),
+    graphlink = require("./lib/graphlink"),
 
     pathUtils = require("./lib/pathUtils"),
     Storable = require("./storable").Storable,
@@ -51,13 +53,13 @@ var fun   = require("../uki-core/function"),
 //                   +++++++                            |
 //                 //       \\                          |
 //                || _-----_ ||                         |
-//        _-----_  \|-_____-|/                          |
-//   _-----_  _-|   |-_____-|   _-----_  _-----_        |
-//  |-_____-| _-|   |-_____-|  |-__ _-----_  _-----_    |
-//  |-_____-| _-|    -_____-   |-__|-_____-||-_____-|   |
-//_ |-_____-| ________________ |-__|-_____-||-_____-| __|
-//   -_____-                    -__|-_____-||-_____-|    \
-//                                  -_____-  -_____-      \
+//                 \|-_____-|/                          |
+//   _-----_        |-_____-|   _-----_  _-----_        |
+//  |-__ _-----_    |-_____-|  |-__ _-----_  _-----_    |
+//  |-__|-_____-|    -_____-   |-__|-_____-||-_____-|   |
+//_ |-__|-_____-|_____________ |-__|-_____-||-_____-| __|
+//   -__|-_____-|               -__|-_____-||-_____-|    \
+//       -_____-                    -_____-  -_____-      \
 //
 /**
  * @example
@@ -203,14 +205,7 @@ var Storage = {
       callback([]);
       return;
     }
-    var items = storeUtils.wrapArray(data).map(function(c) {
-      var item = new Self();
-      item
-        .muteChanges(true)
-        .fromRemoteObject(c)
-        .muteChanges(false);
-      return item;
-    });
+    var items = storeUtils.wrapArray(data).map(this.createFromRemote);
     callback(items);
   },
 
@@ -227,131 +222,72 @@ var Storage = {
 
   // ---- ++++ Graph API ++++ -----
 
-  graphEdgeName: fun.newProp('graphEdgeName'),
-
-  /**
-  * @param paths: 1 path if batchCall is false. array of paths if not
-  */
-  loadAndStore: function(paths, options, edgeCall, callback) {
-    this.loadGRemote(paths, options, edgeCall, fun.bind(function(data, isDone) {
-      this.storeMulti(data, function(data) {
-          callback(data, isDone);
+  fetchAndStoreObjects: function(paths, options, callback, pc) {
+    callback = callback || options;
+    options = utils.isFunction(options) ? {} : options;
+    var objects = [];
+    async.forEach(
+      storeUtils.wrapArray(paths),
+      fun.bind(function(path, i, iterCallback) {
+        graphlink.fetchObject.call(this, path, options,
+          fun.bind(function(fetched) {
+            var created = this.createFromRemote(fetched);
+            objects.push(created);
+            iterCallback();
+          }, this)
+        );
+      }, this),
+      // called after async iterator is finished
+      fun.bind(function() {
+        this.storeMulti(objects, function(stored) {
+          callback(stored);
         });
       }, this)
     );
   },
 
-  loadGRemote: function(graphPaths, options, edgeCall, callback) {
-    var isDone;
-    if (utils.isArray(options)) {
-      options.forEach(function(opt) {
-        opt.date_format = 'U';
-      });
-    } else {
-      options.date_format = 'U';
-    }
-    if (utils.isArray(graphPaths)) {
-      var remaining = graphPaths.slice(20);
-      graphPaths = graphPaths.slice(0, 20);
-      isDone = !remaining.length;
-      var batching = {};
-      batching.batch = graphBatcher(graphPaths, options);
-      FB.api(
-        '/',
-        'POST',
-        batching,
-        fun.bind(function(data) {
-          if (!isDone) {
-            this.loadGRemote(remaining, options, edgeCall, callback);
-          }
-          this.batchCallback(data, isDone, edgeCall, callback);
+  fetchAndStoreEdges: function(paths, options, callback, pc) {
+    callback = callback || options;
+    options = utils.isFunction(options) ? {} : options;
+    var objects = [];
+      async.forEach(
+        storeUtils.wrapArray(paths),
+        fun.bind(function(path, i, iterCallback) {
+          graphlink.fetchEdge.call(this, path, options,
+            fun.bind(function(fetched) {
+              var created = this.createMultipleFromRemote(fetched);
+              Array.prototype.push.apply(objects, created);
+              iterCallback();
+            }, this)
+          );
+        }, this),
+        // called after async iterator is finished
+        fun.bind(function() {
+          this.storeMulti(objects, function(stored) {
+            callback(objects);
+          });
         }, this)
       );
-    } else {
-      isDone = true;
-      FB.api(
-        graphPaths,
-        options,
-        fun.bind(function(data) {
-          if (edgeCall) {
-            // Aggregate data from paging calls
-            var _result = [];
-            var edgeTraversal = function(edgeData) {
-              _result.push.apply(_result, edgeData[this.graphEdgeName()]);
-              if (edgeData && edgeData.paging && edgeData.paging.next &&
-                edgeData.count && _result.length < edgeData.count) {
-                FB.api(edgeData.paging.next, fun.bind(edgeTraversal, this));
-              } else {
-                this.loadCallback(_result, isDone, callback);
-              }
-            };
-            edgeTraversal.call(this, data);
-          } else {
-            this.loadCallback(data, isDone, callback);
-          }
-        }, this)
-      );
-    }
   },
 
-  batchCallback: function(data, isDone, edgeCall, callback, _respItems) {
-    var edgeName = edgeCall && this.graphEdgeName();
-    _respItems = _respItems || [];
-    var pagers = [];
-    data.map(function(response, i) {
-      if (response.body && response.body.error) {
-        var msg = response.body.error.message,
-            type = response.body.error.type,
-            code = response.code;
-        throw new Error(code + ': ' + type + ' => ' + msg);
-      }
-      var responseBody = JSON.parse(response.body);
-      _respItems[i] = _respItems[i] || [];
-      if (edgeCall) {
-        // aggregate data from paging calls
-        if (responseBody && responseBody.paging && responseBody.paging.next &&
-          responseBody.count && _respItems[i].length < responseBody.count) {
-          pagers.push(responseBody.paging.next);
-        }
-        _respItems[i].push.apply(_respItems[i], responseBody[edgeName]);
-      } else {
-        _respItems[i].push(responseBody);
-      }
-    });
-    if (!!pagers.length) {
-      // pagers cannot have more than 20 paths
-      var options = {};
-      options.batch = graphBatcher(pagers, { date_format: 'U' });
-      FB.api('/', 'POST', options, fun.bind(function(data) {
-        this.batchCallback(data, isDone, edgeCall, callback, _respItems);
-      }, this));
-    } else {
-      // set isDone appropriately based on state of batch calls
-      var allItems = [];
-      _respItems.map(function(items) {
-        allItems.push.apply(allItems, items);
-      });
-      this.loadCallback(allItems, isDone, callback);
-    }
+  createFromRemote: function(data) {
+    var Self = this;
+    var item = new Self();
+    item
+      .muteChanges(true)
+      .fromRemoteObject(data)
+      .muteChanges(false);
+    return item;
   },
 
   /*
    * @param data = remotely loaded data
-   * @param isDone = is it the last call in a sequence of batch calls?
-   * @param callback
    */
-  loadCallback: function(data, isDone, callback) {
-    var Self = this;
+  createMultipleFromRemote: function(data) {
     data = data || [];
-    var items = storeUtils.wrapArray(data).map(function(c) {
-      var item = new Self();
-      item
-        .muteChanges(true)
-        .fromRemoteObject(c)
-        .muteChanges(false);
-      return item;
-    });
-    callback(items, isDone);
+    var items = storeUtils.wrapArray(data).map(
+      fun.bind(this.createFromRemote, this));
+    return items;
   },
 
   // ---- ++++ End Graph API ++++ -----
@@ -368,33 +304,6 @@ Storage
   .defaultPropType(require("./prop/base").Base)
   .resultSetType(ResultSet);
 
-
-// --- Utility private functions
-/**
- * @param paths = array of paths to batch together
- * currently assumes that each path is clear of any querystring
- * @param optionsArr = could be jsut one object with options
- * or array with same length as paths with distinct options for each path
- */
-function graphBatcher(paths, optionsArr) {
-  return paths.map(function(path, i) {
-    var options = utils.isArray(optionsArr) ? optionsArr[i] : optionsArr;
-    if (urllib.isUrl(path)) {
-      var url = path;
-      utils.extend(options, urllib.parsePagingParams(url));
-      path = urllib.parseRelPath(url);
-    }
-    if (options) {
-      path += (path.indexOf('?') > -1) ? '&' : '?';
-      path += urllib.stringify(options);
-    }
-    var batches = {
-      method: 'GET',
-      relative_url: path
-    };
-    return batches;
-  });
-}
 
 // prefer WebSql since Chrome's IndexedDB is terribly slow
 var Impl = IndexedDBImpl;

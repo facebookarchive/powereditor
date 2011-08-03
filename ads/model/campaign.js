@@ -287,7 +287,6 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
 Campaign
   .defaultPropType(props.Base)
   .tableName('campaign')
-  .graphEdgeName('data')
   .resultSetType(require("./campaign/campResultSet").CampResultSet);
 
 Campaign.addProp({
@@ -295,14 +294,14 @@ Campaign.addProp({
   prefix: 'c:',
   name: 'id',
   remote: 'campaign_id',
-  indexed: 'INTEGER NOT NULL PRIMARY KEY',
+  indexed: 'TEXT NOT NULL PRIMARY KEY',
   tabSeparated: 'Campaign ID'
 });
 
 Campaign.addProp({
   type: props.LongNumber,
   name: 'account_id',
-  indexed: "INTEGER NOT NULL",
+  indexed: "TEXT NOT NULL",
   db: true, remote: true
 });
 
@@ -850,23 +849,13 @@ Campaign.loadFromAccountIds = function(account_ids, callback) {
       return pathUtils.join('act_' + account_id, '/adcampaigns');
     }
   );
-  // want to pass just the 1 account as a string
-  if (paths.length == 1) {
-    paths = paths[0];
-  }
-  var edgeCall = true;
-  Campaign.loadAndStore(paths, {}, edgeCall, callback);
+  Campaign.fetchAndStoreEdges(paths, callback);
 };
 
-Campaign.loadGRemote = function(paths, options, edgeCall, callback) {
-  storage.Storage.loadGRemote.call(Campaign, paths, options, edgeCall,
-    function(camps, isDone) {
-      camps.forEach(function(c) {
-        c.initChangeable();
-      });
-      callback(camps, isDone);
-    }
-  );
+Campaign.createFromRemote = function(data) {
+  var camp = storage.Storage.createFromRemote.call(this, data);
+  camp.initChangeable();
+  return camp;
 };
 
 // --- END Syncing with Graph API stuff ---

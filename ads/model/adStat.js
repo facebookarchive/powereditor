@@ -25,6 +25,7 @@
 var fun       = require("../../uki-core/function"),
     utils     = require("../../uki-core/utils"),
 
+    props     = require("../lib/props"),
     storage   = require("../../storage/storage"),
     pathUtils = require("../../storage/lib/pathUtils"),
 
@@ -57,13 +58,13 @@ var AdStat = storage.newStorage(BaseStat, {
 });
 
 AdStat
-  .tableName('ad_stat')
-  .graphEdgeName('data');
+  .tableName('ad_stat');
 
 AdStat.addProp({
   name: 'object_id',
+  type: props.LongNumber,
   remote: 'adgroup_id',
-  indexed: 'INTEGER NOT NULL'
+  indexed: 'TEXT NOT NULL'
 });
 
 AdStat.pathFormat = function(account_id) {
@@ -71,7 +72,7 @@ AdStat.pathFormat = function(account_id) {
 };
 
 AdStat.loadFromAccountsAndRange = BaseStat.loadFromAccountsAndRange;
-AdStat.loadCallback = BaseStat.loadCallback;
+AdStat.createFromRemote = BaseStat.createFromRemote;
 
 /*
 

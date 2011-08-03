@@ -59,11 +59,11 @@ var ConnectedObject = storage.newStorage({
 
 ConnectedObject
   .defaultPropType(props.Base)
-  .tableName('connected_object')
-  .graphEdgeName('data');
+  .tableName('connected_object');
 
 ConnectedObject.addProp({
   name: 'id',
+  type: props.LongNumber,
   remote: true,
   indexed: 'TEXT NOT NULL PRIMARY KEY'
 });
@@ -178,23 +178,9 @@ ConnectedObject.loadFromAccountIds = function(account_ids, callback) {
       return pathUtils.join('act_' + account_id, '/connectionobjects');
     }
   );
-  // want to pass just the 1 account as a string
-  if (paths.length == 1) {
-    paths = paths[0];
-  }
-  var edgeCall = true;
   // clear caches
   this._cache = this._cacheMap = null;
-  ConnectedObject.loadAndStore(paths, {}, edgeCall, callback);
-};
-
-ConnectedObject.loadGRemote = function(paths, options, edgeCall, callback) {
-  storage.Storage.loadGRemote.call(ConnectedObject, paths, options, edgeCall,
-    function(cobjs, isDone) {
-      // TODO what about extra_only option?
-      callback(cobjs, isDone);
-    }
-  );
+  ConnectedObject.fetchAndStoreEdges(paths, callback);
 };
 
 // --- END Syncing with Graph API stuff ---

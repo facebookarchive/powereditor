@@ -66,8 +66,9 @@ Contract.addProp({
 
 Contract.addProp({
   name: 'id',
+  type: props.LongNumber,
   remote: 'account_id',
-  indexed: 'INTEGER NOT NULL PRIMARY KEY'
+  indexed: 'TEXT NOT NULL PRIMARY KEY'
 });
 
 Contract.addProp({

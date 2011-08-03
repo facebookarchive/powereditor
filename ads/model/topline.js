@@ -253,8 +253,9 @@ Topline.addProp({
 
 Topline.addProp({
   name: 'id',
+  type: props.LongNumber,
   remote: 'line_id',
-  indexed: 'INTEGER NOT NULL PRIMARY KEY'
+  indexed: 'TEXT NOT NULL PRIMARY KEY'
 });
 
 Topline.addProp({

@@ -23,37 +23,18 @@
 */
 
 
-var storage = require("../../storage/storage"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+var pathUtils = require("../../storage/lib/pathUtils"),
+    graphlink = require("../../storage/lib/graphlink"),
+    storeUtils = require("../../storage/lib/utils"),
+    asyncUtils = require("../../storage/lib/async");
 
-    storeUtils = require("../../storage/lib/utils");
-
-var AdCreative = storage.newStorage({
-});
-
-AdCreative
-  .graphEdgeName('data');
+var AdCreative = {};
 
 /**
- * @param account_ids = array of account_ids
+ * @param creative_ids = array of creative_ids
  */
-AdCreative.loadFromAccountIds = function(account_ids, callback) {
-  var creativesPaths = storeUtils.wrapArray(account_ids).map(
-    function(account_id) {
-      return pathUtils.join('act_' + account_id, '/adcreatives');
-  });
-  if (creativesPaths.length == 1) {
-    creativesPaths = creativesPaths[0];
-  }
-  var creativesEdgeName = 'creatives';
-  var edgeCall = true;
-
-  storage.Storage.loadGRemote.call(
-    AdCreative, creativesPaths, {}, edgeCall, callback);
-};
-
-AdCreative.loadCallback = function(items, isDone, callback) {
-  callback(storeUtils.wrapArray(items), isDone);
+AdCreative.loadFromIds = function(creative_ids, callback) {
+  graphlink.fetchObjectsById(creative_ids, callback);
 };
 
 exports.AdCreative = AdCreative;

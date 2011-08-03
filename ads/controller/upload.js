@@ -26,11 +26,14 @@ var view  = require("../../uki-core/view"),
     utils = require("../../uki-core/utils"),
     fun   = require("../../uki-core/function"),
     build = require("../../uki-core/builder").build,
+
     asyncUtils = require("../../storage/lib/async"),
+    FBConnection = require("../../storage/lib/connect").FBConnection,
+    graphlink = require("../../storage/lib/graphlink"),
+    pathUtils = require("../../storage/lib/pathUtils"),
 
     App = require("./app").App,
     UploadDialog = require("../view/uploadDialog").UploadDialog,
-    FBConnection = require("../../storage/lib/connect").FBConnection,
 
     models = require("../models");
 
@@ -181,13 +184,11 @@ function uploadCampsResponse(camp, camps, callback, result) {
   } else {
     // remove old camp before creating/updating new one
     camp.remove(function() {
-      models.Campaign.loadGRemote(
+      graphlink.fetchObject(
         '/' + (result.id || camp.id()),
-        {},
-        false,
-        function(reloadedCamps) {
+        function(reloadedCampData) {
 
-          if (!reloadedCamps || !reloadedCamps[0]) {
+          if (!reloadedCampData) {
             // if camp was deleted, delete local copy and continue
             if (camp.campaign_status() !== 3) {
               camp.remove(next);
@@ -200,8 +201,7 @@ function uploadCampsResponse(camp, camps, callback, result) {
             return;
           }
 
-          var reloadedCamp = reloadedCamps[0];
-
+          var reloadedCamp = models.Campaign.createFromRemote(reloadedCampData);
           function finish() {
             reloadedCamp.changes(camp.changes());
             reloadedCamp.store(next);
@@ -366,9 +366,9 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
 
     // reload the ad from server after update/create
     var path = '/' + (result.id || ad.id());
-    models.Ad.loadGRemote(path, {}, false, function(reloadedAds) {
+    graphlink.fetchObject(path, function(reloadedAdData) {
 
-      if (!reloadedAds || !reloadedAds[0]) {
+      if (!reloadedAdData) {
         if (ad.adgroup_status() === 3) {
           // if the ad has been deleted, remove local copy and continue
           ad.remove(next);
@@ -380,10 +380,9 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
         return;
       }
 
-      var reloadedAd = reloadedAds[0];
+      var reloadedAd = models.Ad.createFromRemote(reloadedAdData);
       var path = '/' + reloadedAd.creative_ids()[0];
-      models.AdCreative.loadGRemote(path, {}, false, function(creatives) {
-        var creative = creatives[0];
+      graphlink.fetchObject(path, function(creative) {
         delete creative.name;
         ad.remove(function() {
           reloadedAd.muteChanges(true);

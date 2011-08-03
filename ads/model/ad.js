@@ -341,7 +341,6 @@ function fix(store) {
 
 Ad
   .tableName('ad')
-  .graphEdgeName('data')
   .resultSetType(require("./ad/resultSet").ResultSet);
 
 function getSearchIndex() {
@@ -366,12 +365,7 @@ Ad.loadFromAccountIds = function(account_ids, callback) {
       return pathUtils.join('act_' + account_id, '/adgroups');
     }
   );
-  // want to pass just the single ad as a string
-  if (paths.length == 1) {
-    paths = paths[0];
-  }
-  var edgeCall = true;
-  Ad.loadAndStore(paths, {}, edgeCall, callback);
+  Ad.fetchAndStoreEdges(paths, callback);
 };
 
 // --- END Syncing with Graph API stuff ---

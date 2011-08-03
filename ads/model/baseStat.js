@@ -165,35 +165,21 @@ BaseStat.loadFromAccountsAndRange = function(accounts, from, to, callback) {
   };
   // clear old stats
   this.clear(fun.bind(function() {
-
-    asyncUtils.forEach(
-      accounts,
-      fun.bind(function(account, i, iterCallback) {
-        storage.Storage.loadAndStore.call(
-          this, this.pathFormat(account.id()),
-          options, edgeCall, iterCallback);
-      }, this),
-      callback
-    );
-
+    var paths = accounts.map(fun.bind(function(account) {
+      return this.pathFormat(account.id());
+    }, this));
+    BaseStat.fetchAndStoreEdges.call(this, paths, options, callback);
   }, this));
 };
 
-BaseStat.loadCallback = function(data, isDone, callback) {
-
-  storage.Storage.loadCallback.call(this, data, isDone,
-    function(items, isDone) {
-      items.forEach(function(item) {
-        var range = dateRange.encode(item.start_time(), item.end_time());
-        item
-          .muteChanges(true)
-          .date_range(range)
-          .muteChanges(false);
-      });
-      callback(items, isDone);
-    }
-  );
-
+BaseStat.createFromRemote = function(data) {
+  var item = storage.Storage.createFromRemote.call(this, data);
+  var range = dateRange.encode(item.start_time(), item.end_time());
+  item
+    .muteChanges(true)
+    .date_range(range)
+    .muteChanges(false);
+  return item;
 };
 
 // --- END Syncing with Graph API stuff ---

@@ -210,13 +210,11 @@ function loadAccounts(account_ids, state, status, pc, callback) {
   var allAccounts = [];
   Account.loadFromIds(
     account_ids,
-    function(accounts, isDone) {
+    function(accounts) {
       status.accounts = accounts.length;
       pc(status);
       allAccounts.push.apply(allAccounts, accounts);
-      if (isDone) {
-        callback(utils.pluck(allAccounts, 'id'));
-      }
+      callback(utils.pluck(allAccounts, 'id'));
     }
   );
 }
@@ -359,21 +357,19 @@ function loadCampaigns(account_ids, state, status, pc, callback) {
 
   Campaign.loadFromAccountIds(
     account_ids,
-    function(campaigns, isDone) {
+    function(campaigns) {
 
       status.campaigns += campaigns.length;
       pc(status);
       totalCampaigns = totalCampaigns.concat(campaigns);
 
-      if (isDone) {
-        status.campaigns_isdone = true;
-        pc(status);
+      status.campaigns_isdone = true;
+      pc(status);
 
-        Campaign.prepare(function(campaigns) {
-          totalCampaigns.prefetch && totalcampaigns.prefetch();
-          callback(null);
-        }, true);
-      }
+      Campaign.prepare(function(campaigns) {
+        totalCampaigns.prefetch && totalcampaigns.prefetch();
+        callback(totalCampaigns);
+      }, true);
     }
   );
 }
@@ -399,13 +395,11 @@ function loadAds(account_ids, state, status, pc, callback) {
 
       totalAds.push.apply(totalAds, ads);
 
-      if (isDone) {
-        status.ads_isdone = true;
-        pc(status);
+      status.ads_isdone = true;
+      pc(status);
 
-        totalAds.prefetch && totalAds.prefetch();
-        callback(totalAds);
-      }
+      totalAds.prefetch && totalAds.prefetch();
+      callback(totalAds);
     }
   );
 }
@@ -422,17 +416,21 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
   }
 
   var adMapByCreative = {};
+  var creative_ids = [];
   storeUtils.wrapArray(ads).map(function(ad) {
     var creativeId = (ad.creative_ids() || [])[0];
     if (creativeId) {
       adMapByCreative[creativeId] = adMapByCreative[creativeId] || [];
       adMapByCreative[creativeId].push(ad);
+      creative_ids.push(creativeId);
     }
   });
 
+  creative_ids = utils.unique(creative_ids);
+
   // load creatives all together
-  AdCreative.loadFromAccountIds(account_ids,
-    function(data, isCreativesDone) {
+  AdCreative.loadFromIds(creative_ids,
+    function(data) {
 
       status.adcreatives += data.length;
       pc(status);
@@ -449,16 +447,14 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
           });
         }
       });
-      if (isCreativesDone) {
 
-        status.adcreatives_isdone = true;
-        pc(status);
+      status.adcreatives_isdone = true;
+      pc(status);
 
-        // commit the ad changes back to db
-        storage.Storage.storeMulti.call(Ad, ads, function(data) {
-            callback(data);
-        });
-      }
+      // commit the ad changes back to db
+      storage.Storage.storeMulti.call(Ad, ads, function(data) {
+          callback(data);
+      });
     }
   );
   // end load creatives

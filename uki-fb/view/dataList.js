@@ -108,6 +108,7 @@ var DataList = view.newClass('DataList', Container, Focusable, {
     } else {
       this._initLayout();
     }
+
     return this;
   },
 
@@ -378,7 +379,6 @@ var DataList = view.newClass('DataList', Container, Focusable, {
     } else {
       this.childViews([]);
     }
-
     this._scheduleRenderRows(rows);
   },
 

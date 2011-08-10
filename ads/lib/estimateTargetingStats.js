@@ -24,8 +24,8 @@
 
 var fun = require("../../uki-core/function");
 
-var FB = require("../../storage/lib/connect").FB;
-
+var graphlink = require("../../lib/graphlink"),
+    pathUtils = require("../../lib/pathUtils");
 
 var cache = {};
 var CACHE_TTL = 1000 * 60 * 60 * 24; // day
@@ -34,7 +34,15 @@ function buildKey(account, targeting_spec) {
   return account.id() + ' ' + JSON.stringify(targeting_spec);
 }
 
+function valid(targeting_spec) {
+  return targeting_spec.countries && targeting_spec.countries.length > 0;
+}
+
 function estimate(account, targeting_spec, callback) {
+  if (!valid(targeting_spec)) {
+    callback({});
+    return;
+  }
   var key = buildKey(account, targeting_spec);
 
   // clear stale cache
@@ -53,19 +61,21 @@ function estimate(account, targeting_spec, callback) {
       waiting: [callback],
       time: +new Date()
     };
-
-    FB.api({
-      method: 'ads.estimateTargetingStats',
-      targeting_spec: targeting_spec,
-      account_id: account.id(),
-      currency: account.currency()
-    }, function(result) {
-      cache[key].result = result;
-      cache[key].waiting.forEach(function(callback) {
-        callback(result);
-      });
-      delete cache[key].waiting;
-    });
+    graphlink.fetchObject(
+      pathUtils.join('/act_' + account.id(), 'reachestimate'),
+      {
+        targeting_spec: targeting_spec,
+        currency: account.currency()
+      },
+      function(r) {
+        var result = r.data;
+        cache[key].result = result;
+        cache[key].waiting.forEach(function(cb) {
+          cb(result);
+        });
+        delete cache[key].waiting;
+      },
+      this);
   }
 }
 

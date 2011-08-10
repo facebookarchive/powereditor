@@ -27,7 +27,7 @@ var fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
     view  = require("../../uki-core/view"),
 
-    dateRange = require("../lib/dateRange"),
+    dateRange = require("../../lib/dateRange"),
 
     DateDataSource =
         require("../lib/typeahead/DateDataSource").DateDataSource,
@@ -37,7 +37,7 @@ var fun   = require("../../uki-core/function"),
     campConst = require("../model/campaign/constants"),
 
     BaseBinding = require("../../uki-fb/binding").Binding,
-    formatters = require("../lib/formatters"),
+    formatters = require("../../lib/formatters"),
     paneFormatters = require("./adPane/formatters"),
     campFormatters = require("./campPane/formatters");
 
@@ -118,7 +118,7 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
         });
         this.content().budget_sum.binding({
             model: m,
-            modelProp: 'budget_100',
+            modelProp: 'uninflated_ui_budget_100',
             modelEvent: 'change.lifetime_budget change.daily_budget',
             viewEvent: 'keyup change blur paste'
         });

@@ -32,13 +32,13 @@
 var fun   = require("../uki-core/function"),
     utils = require("../uki-core/utils"),
 
-    FB = require("./lib/connect").FB,
-    storeUtils = require("./lib/utils"),
-    urllib = require("./lib/urllib"),
-    async = require("./lib/async"),
-    graphlink = require("./lib/graphlink"),
+    FB = require("../lib/connect").FB,
+    libUtils = require("../lib/utils"),
+    urllib = require("../lib/urllib"),
+    async = require("../lib/async"),
+    graphlink = require("../lib/graphlink"),
 
-    pathUtils = require("./lib/pathUtils"),
+    pathUtils = require("../lib/pathUtils"),
     Storable = require("./storable").Storable,
     ResultSet = require("./resultSet").ResultSet,
     WebSqlImpl = require("./impl/webSql").WebSql,
@@ -205,7 +205,7 @@ var Storage = {
       callback([]);
       return;
     }
-    var items = storeUtils.wrapArray(data).map(this.createFromRemote);
+    var items = libUtils.wrapArray(data).map(this.createFromRemote, this);
     callback(items);
   },
 
@@ -227,22 +227,22 @@ var Storage = {
     options = utils.isFunction(options) ? {} : options;
     var objects = [];
     async.forEach(
-      storeUtils.wrapArray(paths),
-      fun.bind(function(path, i, iterCallback) {
-        graphlink.fetchObject.call(this, path, options,
-          fun.bind(function(fetched) {
+      libUtils.wrapArray(paths),
+      function(path, i, iterCallback) {
+        graphlink.fetchObject(path, options,
+          function(fetched) {
             var created = this.createFromRemote(fetched);
             objects.push(created);
             iterCallback();
-          }, this)
+          },
+          this // graphlink callback context
         );
-      }, this),
+      },
       // called after async iterator is finished
-      fun.bind(function() {
-        this.storeMulti(objects, function(stored) {
-          callback(stored);
-        });
-      }, this)
+      function() {
+        this.storeMulti(objects, callback);
+      },
+      this // async callback context
     );
   },
 
@@ -251,22 +251,22 @@ var Storage = {
     options = utils.isFunction(options) ? {} : options;
     var objects = [];
       async.forEach(
-        storeUtils.wrapArray(paths),
-        fun.bind(function(path, i, iterCallback) {
-          graphlink.fetchEdge.call(this, path, options,
-            fun.bind(function(fetched) {
+        libUtils.wrapArray(paths),
+        function(path, i, iterCallback) {
+          graphlink.fetchEdge(path, options,
+            function(fetched) {
               var created = this.createMultipleFromRemote(fetched);
               Array.prototype.push.apply(objects, created);
               iterCallback();
-            }, this)
+            },
+            this // graphlink callback context
           );
-        }, this),
+        },
         // called after async iterator is finished
-        fun.bind(function() {
-          this.storeMulti(objects, function(stored) {
-            callback(objects);
-          });
-        }, this)
+        function() {
+          this.storeMulti(objects, callback);
+        },
+        this // async callback context
       );
   },
 
@@ -285,8 +285,7 @@ var Storage = {
    */
   createMultipleFromRemote: function(data) {
     data = data || [];
-    var items = storeUtils.wrapArray(data).map(
-      fun.bind(this.createFromRemote, this));
+    var items = libUtils.wrapArray(data).map(this.createFromRemote, this);
     return items;
   },
 

@@ -63,6 +63,8 @@ var Pack = fun.newClass(Base, {
 
   setSelected: function(index, state) {
     var row = this._rowAt(index);
+
+    state = !!state;
     if (row) {
       dom.toggleClass(row, 'ufb-dataTable-row_selected', state);
       this._selection[index] = state;
@@ -75,7 +77,7 @@ var Pack = fun.newClass(Base, {
     });
   },
 
-  _rowAt: function(pos) {
+_rowAt: function(pos) {
     return this.tbody() && this.tbody().childNodes[pos];
   },
 

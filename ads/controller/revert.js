@@ -26,7 +26,7 @@ var view  = require("../../uki-core/view"),
     utils = require("../../uki-core/utils"),
 
     App          = require("./app").App,
-    DeferredList = require("../lib/deferredList").DeferredList;
+    DeferredList = require("../../lib/deferredList").DeferredList;
 
 
 /**

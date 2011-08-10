@@ -6,11 +6,10 @@ var fun = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
     Campaign = require("../model/campaign").Campaign,
     Ad = require("../model/ad").Ad,
-    MD5 = require("./md5"),
     StatusMap = require("./prop/adgroupStatus").STATUS_MAP;
 
 var PROFILE_BASE = "http://www.facebook.com/profile.php/",
-    HOME_BASE = "http://www.facebook.com/home.php/";
+    HOME_BASE = "http://www.facebook.com/";
 
 var headerArr = [
   'campaign_id',
@@ -78,15 +77,10 @@ function _fillCSV(accountId, callback) {
  * return: string the 10 digit hash that must match the 'h' param
  *
  */
-function _demoAdHash(adgroup_id) {
-  var salt = "chocolate milk and m&ms, mmmm";
-  var md5Str = MD5.md5(salt + adgroup_id);
-  return md5Str.substr(0, 10);
-}
+// XXX TODO zahanm fix demo link hash generation
 
 function _buildDemoAdLink(base, adgroup_id) {
-  var str = base + '?demo_ad=' + adgroup_id + '&h=' +
-    _demoAdHash(adgroup_id);
+  var str = base + '?demo_ad=' + adgroup_id;
   return str;
 }
 

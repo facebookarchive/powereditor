@@ -56,31 +56,66 @@ var DownloadProgress = view.newClass('ads.DownloadProgress', Dialog, {
 
   _template: requireText('downloadProgress/downloadProgress.html'),
 
-  status: function(status) {
+  init: function() {
+    Dialog.prototype.init.call(this, arguments);
+    this.progress = [];
+    var hasCorpAct = App.hasCorpAct();
+    DownloadProgress.steps.forEach(fun.bind(function(step) {
+      this.progress.push({
+        name: step.name,
+        label: step.label,
+        show: !step.corpStep || hasCorpAct,
+        loaded: 0,
+        iscomplete: false
+      });
+    }, this));
+  },
 
-    status.accounts_complete = !!status.accounts;
-    status.campaigns_complete =
-    status.campaigns_isdone && status.accounts > 0;
+  setStep: function(stepname) {
+    this.progress.forEach(fun.bind(function(step) {
+      if (step.name == stepname) {
+        this.current = step;
+      }
+    }, this));
+  },
 
-    status.contracts_complete = !!status.contracts;
-    status.toplines_complete =
-    status.contracts_with_toplines === status.contracts &&
-    status.contracts > 0;
+  statusUpdate: function(update) {
+    if (typeof update === 'number') {
+      this.current.loaded += update;
+    }
+    this.updateDialog();
+  },
 
-    status.ads_complete =
-    status.ads_isdone && status.campaigns > 0;
+  completeStep: function(stepname) {
+    if (stepname) {
+      this.progress.forEach(function(step) {
+        if (step.name == stepname) {
+          step.iscomplete = true;
+        }
+      });
+    } else {
+      this.current.iscomplete = true;
+    }
+    this.updateDialog();
+  },
 
-    status.adcreatives_complete =
-    status.adcreatives_isdone && status.ads > 0;
-
-    status.objects_complete = status.objects === 2;
-    status.objects_text = statusTexts[status.objects];
-
-    status.HAS_CORP_ACT = App.hasCorpAct();
-
-    this._body.html(Mustache.to_html(this._template, status));
+  updateDialog: function() {
+    var tcontext = {};
+    tcontext.progress = this.progress;
+    this._body.html(Mustache.to_html(this._template, tcontext));
   }
+
 });
+
+DownloadProgress.steps = [
+  { name: 'accounts', label: 'Accounts' },
+  { name: 'objects', label: 'Connection Objects' },
+  
+  { name: 'campaigns', label: 'Campaigns' },
+  { name: 'ads', label: 'Ads' },
+  { name: 'adcreatives', label: 'Ad Creatives' },
+  { name: 'adimages', label: 'Ad Images' }
+];
 
 
 exports.DownloadProgress = DownloadProgress;

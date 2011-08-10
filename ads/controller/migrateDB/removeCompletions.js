@@ -22,42 +22,28 @@
 *
 */
 
-var fun = require("../../uki-core/function");
+var fun = require("../../../uki-core/function");
+var utils = require("../../../uki-core/utils");
+var storage = require("../../../storage/storage");
 
-var UserStorage = fun.newClass({
-  init: function(uid, project) {
-    this.uid = uid || '';
-    this.project = project || '';
-    this.storage = global.localStorage;
-  },
+var Completion = storage.newStorage({}).tableName('completion');
 
-  // local storage API
-  setItem: function(key, value) {
-    this.setString(key, JSON.stringify(value));
-  },
+function migrate(uid, newDb, callback) {
+  delete localStorage[uid + ':model:completion:2'];
+  Completion.db(newDb);
+  newDb.transaction(function(tx) {
+    Completion.withTransaction(tx, function() { this.dbDrop(); });
+  }, storage.errorCallback, callback);
+}
 
-  getItem: function(key) {
-    var value = this.getString(key);
-    return value && JSON.parse(value);
-  },
-
-  deleteItem: function(key) {
-    delete this.storage[this._buildKey(key)];
-  },
-
-  // raw string API
-  setString: function(key, value) {
-    this.storage[this._buildKey(key)] = value;
-  },
-
-  getString: function(key) {
-    return this.storage[this._buildKey(key)];
-  },
-
-  _buildKey: function(key) {
-    return [this.uid, this.project, key].join(':');
+function migrateIndexDB(uid, newDb) {
+  delete localStorage[uid + ':model:completion:2'];
+  if (utils.toArray(newDb.objectStoreNames)
+    .indexOf(Completion.objectStoreName()) > -1) {
+    Completion.db(newDb);
+    Completion.dbDrop();
   }
-});
+}
 
-
-exports.UserStorage = UserStorage;
+exports.migrate = migrate;
+exports.migrateIndexDB = migrateIndexDB;

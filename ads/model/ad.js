@@ -27,10 +27,10 @@ var fun   = require("../../uki-core/function"),
 
     storage = require("../../storage/storage"),
     rs = require("../lib/runStatus"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+    pathUtils = require("../../lib/pathUtils"),
 
-    FB            = require("../../storage/lib/connect").FB,
-    storeUtils       = require("../../storage/lib/utils"),
+    FB            = require("../../lib/connect").FB,
+    libUtils       = require("../../lib/utils"),
     Changeable    = require("../lib/model/changeable").Changeable,
     Validatable   = require("../lib/model/validatable").Validatable,
     TabSeparated  = require("../lib/model/tabSeparated").TabSeparated,
@@ -235,8 +235,6 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
 
   adlink: fun.newProp('adlink'),
 
-  demolinks: fun.newProp('demolinks'),
-
   searchFields: function() {
     return [
     'name',
@@ -341,7 +339,7 @@ function fix(store) {
 
 Ad
   .tableName('ad')
-  .resultSetType(require("./ad/resultSet").ResultSet);
+  .resultSetType(require("./ad/resultSet").AdResultSet);
 
 function getSearchIndex() {
   var indexes =  this.searchFields().map(fun.bind(
@@ -360,7 +358,7 @@ Ad.loadFromAccountIds = function(account_ids, callback) {
     callback([], true);
     return;
   }
-  var paths = storeUtils.wrapArray(account_ids).map(
+  var paths = libUtils.wrapArray(account_ids).map(
     function(account_id) {
       return pathUtils.join('act_' + account_id, '/adgroups');
     }

@@ -26,11 +26,11 @@ var fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
 
     storage = require("../../storage/storage"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+    pathUtils = require("../../lib/pathUtils"),
 
     props   = require("../lib/props"),
-    FB = require("../../storage/lib/connect").FB,
-    storeUtils = require("../../storage/lib/utils"),
+    FB = require("../../lib/connect").FB,
+    libUtils = require("../../lib/utils"),
 
     CampStat      = require("./campStat").CampStat,
     Changeable    = require("../lib/model/changeable").Changeable,
@@ -66,8 +66,6 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
     }
     return '';
   },
-
-  line_numbers: fun.newDelegateCall('account', 'line_numbers'),
 
   allowedStatusTransitions: function() {
     if (this.isNew()) {
@@ -762,6 +760,9 @@ fun.delegateProp(Campaign.prototype, [
     'description', 'targets'
 ], 'topline');
 
+fun.delegateCall(Campaign.prototype,
+    ['line_numbers', 'isCorporate'], 'account');
+
 fun.delegateProp(Campaign.prototype, 'line_impressions',
   'topline', 'impressions');
 
@@ -844,7 +845,7 @@ Campaign.loadFromAccountIds = function(account_ids, callback) {
     callback([], true);
     return;
   }
-  var paths = storeUtils.wrapArray(account_ids).map(
+  var paths = libUtils.wrapArray(account_ids).map(
     function(account_id) {
       return pathUtils.join('act_' + account_id, '/adcampaigns');
     }

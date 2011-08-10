@@ -27,10 +27,10 @@ var view  = require("../../uki-core/view"),
     fun   = require("../../uki-core/function"),
     build = require("../../uki-core/builder").build,
 
-    asyncUtils = require("../../storage/lib/async"),
-    FBConnection = require("../../storage/lib/connect").FBConnection,
-    graphlink = require("../../storage/lib/graphlink"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+    asyncUtils = require("../../lib/async"),
+    FBConnection = require("../../lib/connect").FBConnection,
+    graphlink = require("../../lib/graphlink"),
+    pathUtils = require("../../lib/pathUtils"),
 
     App = require("./app").App,
     UploadDialog = require("../view/uploadDialog").UploadDialog,
@@ -186,6 +186,7 @@ function uploadCampsResponse(camp, camps, callback, result) {
     camp.remove(function() {
       graphlink.fetchObject(
         '/' + (result.id || camp.id()),
+        {},
         function(reloadedCampData) {
 
           if (!reloadedCampData) {
@@ -253,7 +254,8 @@ function uploadImages(ads, callback) {
           return;
         }
         // update remote image on the server
-        FB.api('/act_' + image.account_id() + '/adimages',
+        FB.api(
+          pathUtils.join('/act_' + image.account_id(), '/adimages'),
           'POST', {
             bytes: image.url().split(',')[1]
           }, function(result) {
@@ -366,7 +368,7 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
 
     // reload the ad from server after update/create
     var path = '/' + (result.id || ad.id());
-    graphlink.fetchObject(path, function(reloadedAdData) {
+    graphlink.fetchObject(path, {}, function(reloadedAdData) {
 
       if (!reloadedAdData) {
         if (ad.adgroup_status() === 3) {
@@ -382,7 +384,7 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
 
       var reloadedAd = models.Ad.createFromRemote(reloadedAdData);
       var path = '/' + reloadedAd.creative_ids()[0];
-      graphlink.fetchObject(path, function(creative) {
+      graphlink.fetchObject(path, {}, function(creative) {
         delete creative.name;
         ad.remove(function() {
           reloadedAd.muteChanges(true);

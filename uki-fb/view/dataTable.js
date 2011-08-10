@@ -38,6 +38,7 @@ var dom   = require("../../uki-core/dom");
 var view  = require("../../uki-core/view");
 var build = require("../../uki-core/builder").build;
 
+var compare   = require("./dataTable/compare");
 var DataList  = require("./dataList").DataList;
 var Mustache  = require("../../uki-core/mustache").Mustache;
 var Base      = require("../../uki-core/view/base").Base;
@@ -55,7 +56,7 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     if (cols === undefined) {
       return this._list.columns();
     }
-    cols = table.addColumnDefatuls(cols);
+    cols = table.addColumnDefaults(cols);
     this._list.columns(cols);
     this._header.columns(cols);
     return this;
@@ -179,6 +180,7 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
 
     this._header = c.view('header');
     this._header.on('render', fun.bindOnce(this._updateHeaderHeight, this));
+    this.on('sortColumn', fun.bind(this._sortColumn, this));
     this._container = c.view('container');
     this._list = c.view('list');
   },
@@ -199,20 +201,67 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
 
   _resizeColumn: function(e) {
     this._list._updateColumnSize(e.column.index);
+  },
+
+  sortColumn: function(index, direction) {
+    var i = index;
+    if (index == -1) {
+      return;
+    }
+    if (!this.data().length) {
+      return;
+    }
+
+    var dataKey = this.columns()[index].key;
+
+    //the sort function depends on whether the column data is numerical or not
+    var compFn = this.columns()[index].compareFn;
+    var sortFn;
+    if (direction) {
+      sortFn = function(a, b) {
+        var obj1 = a[dataKey]();
+        var obj2 = b[dataKey]();
+        return compFn(obj1, obj2);
+      };
+    } else {
+      sortFn = function(a, b) {
+        var obj1 = a[dataKey]();
+        var obj2 = b[dataKey]();
+        return compFn(obj2, obj1);
+      };
+    }
+    this.data().sort(sortFn);
+    this.list().reset();
+
+    this._header._setSortedColumn(index, direction);
+
+  },
+
+  sortIndex: function() {
+    return this._header._sortInfo.sortIndex;
+  },
+
+  visibleSortIndex: function() {
+    return this.columns()[this.sortIndex()].visibleIndex;
+  },
+
+  sortDirection: function() {
+    return this._header._sortInfo.asc;
   }
 });
 
 fun.delegateProp(DataTable.prototype, [
   'data', 'throttle', 'debounce', 'template', 'formatter', 'key',
   'selection', 'selectedRows', 'selectedRow',
-  'selectedIndexes', 'selectedIndex', 'lastClickIndex', 'multiselect',
-  'editorController', 'selectionController', 'metrics',
+  'selectedIndexes', 'selectedIndex', 'lastClickIndex',
+  'multiselect', 'editorController', 'selectionController', 'metrics',
   'binding', 'bindings', 'editing', 'redrawOnModelChange', 'changeEventFilter'
 ], 'list');
 
 fun.delegateCall(DataTable.prototype, [
   'scrollToIndex', 'triggerSelection', 'redrawIndex', 'redrawRow'
 ], 'list');
+
 
 
 
@@ -227,6 +276,10 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     this.on('draggesturestart', this._ondragStart);
     this.on('draggesture', this._ondrag);
     this.on('draggestureend', this._ondrag);
+    this.on('click', this._onClick);
+
+    this._prevCell = this._sortedCell = null;
+    this._sortInfo = { sortIndex: -1, asc: true };
   },
 
   scrollTo: function(offset) {
@@ -235,10 +288,11 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
 
   _ondragStart: function(e) {
     if (dom.hasClass(e.target, 'ufb-dataTable-resizer')) {
-      e.draggbale = e.target;
+      e.draggable = e.target;
       e.cursor = dom.computedStyle(e.target, null).cursor;
-      var index =
-        e.target.className.match(/ufb-dataTable-resizer_index-(\d+)/)[1];
+      var headerCell = e.target;
+      headerCell = this._getHeaderCell(headerCell);
+      var index = parseInt(headerCell.getAttribute('data-index'), 10);
       this._draggableColumn = index;
       this._initialWidth = this.columns()[index].width;
     } else {
@@ -248,12 +302,67 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
 
   _ondrag: function(e) {
     var width = this._initialWidth + e.dragOffset.x;
-
     this._resizeColumn(this._draggableColumn, width);
     this.trigger({
       type: 'resizeColumn',
       column: this.columns()[this._draggableColumn]
     });
+  },
+
+ //traces back element to the header cell element (if it exists)
+  _getHeaderCell: function(elem) {
+    while (elem) {
+      if (dom.hasClass(elem, 'ufb-dataTable-header-cell')) {
+        return elem;
+      }
+      elem = elem.parentNode;
+    }
+    return null;
+  },
+
+  _onClick: function(e) {
+    // This if statement prevents clicks at column boundaries, which indicate
+    // adjusting column width, from also triggering a sort
+    if (dom.hasClass(e.target, 'ufb-dataTable-resizer')) {
+      return;
+    }
+    var headerCell = e.target;
+    headerCell = this._getHeaderCell(headerCell);
+    if (!headerCell) { return; }
+
+    var index = parseInt(headerCell.getAttribute('data-index'), 10);
+    if (!this.columns()[index].sortable) { return; }
+
+    var direction = (index == this._sortInfo.sortIndex) ?
+                          !(this._sortInfo.asc) : true;
+    this._prevCell = this._sortedCell;
+    this._sortedCell = headerCell;
+
+    if (this._parent) {
+      this._parent.sortColumn(index, direction);
+      this.trigger({ type: 'tableSorted',
+                     index: index,
+                     direction: direction,
+                     visibleIndex: this.columns()[index].visibleIndex,
+                     simulatePropagation: true });
+    } else {
+        this._setSortedColumn(index, direction);
+    }
+  },
+
+  _setSortedColumn: function(index, direction) {
+    var prevAsc = this._sortInfo.asc;
+    this._sortInfo.asc = direction;
+    this._sortInfo.sortIndex = index;
+
+    if (this._prevCell) {
+      dom.toggleClass(this._prevCell,
+        'ufb-dataTable-header-sort-' +
+        (prevAsc ? 'asc' : 'desc'), false);
+    }
+    dom.toggleClass(this._sortedCell,
+      'ufb-dataTable-header-sort-' + (this._sortInfo.asc ? 'asc' : 'desc'),
+      true);
   },
 
   _resizeColumn: function(index, width) {
@@ -276,7 +385,8 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
       style: 'width:' + col.width + 'px',
       className: col.className +
         (col.width != col.maxWidth || col.width != col.minWidth ?
-        ' ufb-dataTable-header-cell_resizable' : '')
+        ' ufb-dataTable-header-cell_resizable' : '') +
+        (col.sortable ? ' ufb-dataTable-header-cell_sortable' : '')
     };
   },
 
@@ -284,6 +394,7 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     this._columns = cols;
     fun.deferOnce(fun.bindOnce(this._render, this));
   }),
+
 
   _render: function() {
     this._dom.innerHTML = Mustache.to_html(
@@ -294,7 +405,28 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
         }).map(this._formatColumn, this),
         style: 'width:' + table.totalWidth(this.columns()) + 'px'
       });
+
+    if (this._sortedCell) {
+      this._sortedCell = this._getHeaderRow().children
+        [this.columns()[this._sortInfo.sortIndex].visibleIndex];
+      this._prevCell = null;
+      this._setSortedColumn(this._sortInfo.sortIndex, this._sortInfo.asc);
+    }
+
     this.trigger({ type: 'render' });
+  },
+
+  _getHeaderRow: function() {
+    var hdrRow = this._dom;
+
+    while (hdrRow) {
+      if (dom.hasClass(hdrRow, 'ufb-dataTable-header-row')) {
+        return hdrRow;
+      }
+      hdrRow = hdrRow.children[0];
+    }
+
+    return null;
   }
 });
 
@@ -313,17 +445,19 @@ var DataTableList = view.newClass('DataTableList', DataList, {
 
   /**
   * {
-  *   key: 'propName',        // optional=index, propName to read from object
-  *   className: 'mycls',     // optional='', className to add to a cell
-  *   width: 200,             // optional=200, default width in px
-  *   minWidth: 100,          // optional=100, minWidth in px
-  *   maxWidth: 300,          // optional=-1, maxWidth in px, -1 for now
-  *                              maxWidth
-  *   visible: true,          // optional=true, should you show the column or
-  *                              not
-  *   label: 'My Label',      // optional='', used by header
-  *   formatter: function(){} // optional, formats value before rendering
-  *                           // (ex: numberFormatter, dateFormatter)
+  *   key: 'propName',         // optional=index, propName to read from object
+  *   className: 'mycls',      // optional='', className to add to a cell
+  *   sortable: false,         // optional=false, determines if cell is sortable
+  *   compareFn: function(){}, // optional, determines how the data gets sorted
+  *   width: 200,              // optional=200, default width in px
+  *   minWidth: 100,           // optional=100, minWidth in px
+  *   maxWidth: 300,           // optional=-1, maxWidth in px, -1 for now
+  *                               maxWidth
+  *   visible: true,           // optional=true, should you show the column or
+  *                               not
+  *   label: 'My Label',       // optional='', used by header
+  *   formatter: function(){}  // optional, formats value before rendering
+  *                            // (ex: numberFormatter, dateFormatter)
   * }
   */
   columns: fun.newProp('columns'),
@@ -353,10 +487,12 @@ var table = {
     }, 0);
   },
 
-  addColumnDefatuls: function(columns) {
+  addColumnDefaults: function(columns) {
     columns = utils.map(columns, function(col, index) {
       col = utils.extend({
         index: index,
+        sortable: false,
+        compareFn: compare.objects,
         width: 200,
         name: '',
         className: '',

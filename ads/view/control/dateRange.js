@@ -28,7 +28,7 @@ var fun   = require("../../../uki-core/function"),
     find  = require("../../../uki-core/selector").find,
     build = require("../../../uki-core/builder").build,
 
-    dateRange = require("../../lib/dateRange"),
+    dateRange = require("../../../lib/dateRange"),
 
     PersistentState = require("../../../uki-fb/persistentState").PersistentState,
 
@@ -79,14 +79,14 @@ var DateRange = view.newClass('ads.control.DateRange',
                 { view: 'MenuItem', text: 'Lifetime', lifetime: true,
                     from: 0, to: 0 },
                 { view: 'MenuItem', text: 'Last 7 Days',
-                    from: getDate(-6), to: getDate(0) },
+                    from: getDate(-7), to: getDate(0) },
                 { view: 'MenuItem', text: 'Yesterday',
-                    from: getDate(-1), to: getDate(-1) },
+                    from: getDate(-1), to: getDate(0) },
                 { view: 'MenuItem', text: 'Today',
-                    from: getDate(0), to: getDate(0) },
+                    from: getDate(0), to: getDate(1) },
                 { view: 'MenuSeparator' },
                 { view: 'MenuItem', text: 'Custom', custom: true,
-                    from: getDate(-6), to: getDate(0) }
+                    from: getDate(-7), to: getDate(0) }
               ] },
 
           { view: 'Text', text: 'from', addClass: 'mhs',

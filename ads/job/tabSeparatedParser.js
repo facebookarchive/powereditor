@@ -26,7 +26,7 @@ var fun = require("../../uki-core/function");
 var utils = require("../../uki-core/utils");
 var Job = require("./base").Job;
 var AdError = require("../lib/error").Error;
-var async = require("../../storage/lib/async");
+var async = require("../../lib/async");
 
 var ESCAPED_CHAR_RE = /"(.)/g;
 var ESCAPED_CHECK_RE = /[\t\n]/;
@@ -45,6 +45,8 @@ var CHUNKER_RE_PASTE =
   /(\t|\n|^)(?:"((?:(?:(?:"")*[^"]*)*)|(?:[^\t\n]*))"|([^\t\n]*))/gi;
 
 function parseTSV(string, excelPaste) {
+  try { // error report
+
   // exit fast
   if (!string) { return []; }
   var re = excelPaste ? CHUNKER_RE_PASTE : CHUNKER_RE;
@@ -69,6 +71,11 @@ function parseTSV(string, excelPaste) {
   result = utils.filter(result, function(s) {
     return s.join('').match(/\S/);
   });
+
+  } catch (e) {
+    require("../../lib/errorReport").handleException(e, 'tsp:pars');
+  }
+
   return result;
 }
 
@@ -128,14 +135,12 @@ var Parser = fun.newClass(Job, {
   _prepare: function() {
     var next = fun.bind(this._parse, this);
 
-    require("../model/connectedObject").ConnectedObject.prepare(function() {
-      require("../model/completion").Completion.prepare(
-        ['cities', 'countries', 'regions', 'zips', 'college_majors',
-        'locales', 'workplaces', 'colleges'], next);
-    });
+    require("../model/connectedObject").ConnectedObject.prepare(next);
   },
 
   _parse: function() {
+    try { // error report
+
     var rows = parseTSV(this.string(), this.excelPaste());
     if (rows.length < 2) {
       this._fail(new NotEnoughRowsError());
@@ -163,6 +168,10 @@ var Parser = fun.newClass(Job, {
     this._createAds(dataRows, function() {
       this._createCamps(dataRows, this._complete);
     });
+
+    } catch (e) {
+      require("../../lib/errorReport").handleException(e, 'tsp:parse');
+    }
   },
 
   _createAds: function(rows, callback) {
@@ -174,19 +183,23 @@ var Parser = fun.newClass(Job, {
     async.forEach(
       rows,
       function(row, index, iteratorCallback) {
-        var ad = new Ad()
-          .muteChanges(true)
-          .account_id(this.account().id());
-        this.ads().push(ad);
+        try {
+          var ad = new Ad()
+            .muteChanges(true)
+            .account_id(this.account().id());
+          this.ads().push(ad);
 
-        ad.fromTabSeparatedMap(
-          row,
-          this.foundAdProps(),
-          function() {
-            ad.muteChanges(false);
-            iteratorCallback();
-          },
-          this.imageLookup() || { data: {}, hashes: {} });
+          ad.fromTabSeparatedMap(
+            row,
+            this.foundAdProps(),
+            function() {
+              ad.muteChanges(false);
+              iteratorCallback();
+            },
+            this.imageLookup() || { data: {}, hashes: {} });
+        } catch (e) {
+          require("../../lib/errorReport").handleException(e, 'tsp:ads');
+        }
       },
       callback,
       this);
@@ -203,15 +216,19 @@ var Parser = fun.newClass(Job, {
     async.forEach(
       rows,
       function(row, index, iteratorCallback) {
-        var camp = new Campaign()
-          .muteChanges(true)
-          .account_id(this.account().id());
-        this.camps().push(camp);
+        try {
+          var camp = new Campaign()
+            .muteChanges(true)
+            .account_id(this.account().id());
+          this.camps().push(camp);
 
-        camp.fromTabSeparatedMap(row, this.foundCampProps(), function() {
-          camp.muteChanges(false);
-          iteratorCallback();
-        });
+          camp.fromTabSeparatedMap(row, this.foundCampProps(), function() {
+            camp.muteChanges(false);
+            iteratorCallback();
+          });
+        } catch (e) {
+          require("../../lib/errorReport").handleException(e, 'tsp:camps');
+        }
       },
       callback,
       this);

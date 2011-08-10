@@ -29,7 +29,7 @@ var fun   = require("../../uki-core/function"),
     build = require("../../uki-core/builder").build,
     find  = require("../../uki-core/selector").find,
     view = require("../../uki-core/view"),
-    formatters     = require("../lib/formatters"),
+    formatters     = require("../../lib/formatters"),
     contractFormatters = require("./contractPane/formatters"),
     CampStat = require("../model/campStat").CampStat,
     Account = require("../model/account").Account,
@@ -143,15 +143,15 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
               addClass: 'contractPane-data', id: 'topline-table',
               pos: 'l:0 t:250px b:0 r:0', debounce: 42,
               multiselect: false, columns: [
-                { label: '#', key: 'line_number', width: 20, maxWidth:
-                  30, minWidth: 10},
+                { label: '#', key: 'line_number', width: 28, maxWidth:
+                  28, minWidth: 28},
                 { label: 'Line ID', key: 'line_id', width: 60, maxWidth: 100,
                   minWidth: 40},
                 { label: 'Flight Start Date', key: 'flight_start_date',
                   width: 100, maxWidth: 120, minWidth: 80,
                   formatter: contractFormatters.date},
-                { label: 'Flight End Date', key: 'flight_end_date', width:
-                  100, maxWidth: 120, minWidth: 80,
+                { label: 'Flight End Date', key: 'flight_end_date',
+                  width: 100, maxWidth: 120, minWidth: 80,
                   formatter: contractFormatters.date},
                 { label: 'Description', key: 'description',
                   width: 150, maxWidth: 200, minWidth: 60},

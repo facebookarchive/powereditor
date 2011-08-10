@@ -32,7 +32,7 @@ var fun   = require("../../uki-core/function"),
     build = require("../../uki-core/builder").build,
     find  = require("../../uki-core/selector").find,
 
-    imageReader = require("../lib/imageReader"),
+    imageReader = require("../../lib/imageReader"),
 
     Mustache = require("../../uki-core/mustache").Mustache,
 

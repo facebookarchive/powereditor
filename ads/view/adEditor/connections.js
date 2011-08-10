@@ -22,15 +22,14 @@
 *
 */
 
-var fun = require("../../../uki-core/function"),
-    view = require("../../../uki-core/view"),
+var fun = require("../../../uki-core/function");
+var view = require("../../../uki-core/view");
 
-    LocalDataSource =
-        require("../../lib/typeahead/LocalDataSource").LocalDataSource,
-    ConnectedObject = require("../../model/connectedObject").ConnectedObject,
-    Completion      = require("../../model/completion").Completion,
-    Base            = require("./base").Base,
-    AdEditorConstants = require("./constants");
+var LocalDataSource =
+  require("../../lib/typeahead/LocalDataSource").LocalDataSource;
+var ConnectedObject = require("../../model/connectedObject").ConnectedObject;
+var Base            = require("./base").Base;
+var AdEditorConstants = require("./constants");
 
 var Connections = view.newClass('ads.adEditor.Connections', Base, {
 

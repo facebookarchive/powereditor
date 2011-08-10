@@ -40,7 +40,7 @@ var dom   = require("../../uki-core/dom"),
     db     = require("../db"),
     models = require("../models"),
 
-    UserStorage = require("../lib/userStorage").UserStorage,
+    UserStorage = require("../../lib/userStorage").UserStorage,
 
     AccountResultWrapper =
         require("../lib/accountResultWrapper").AccountResultWrapper,
@@ -115,8 +115,6 @@ function init(uid) {
 }
 
 function dbInitCallback() {
-  require("./downloadCompletions")
-    .DownloadCompletions.download(initList);
   require("./downloadBCT")
     .DownloadBCT.download(initList);
 }
@@ -140,16 +138,12 @@ function initList(preserveVisState) {
       models.Contract.prepare(function(contracts) {
         models.Topline.prepare(function(toplines) {
           models.Campaign.prepare(function(campaigns) {
-            // same as ConnectedObject
-            models.Completion.prepare(['locales'],
-            function() {
 
-              _buildOrRestoreCampaignList(
-                preserveVisState,
-                accounts, campaigns,
-                contracts, toplines);
+            _buildOrRestoreCampaignList(
+              preserveVisState,
+              accounts, campaigns,
+              contracts, toplines);
 
-            }, true);
           }, true);
         }, true);
       }, true);

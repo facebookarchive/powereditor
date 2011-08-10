@@ -48,20 +48,24 @@ var BidTypeName = fun.newClass(Base, {
   },
 
   setTabSeparated: function(obj, value, callback) {
-    this.setValue(obj, value);
+    obj[this.originalName](this._getNumber(obj, value, 'tabSeparated'));
     callback();
   },
 
   setValue: function(obj, value) {
-    var number = 1;
+    obj[this.originalName](this._getNumber(obj, value, 'text'));
+  },
 
-    value = value.trim().toLowerCase();
-    utils.forEach(bidTypes.options(obj.isCorporate()), function(type) {
-      if (type.tabSeparated == value) {
-        number = type.value;
+  _getNumber: function(obj, value, field) {
+    var options = bidTypes.options(obj.isCorporate());
+    for (var i = 0; i < options.length; ++i) {
+      if (options[i][field] == value) {
+        return options[i].value;
       }
-    });
-    obj[this.originalName](number);
+    }
+
+    // default type is 1
+    return 1;
   }
 });
 

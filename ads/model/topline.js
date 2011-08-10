@@ -28,7 +28,7 @@ var fun   = require("../../uki-core/function"),
     props = require("../lib/props"),
 
     Validatable = require("../lib/model/validatable").Validatable,
-    formatters = require("../lib/formatters"),
+    formatters = require("../../lib/formatters"),
     CampResultSet = require("./campaign/campResultSet").CampResultSet,
     storage = require("../../storage/storage"),
     Converter = require("../lib/budgetImpsConverter").Converter;

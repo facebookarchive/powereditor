@@ -20,47 +20,25 @@
 * DEALINGS IN THE SOFTWARE.
 *
 *
-* Deferred List for callback-basse world
-*
 */
 
-var fun = require("../../uki-core/function"),
-    env = require("../../uki-core/env");
+var fun = require("../../../uki-core/function"),
 
-var DeferredList = fun.newClass({
-    init: function() {
-        this._waiting = { count: 0 };
-        this._complete  = [];
-    },
+    Base = require("../../../uki-fb/view/dataList/selectEditor").SelectEditor;
 
-    complete: function(callback) {
-        if (!this._waiting.count) {
-            callback();
-        } else {
-            this._complete.push(callback);
-        }
-    },
 
-    newWaitHandler: function() {
-        var id = env.guid++;
-        var handler = fun.bind(this.waitHandler, this, id);
-        handler.huid = id;
+var PeriodEditor = fun.newClass(Base, {
 
-        this._waiting[id] = handler;
-        this._waiting.count++;
-        return handler;
-    },
+    typeName: 'app.campPane.PeriodEditor',
 
-    waitHandler: function(id) {
-        this._waiting[id] = null;
-        this._waiting.count--;
-
-        if (!this._waiting.count) {
-            var complete = this._complete;
-            this._complete = [];
-            complete.forEach(function(c) { c && c(); });
-        }
+    edit: function(binding) {
+        this.options([
+          {value: 'l', text: 'Lifetime'},
+          {value: 'd', text: 'Daily'}]);
+        Base.prototype.edit.call(this, binding);
     }
+
 });
 
-exports.DeferredList = DeferredList;
+
+exports.PeriodEditor = PeriodEditor;

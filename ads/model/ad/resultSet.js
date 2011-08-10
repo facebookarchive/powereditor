@@ -24,76 +24,18 @@
 
 var fun   = require("../../../uki-core/function"),
 
-    props   = require("../../lib/props"),
-    addProp = props.add,
-
     AdStat = require("../adStat").AdStat,
-    Base   = require("../../../storage/resultSet").ResultSet;
+    Base   = require("../resultSet").ResultSet;
 
-/**
-* Ad ResultSet, support stat lazy loading
-* @class
-*/
-var ResultSet = fun.newClass(Base, {
+var AdResultSet = fun.newClass(Base, {
 
   init: function() {
     this._stat = [];
     Base.apply(this, arguments);
-  },
-
-  /**
-  * Load stat for a given a given index range
-  *
-  * @param from index
-  * @param to index
-  * @param callback to be called after load
-  */
-  loadRange: function(from, to, callback) {
-    if (!this.statRange()) {
-      callback(this.slice(from, to));
-      return;
-    }
-
-    // search for missing stat rows
-    var missing = [];
-    for (var i = from; i < to && i < this.length; i++) {
-      if (!this._stat[i]) {
-        missing.push(this.item(i).id());
-      }
-      this._stat[i] = true;
-    }
-
-    if (missing.length) {
-      AdStat.findAllBy(
-        'object_id',
-        missing,
-        fun.bind(function(items) {
-
-          var map = {};
-          items.forEach(function(item) {
-            map[item.object_id()] = item;
-          });
-
-          for (i = from; i < to && i < this.length; i++) {
-            this.item(i).stat(map[this.item(i).id()]);
-            this._stat[i] = map[this.item(i).id()] || true;
-          }
-          callback(this.slice(from, to));
-
-        }, this));
-
-    } else {
-      callback(this.slice(from, to));
-    }
-
-  },
-
-  statRange: fun.newProp('statRange', function(v) {
-    this._statRange = v;
-    this._stat = [];
-  })
+    this._statType = AdStat;
+  }
 });
 
 
-exports.ResultSet = ResultSet;
+exports.AdResultSet = AdResultSet;
 

@@ -31,7 +31,6 @@ var DownloadBCT = {
   download: function(callback) {
     var job = new Job();
     var dialog = DownloadBCT.dialog();
-
     job
       .onprogress(function(e) {
         var status = e.status;

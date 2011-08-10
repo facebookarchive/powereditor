@@ -22,36 +22,44 @@
 *
 */
 
-var fun = require("../../../uki-core/function"),
+var fun = require("../../../uki-core/function");
 
-    Base = require("./base").Base;
+var Base = require("./base").Base;
 
 
 var FlatArray = fun.newClass(Base, {
   def: [],
+  delimiter: ',',
 
-  tsFindByName: function(name, obj) {
-    return name;
+  tsFindByName: function(name, obj, callback) {
+    return callback(name);
   },
 
   getTabSeparated: function(obj) {
-    return this.getValue(obj).join(', ');
+    return this.getValue(obj).join(this.delimiter + ' ');
   },
 
   setTabSeparated: function(obj, value, callback) {
     var result = [];
-    value.split(',').forEach(function(name) {
-      name = name.trim();
-      if (!name) {
-        return;
-      }
-      var item = this.tsFindByName(name, obj);
-      if (item) {
-        result.push(item);
-      }
-    }, this);
-    this.setValue(obj, result);
-    callback();
+    require("../../../lib/async").forEach(
+      value.split(this.delimiter),
+      function(name, _, iteratorCallback) {
+        name = name.trim();
+        if (!name) {
+          iteratorCallback();
+          return;
+        }
+
+        this.tsFindByName(name, obj, function(item) {
+          if (item) { result.push(item); }
+          iteratorCallback();
+        });
+      },
+      function() {
+        this.setValue(obj, result);
+        callback();
+      },
+      this);
   },
 
   compare: function(a, b) {

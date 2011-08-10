@@ -87,7 +87,7 @@ var Importer = fun.newClass(Job, {
       .mapById(mapById)
       .mapByName(mapByName);
 
-    require("../../storage/lib/async").forEach(
+    require("../../lib/async").forEach(
       this.camps(),
       this._routeCamp,
       this._importAds,
@@ -150,6 +150,7 @@ var Importer = fun.newClass(Job, {
    * better readability and consistence with ads.
    */
   _routeCamp: function(newCamp, index, callback) {
+    try {
     var mapById = this.mapById();
     var mapByName = this.mapByName();
     var name = (newCamp.name() || '').toLowerCase();
@@ -172,6 +173,9 @@ var Importer = fun.newClass(Job, {
       this._createCamp(newCamp, callback);
 
     }
+    } catch (e) {
+      require("../../lib/errorReport").handleException(e, 'ci:route');
+    }
   },
 
   _failCamp: function(error) {
@@ -181,28 +185,34 @@ var Importer = fun.newClass(Job, {
   },
 
   _updateCamp: function(existingCamp, newCamp, callback) {
-    this.results().push({ action: 'update', id: existingCamp.id() });
+    try {
+      this.results().push({ action: 'update', id: existingCamp.id() });
 
-    var updated = false;
-    // remove camp from the name map in case we update the name
-    delete this.mapByName()[existingCamp.name().toLowerCase()];
+      var updated = false;
+      // remove camp from the name map in case we update the name
+      delete this.mapByName()[existingCamp.name().toLowerCase()];
 
-    this.propsToCopy().forEach(function(found) {
-      if (['id', 'account_id'].indexOf(found) !== -1) { return; }
-      updated = true;
-      existingCamp[found](newCamp[found]());
-    });
+      this.propsToCopy().forEach(function(found) {
+        if (['id', 'account_id'].indexOf(found) !== -1) { return; }
+        updated = true;
+        existingCamp[found](newCamp[found]());
+      });
 
-    this.mapByName()[existingCamp.name().toLowerCase()] = existingCamp;
+      this.mapByName()[existingCamp.name().toLowerCase()] = existingCamp;
 
-    if (updated) {
-      existingCamp.store(callback);
-    } else {
-      callback();
+      if (updated) {
+        existingCamp.store(callback);
+      } else {
+        callback();
+      }
+    } catch (e) {
+      require("../../lib/errorReport").handleException(e, 'ci:update');
     }
   },
 
   _createCamp: function(newCamp, callback) {
+    try {
+
     // enforce parent
     newCamp
       .id(- new Date() - (env.guid++))
@@ -226,6 +236,10 @@ var Importer = fun.newClass(Job, {
     newCamp.validateAll();
 
     newCamp.store(callback);
+
+    } catch (e) {
+      require("../../lib/errorReport").handleException(e, 'ci:create');
+    }
   }
 
 });

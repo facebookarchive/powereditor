@@ -133,6 +133,36 @@
   line-height: 14px;
 }
 
+.ufb-dataTable-header-sort-asc .ufb-dataTable-header-text {
+  padding: 2px 11px 2px 0px;
+}
+
+.ufb-dataTable-header-sort-desc .ufb-dataTable-header-text {
+  padding: 2px 11px 2px 0px;
+}
+
+.ufb-dataTable-header-cell_sortable .ufb-dataTable-header-sort {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40%;
+  background-position: right top;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  height: 6px;
+  width: 9px;
+}
+
+.ufb-dataTable-header-sort-asc .ufb-dataTable-header-sort {
+  background-image: url(./column-up.png);
+  display: block;
+}
+
+.ufb-dataTable-header-sort-desc .ufb-dataTable-header-sort {
+  background-image: url(./column-down.png);
+  display: block;
+}
+
 .ufb-dataTable-resizer {
   display: none;
   overflow: hidden;

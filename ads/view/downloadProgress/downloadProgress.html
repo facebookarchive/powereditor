@@ -1,36 +1,10 @@
 <table class="downloadProgress">
+  {{#progress}}
+    {{#show}}
     <tr>
-        <td class="label">Accounts:</td>
-        <td class="value{{#accounts_complete}} complete{{/accounts_complete}}">{{accounts}}</td>
+      <td class="label">{{label}}:</td>
+      <td class="value {{#iscomplete}}complete{{/iscomplete}}">{{loaded}}</td>
     </tr>
-    {{#HAS_CORP_ACT}}
-    <tr>
-        <td class="label">Contracts:</td>
-        <td class="value{{#contracts_complete}} complete{{/contracts_complete}}">{{contracts}}</td>
-    </tr>
-    <tr>
-        <td class="label">Toplines:</td>
-        <td class="value{{#toplines_complete}} complete{{/toplines_complete}}">{{toplines}} <span class="extra">({{contracts_with_toplines}}/{{contracts}})</span></td>
-    </tr>
-    {{/HAS_CORP_ACT}}
-    <tr>
-      <td class="label">Campaigns:</td>
-     <td class="value{{#campaigns_complete}} complete{{/campaigns_complete}}">
-				{{campaigns}}
-			</td>
-    </tr>
-    <tr>
-        <td class="label">Ads:</td>
-        <td class="value{{#ads_complete}} complete{{/ads_complete}}">{{ads}}
-				</td>
-    </tr>
-		<tr>
-      <td class="label">Ads Creatives:</td>
-      <td class="value{{#adcreatives_complete}} complete{{/adcreatives_complete}}">{{adcreatives}}
-			</td>
-    </tr>
-    <tr>
-        <td class="label">Objects:</td>
-        <td class="value{{#objects_complete}} complete{{/objects_complete}}">{{objects_text}}</td>
-    </tr>
+    {{/show}}
+  {{/progress}}
 </table>

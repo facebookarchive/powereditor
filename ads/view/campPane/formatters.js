@@ -22,8 +22,8 @@
 *
 */
 
-var formatters = require("../../lib/formatters");
-var dateRange  = require("../../lib/dateRange");
+var formatters = require("../../../lib/formatters");
+var dateRange  = require("../../../lib/dateRange");
 var dom = require("../../../uki-core/dom");
 
 
@@ -59,10 +59,8 @@ function startDate(d) {
 }
 
 function endDate(date) {
-    if (date) {
-      if (!date || date.getTime() < 2) { return 'Ongoing'; }
-      return startDate(date);
-    }
+  if (!date || date.getTime() < 2) { return 'Ongoing'; }
+  return startDate(date);
 }
 
 var money = formatters.createMoneyFormatter;

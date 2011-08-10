@@ -40,7 +40,7 @@ var ReachEstimate = view.newClass('ads.ReachEstimate', Container, {
         addClass: 'reachEstimate-number' }
     ]).appendTo(this);
 
-    this._formatter = require("../lib/formatters").createNumberFormatter(0);
+    this._formatter = require("../../lib/formatters").createNumberFormatter(0);
   },
 
   loading: view.newToggleClassProp('reachEstimate-loading'),

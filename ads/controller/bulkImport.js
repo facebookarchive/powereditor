@@ -31,13 +31,13 @@ var utils = require("../../uki-core/utils"),
     BulkImportDialog = require("../view/bulkImportDialog").BulkImportDialog,
     LogDialog = require("../view/logDialog").LogDialog,
 
-    imageReader  = require("../lib/imageReader"),
+    imageReader  = require("../../lib/imageReader"),
     models       = require("../models"),
 
     ParserJob = require("../job/tabSeparatedParser").Parser,
     CampImporterJob = require("../job/campImporter").Importer,
 
-    DeferredList = require("../lib/deferredList").DeferredList,
+    DeferredList = require("../../lib/deferredList").DeferredList,
     App          = require("./app").App,
     Mutator      = require("./mutator").Mutator;
 
@@ -182,6 +182,8 @@ function initErrors() {
 }
 
 BulkImport.importInto = function(account, text, imageLookup) {
+  require("../lib/completions").dialog = BulkImport.progressDialog();
+
   var parser = new ParserJob(account, text, imageLookup);
 
   parser.oncomplete(function() {

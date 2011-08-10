@@ -22,218 +22,182 @@
 *
 */
 
-var fun = require("../../../uki-core/function"),
-    dom = require("../../../uki-core/dom"),
-    view = require("../../../uki-core/view"),
+var fun = require("../../../uki-core/function");
+var dom = require("../../../uki-core/dom");
+var view = require("../../../uki-core/view");
 
-    controls = require("../controls"),
+var controls = require("../controls");
 
-    LocalDataSource =
-        require("../../lib/typeahead/LocalDataSource").LocalDataSource,
-    Completion        = require("../../model/completion").Completion,
-    Base              = require("./base").Base,
-    AdEditorConstants = require("./constants");
+var LocalDataSource =
+  require("../../lib/typeahead/LocalDataSource").LocalDataSource;
+var GraphAPIDataSource =
+  require("../../lib/typeahead/GraphAPIDataSource").GraphAPIDataSource;
+
+var Base              = require("./base").Base;
+var AdEditorConstants = require("./constants");
+
 
 var LocDem = view.newClass('ads.adEditor.LocDem', Base, {
 
-    _template: requireText('locDem/locDem.html'),
+  _template: requireText('locDem/locDem.html'),
 
-    _setupBindings: function(m) {
-        ['countries', 'regions', 'cities', 'zips'].forEach(function(prop) {
-            this.child(prop).binding({ model: m, modelProp: prop });
-        }, this);
-        var countries = this.model().countries(),
-            newData = countries && countries.length && countries[0] || '';
-        this.child('cities').data().queryData(newData);
-        this.child('regions').data().queryData(newData);
+  _setupBindings: function(m) {
+    ['countries', 'regions', 'cities', 'zips'].forEach(function(prop) {
+      this.child(prop).binding({ model: m, modelProp: prop });
+    }, this);
 
-        this.child('age').binding({ model: m, modelPrefix: 'age_' });
-        this.child('exact_age').binding({
-            model: m,
-            modelProp: 'exact_age',
-            modelEvent: 'change.broad_age'
-        });
+    var countries = this.model().countries();
+    var newData = countries && countries.length && countries[0] || '';
 
-        this.child('radius')
-            .binding({
-                model: m,
-                modelProp: 'use_radius',
-                modelEvent: 'change.radius'
-            })
-            .selectBinding({ model: m, modelProp: 'radius' });
+    this.child('cities').data().queryData(newData);
+    this.child('regions').data().queryData(newData);
 
-        this.child('sex').binding({ model: m, modelProp: 'sex' });
-        this.child('loc').binding({ model: m, modelProp: 'loc_targeting' });
-    },
+    this.child('age').binding({ model: m, modelPrefix: 'age_' });
+    this.child('exact_age').binding(
+      { model: m, modelProp: 'exact_age', modelEvent: 'change.broad_age' });
 
-    _prepare: function(callback) {
-        Completion.prepare(['countries', 'regions'], callback);
-        Completion.prepare(['cities'], fun.bind(this._regionChange, this));
-    },
+    this.child('radius')
+      .binding(
+        { model: m, modelProp: 'use_radius', modelEvent: 'change.radius' })
+      .selectBinding({ model: m, modelProp: 'radius' });
 
-    _lockedModelChange: function(e) {
-        if (!e || e.name === 'countries' || e.name === 'loc_targeting') {
-            this._regionChange();
-        }
-    },
+    this.child('sex').binding({ model: m, modelProp: 'sex' });
+    this.child('loc').binding({ model: m, modelProp: 'loc_targeting' });
+  },
 
-    _regionChange: function() {
-        var countries = this.model().countries(),
-            hasRegions = countries.length === 1 &&
-              Completion.hasRegionsFor(countries[0]),
-            hasCities = countries.length === 1 &&
-              Completion.hasCitiesFor(countries[0]);
-            hasZips = countries.length === 1 &&
-              AdEditorConstants.SHOW_ZIP_TARGETING &&
-              countries[0] === 'US';
-
-        this.child('loc').visible(hasRegions || hasCities || hasZips);
-
-        this.child('loc-regions').visible(hasRegions);
-        this.child('loc-cities').visible(hasCities);
-        this.child('loc-zips').visible(hasZips);
-
-        this.child('regions').visible(hasRegions &&
-            this.model().loc_targeting() == 'regions');
-        this.child('cities').visible(hasCities &&
-            this.model().loc_targeting() == 'cities');
-        this.child('radius').visible(hasCities &&
-            this.model().loc_targeting() == 'cities');
-        this.child('zips').visible(hasZips &&
-            this.model().loc_targeting() == 'zips');
-
-        this.child('cities').data().queryEndpoint({
-          search: Completion.createSearcher('cities', countries[0])
-        });
-        this.child('regions').data().queryEndpoint({
-          search: Completion.createSearcher('regions', countries[0])
-        });
-    },
-
-    _createDom: function(initArgs) {
-        Base.prototype._createDom.call(this, initArgs);
-        this.addClass('adEditor-locDem');
-        this.content({
-            location_label: 'Country',
-            location: { view: 'List', horizontal: false,
-                spacing: 'none', childViews: [
-                { view: 'Tokenizer', inline: true, id: 'locDem-countries',
-                    addClass: 'textField',
-                    placeholder: 'Enter a country', childName: 'countries',
-                    value2info: function(id) {
-                      if (Completion.cached('countries')) {
-                        var row = Completion.cached('countries').searchById(id);
-                        return { text: row.value, id: row.id };
-                      } else {
-                        return { text: id, value: id };
-                      }
-                    },
-                    data: (new LocalDataSource())
-                        .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                        .queryEndpoint({
-                          search: Completion.createSearcher('countries')
-                        })
-                },
-                { view: controls.RadioGroup, horizontal: false,
-                    spacing: 'none', childName: 'loc',
-                    childViews: [
-                        { view: 'Radio', name: 'locDem-loc',
-                          childName: 'loc-countries',
-                          text: 'Everywhere', value: 'countries' },
-                        { view: 'Radio', name: 'locDem-loc',
-                          childName: 'loc-regions',
-                          text: 'By State/Province', value: 'regions' },
-                        { view: 'Radio', name: 'locDem-loc',
-                          childName: 'loc-cities',
-                          text: 'By City', value: 'cities' },
-                        { view: 'Radio', name: 'locDem-loc',
-                          childName: 'loc-zips',
-                          text: 'By Zip Code', value: 'zips' }
-                ]},
-                { view: 'Tokenizer', inline: true, id: 'locDem-regions',
-                    addClass: 'textField mts',
-                    placeholder: 'Enter a state/province',
-                    childName: 'regions',
-                    value2info: function(v) {
-                        return { id: v.id, text: v.name };
-                    },
-                    info2value: function(i) {
-                        return { id: i.id, name: i.text };
-                    },
-                    data: (new LocalDataSource())
-                        .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                },
-                { view: 'Tokenizer', inline: true, id: 'locDem-cities',
-                    addClass: 'textField mts',
-                    placeholder: 'Enter a city', childName: 'cities',
-                    renderer: citiesRenderer,
-                    value2info: function(v) {
-                        return { id: v.id, text: v.name };
-                    },
-                    info2value: function(i) {
-                        return { id: i.id, name: i.text };
-                    },
-                    data: (new LocalDataSource())
-                        .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                },
-                { view: 'Tokenizer', inline: true, id: 'locDem-zips',
-                    freeform: true,
-                    addClass: 'textField mts',
-                    placeholder: 'Enter a zip code',
-                    childName: 'zips',
-                    value2info: function(v) {
-                      return { id: v, text: v };
-                    },
-                    info2value: function(i) {
-                      return i.id;
-                    },
-                    data: (new LocalDataSource())
-                        .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                },
-                { view: controls.Radius, childName: 'radius' }
-            ]},
-
-            age_label: 'Age',
-            age: { view: 'List', horizontal: false, spacing: 'none',
-                childViews: [
-                    { view: controls.Age, childName: 'age',
-                      name: 'locDem-age' },
-                    { view: 'Checkbox',
-                      text: 'Require exact age match',
-                      childName: 'exact_age' }
-                ]
-            },
-
-            sex_label: 'Sex',
-            sex: { view: controls.Sex, name: 'locDem-sex', childName: 'sex' }
-        });
-
-        this._indexChildViews();
+  _lockedModelChange: function(e) {
+    if (!e || e.name === 'countries' || e.name === 'loc_targeting') {
+      if (e) {
+        this.model().cities([]).regions([]);
+      }
+      this._regionChange();
     }
+  },
+
+  _regionChange: function() {
+    var countries = this.model().countries();
+    var hasRegions = countries.length === 1 &&
+      require("../../lib/countries").hasRegions(countries[0]);
+    var hasCities = countries.length === 1 &&
+      require("../../lib/countries").hasCities(countries[0]);
+    var hasZips = countries.length === 1 &&
+      AdEditorConstants.SHOW_ZIP_TARGETING &&
+      countries[0] === 'US';
+
+
+    this.child('loc').visible(hasRegions || hasCities || hasZips);
+
+    this.child('loc-regions').visible(hasRegions);
+    this.child('loc-cities').visible(hasCities);
+    this.child('loc-zips').visible(hasZips);
+
+    this.child('regions').visible(
+      hasRegions && this.model().loc_targeting() == 'regions');
+
+    this.child('cities').visible(
+      hasCities && this.model().loc_targeting() == 'cities');
+
+    this.child('radius').visible(
+      hasCities && this.model().loc_targeting() == 'cities');
+
+    this.child('zips').visible(
+      hasZips && this.model().loc_targeting() == 'zips');
+
+    this.child('cities').data().queryData(
+      { type: 'adcity',
+        country_list: countries[0] && countries[0].toLowerCase() });
+    this.child('regions').data().queryData(
+      { type: 'adregion',
+        country_list: countries[0] && countries[0].toLowerCase() });
+  },
+
+  _createDom: function(initArgs) {
+    Base.prototype._createDom.call(this, initArgs);
+    this.addClass('adEditor-locDem');
+    this.content({
+      location_label: 'Country',
+      location:
+        { view: 'List', horizontal: false,
+          spacing: 'none', childViews: [
+
+            { view: 'Tokenizer', inline: true, id: 'locDem-countries',
+              addClass: 'textField',
+              placeholder: 'Enter a country', childName: 'countries',
+              value2info: function(id) {
+                var text = require("../../lib/countries").countries[id];
+                return { text: text, id: id };
+              },
+              data: (new LocalDataSource())
+                .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
+                .queryEndpoint(
+                  { search: require("../../lib/completions").searchCountries })},
+
+            { view: controls.RadioGroup, horizontal: false,
+              spacing: 'none', childName: 'loc',
+              childViews: [
+                { view: 'Radio', name: 'locDem-loc',
+                  childName: 'loc-countries',
+                  text: 'Everywhere', value: 'countries' },
+                { view: 'Radio', name: 'locDem-loc',
+                  childName: 'loc-regions',
+                  text: 'By State/Province', value: 'regions' },
+                { view: 'Radio', name: 'locDem-loc',
+                  childName: 'loc-cities',
+                  text: 'By City', value: 'cities' },
+                { view: 'Radio', name: 'locDem-loc',
+                  childName: 'loc-zips',
+                  text: 'By Zip Code', value: 'zips' }]},
+
+            { view: 'Tokenizer', inline: true, id: 'locDem-regions',
+              addClass: 'textField mts',
+              placeholder: 'Enter a state/province',
+              childName: 'regions',
+              value2info: function(v) { return { id: v.id, text: v.name }; },
+              info2value: function(i) { return { id: i.id, name: i.text }; },
+              data: (new GraphAPIDataSource())
+                .queryEndpoint('search')
+                .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT) },
+
+            { view: 'Tokenizer', inline: true, id: 'locDem-cities',
+              addClass: 'textField mts',
+              placeholder: 'Enter a city', childName: 'cities',
+              // renderer: citiesRenderer,
+              value2info: function(v) { return { id: v.id, text: v.name }; },
+              info2value: function(i) { return { id: i.id, name: i.text }; },
+              data: (new GraphAPIDataSource())
+                .queryEndpoint('search')
+                .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT) },
+
+            { view: 'Tokenizer', inline: true, id: 'locDem-zips',
+              freeform: true,
+              addClass: 'textField mts',
+              placeholder: 'Enter a zip code',
+              childName: 'zips',
+              value2info: function(v) { return { id: v, text: v }; },
+              info2value: function(i) { return i.id; },
+              data: (new LocalDataSource())
+                .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)},
+
+            { view: controls.Radius, childName: 'radius' }
+        ]},
+
+        age_label: 'Age',
+        age:
+          { view: 'List', horizontal: false, spacing: 'none',
+            childViews: [
+              { view: controls.Age, childName: 'age',
+                name: 'locDem-age' },
+              { view: 'Checkbox',
+                text: 'Require exact age match',
+                childName: 'exact_age' }]},
+
+        sex_label: 'Sex',
+        sex: { view: controls.Sex, name: 'locDem-sex', childName: 'sex' }
+    });
+
+    this._indexChildViews();
+  }
 });
-
-
-function citiesRenderer(data, index) {
-    var text = dom.escapeHTML(data.name),
-    subtext = data.region,
-    icon = data.icon,
-    className = '';
-
-    if (data.type) {
-        className = ' class="' + data.type + '"';
-    }
-
-    return [
-        '<li', className, '>',
-            (icon ? '<img src="'  + icon + '" alt=""/>' : ''),
-            (text ? '<span class="text">' +
-                text +
-                (subtext ? '<span class="locDem-regionSubtext">' +
-                    dom.escapeHTML(subtext) + '</span>' : '') +
-            '</span>' : ''),
-        '</li>'
-    ];
-};
 
 
 exports.LocDem = LocDem;

@@ -37,6 +37,5 @@ exports.CampGroup       = require("./model/campaign/group").Group;
 exports.CampStat        = require("./model/campStat").CampStat;
 exports.ConnectedObject = require("./model/connectedObject").ConnectedObject;
 exports.Group           = require("./model/group").Group;
-exports.Completion      = require("./model/completion").Completion;
 exports.BCT             = require("./model/bct").BCT;
 exports.AdCreative      = require("./model/adCreative").AdCreative;

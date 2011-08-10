@@ -27,7 +27,7 @@ var fun       = require("../../uki-core/function"),
 
     props     = require("../lib/props"),
     storage   = require("../../storage/storage"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+    pathUtils = require("../../lib/pathUtils"),
 
     BaseStat  = require("./baseStat").BaseStat;
 

@@ -28,7 +28,7 @@ var fun   = require("../../../uki-core/function"),
     props   = require("../../lib/props"),
 
     AdStat          = require("../adStat").AdStat,
-    formatters      = require("../../lib/formatters");
+    formatters      = require("../../../lib/formatters");
 
 function addProps(Ad) {
   Ad.defaultPropType(props.Base);
@@ -144,6 +144,12 @@ function addProps(Ad) {
       var acc = obj.account();
       return acc && acc.isCorporate();
     }
+  });
+
+  Ad.addProp({
+    name: 'destination',
+    remote: true,
+    db: true
   });
 
   Ad.addProp({
@@ -545,12 +551,16 @@ function addProps(Ad) {
     trackChanges: true,
     humanName: 'Countries',
     tabSeparated: ['Countries', 'Country'],
-    tsFindByName: function(string) {
-      var completion =
-        require("../completion").Completion.cached('countries');
-      var item = completion.searchById((string + '').toUpperCase());
-
-      return item && item.id;
+    tsFindByName: function(string, obj, callback) {
+      var code = (string + '').toUpperCase();
+      if (require("../../lib/countries").countries[code]) {
+        callback(code);
+        return;
+      }
+      require("../../lib/completions")
+        .findBest('country', string + '', function(item) {
+          callback(item && item.id);
+        });
     },
     validate: function(obj) {
       obj.toggleError(
@@ -571,12 +581,14 @@ function addProps(Ad) {
     humanName: 'Cities',
     tabSeparated: ['Cities', 'City'],
     delimiter: ';',
-    tsFindByName: function(string, obj) {
-      var completion =
-        require("../completion").Completion.cached('cities');
-      var item = completion.bestMatch(string, obj.countries()[0]);
-
-      return item && { id: item.id, name: item.getFullName() };
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest(
+          'city',
+          { query: string + '', country: obj.countries()[0] || '' },
+          function(item) {
+            callback(item && { id: item.key, name: item.name });
+          });
     },
     getTabSeparated: function(obj) {
       return utils.pluck(this.getValue(obj), 'name')
@@ -593,11 +605,14 @@ function addProps(Ad) {
     trackChanges: true,
     humanName: 'Regions',
     tabSeparated: ['Regions', 'State'],
-    tsFindByName: function(string, obj) {
-      var completion = require("../completion").Completion
-        .cached('regions');
-      var item = completion.bestMatch(string, obj.countries()[0]);
-      return item && { id: item.id, name: item.value };
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest(
+          'region',
+          { query: string + '', country: obj.countries()[0] || '' },
+          function(item) {
+            callback(item && { id: item.key, name: item.name });
+          });
     },
     targeting: true
   });
@@ -609,7 +624,7 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     humanName: 'Zip Codes',
-    tabSeparated: ['Zips', 'Zip Codes'],
+    tabSeparated: ['Zip', 'Zip Code'],
     targeting: true
   });
 
@@ -710,11 +725,11 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     tabSeparated: ['Education Networks', 'College'],
-    tsFindByName: function(string, obj) {
-      var completion = require("../completion").Completion
-        .cached('colleges');
-      var item = completion.bestMatch(string);
-      return item && { id: item.id, name: item.value };
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest('college', string + '', function(item) {
+          callback(item && { id: item.key, name: item.name });
+        });
     },
     targeting: true
   });
@@ -726,11 +741,11 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     tabSeparated: ['Education Majors', 'Major'],
-    tsFindByName: function(string) {
-      var completion = require("../completion").Completion
-        .cached('college_majors');
-      var item = completion.bestMatch(string);
-      return item && item.value;
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest('collegemajor', string + '', function(item) {
+          callback(item && item.name);
+        });
     },
     targeting: true
   });
@@ -742,11 +757,11 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     tabSeparated: ['Workplaces', 'Company'],
-    tsFindByName: function(string, obj) {
-      var completion = require("../completion").Completion
-        .cached('workplaces');
-      var item = completion.bestMatch(string);
-      return item && { id: item.id, name: item.value };
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest('workplace', string + '', function(item) {
+          callback(item && { id: item.key, name: item.name });
+        });
     },
     targeting: true
   });
@@ -900,17 +915,16 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     tabSeparated: ['Locales', 'Language'],
-    tsFindByName: function(string) {
-      var completion =
-        require("../completion").Completion.cached('locales');
-      var item = completion.bestMatch(string);
-
-      return item && item.id;
+    tsFindByName: function(string, obj, callback) {
+      require("../../lib/completions")
+        .findBest('locale', string + '', function(item) {
+          callback(item && item.id);
+        });
     },
     getTabSeparated: function(obj) {
-      var Completion = require("../completion").Completion;
       return this.getValue(obj).map(function(id) {
-        return Completion.cached('locales').searchById(id).value;
+        var text = require("../../lib/locales").locales[id];
+        return text;
       }).join(', ');
     },
     targeting: true
@@ -923,8 +937,8 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     tabSeparated: ['Likes and Interests', 'Keywords'],
-    tsFindByName: function(string) {
-      return string.trim();
+    tsFindByName: function(string, obj, callback) {
+      callback(string.trim());
     },
     targeting: true
   });

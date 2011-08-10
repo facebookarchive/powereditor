@@ -198,7 +198,7 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
         ]});
       this._indexChildViews();
 
-      this._formatter = require("../../lib/formatters").createNumberFormatter(2);
+      this._formatter = require("../../../lib/formatters").createNumberFormatter(2);
     }
 });
 

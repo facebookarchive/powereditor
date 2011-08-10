@@ -22,29 +22,24 @@
 *
 */
 
-var fun   = require("../../../uki-core/function"),
-    utils = require("../../../uki-core/utils"),
-    dom   = require("../../../uki-core/dom"),
-    view  = require("../../../uki-core/view"),
-    find  = require("../../../uki-core/selector").find,
+var fun   = require("../../../uki-core/function");
+var utils = require("../../../uki-core/utils");
+var dom   = require("../../../uki-core/dom");
+var view  = require("../../../uki-core/view");
+var find  = require("../../../uki-core/selector").find;
 
-    HTMLLayout = require("../../../uki-fb/view/HTMLLayout").HTMLLayout,
-    Binding    = require("../../../uki-fb/binding").Binding,
+var HTMLLayout = require("../../../uki-fb/view/HTMLLayout").HTMLLayout;
+var Binding    = require("../../../uki-fb/binding").Binding;
 
-    LocalDataSource =
-        require("../../lib/typeahead/LocalDataSource").LocalDataSource,
-    Completion        = require("../../model/completion").Completion,
-    Base              = require("./base").Base,
-    AdEditorConstants = require("./constants");
+var GraphAPIDataSource =
+  require("../../lib/typeahead/GraphAPIDataSource").GraphAPIDataSource;
+var Base              = require("./base").Base;
+var AdEditorConstants = require("./constants");
 
 
 var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
 
     _template: requireText('DSTargeting/DSTargeting.html'),
-
-    _prepare: function(callback) {
-      Completion.prepare(['user_clusters'], callback);
-    },
 
     _setupBindings: function(m) {
         ['user_clusters', 'user_clusters2', 'user_clusters3',
@@ -76,11 +71,10 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         placeholder: 'Enter user clusters',
                         childName: 'user_clusters',
                         value2info: value2info, info2value: info2value,
-                        data: (new LocalDataSource())
-                            .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                            .queryEndpoint({
-                              search: Completion.createSearcher('user_clusters')
-                            })
+                        data: (new GraphAPIDataSource())
+                          .queryEndpoint('search')
+                          .queryData({ type: 'adusercluster' })
+                          .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
                 },
                 {
@@ -92,11 +86,10 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         placeholder: 'Enter user clusters',
                         childName: 'user_clusters2',
                         value2info: value2info, info2value: info2value,
-                        data: (new LocalDataSource())
-                            .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                            .queryEndpoint({
-                              search: Completion.createSearcher('user_clusters')
-                            })
+                        data: (new GraphAPIDataSource())
+                          .queryEndpoint('search')
+                          .queryData({ type: 'adusercluster' })
+                          .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
                 },
                 {
@@ -108,11 +101,10 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         placeholder: 'Enter user clusters',
                         childName: 'user_clusters3',
                         value2info: value2info, info2value: info2value,
-                        data: (new LocalDataSource())
-                            .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                            .queryEndpoint({
-                              search: Completion.createSearcher('user_clusters')
-                            })
+                        data: (new GraphAPIDataSource())
+                          .queryEndpoint('search')
+                          .queryData({ type: 'adusercluster' })
+                          .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
                 },
                 {
@@ -124,11 +116,10 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         placeholder: 'Enter user clusters',
                         childName: 'excluded_user_clusters',
                         value2info: value2info, info2value: info2value,
-                        data: (new LocalDataSource())
-                            .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
-                            .queryEndpoint({
-                              search: Completion.createSearcher('user_clusters')
-                            })
+                        data: (new GraphAPIDataSource())
+                          .queryEndpoint('search')
+                          .queryData({ type: 'adusercluster' })
+                          .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
                 },
                 {

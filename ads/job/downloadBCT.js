@@ -29,7 +29,7 @@ var BCT = require("../model/bct").BCT;
 var Job = require("./base").Job;
 
 var REFRESH_TIMEOUT = 86400 * 7; // once per week
-var CACHE_KEY = 'model:bct:0';
+var CACHE_KEY = 'model:bct:1';
 
 var DownloadBCT = fun.newClass(Job, {
   userStorage: fun.newProp('userStorage'),
@@ -56,15 +56,20 @@ var DownloadBCT = fun.newClass(Job, {
         if (accounts.length > 0) {
           var first_account = accounts[0];
           var account_id = first_account.id();
-          var user_id = first_account.user_perm_map()[0].uid;
+          var user_id = require("../controller/app").App.userStorage().uid;
           BCT.loadFromRESTAPI(
             { account_id: account_id, user_id: user_id},
             fun.bind(function() {
             stored = { time: t };
             this.userStorage().setItem(CACHE_KEY, stored);
+            this._complete();
           }, this));
+        } else {
+          this._complete();
         }
       }, this));
+    } else {
+      this._complete();
     }
   }
 });

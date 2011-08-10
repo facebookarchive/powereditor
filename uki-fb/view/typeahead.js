@@ -169,12 +169,10 @@ proto.domForEvent = function(name) {
 
 proto._initEvents = function() {
   this._view.addListener('highligh', fun.bind(function(e) {
-    this.trigger(e);
     this._input.focus();
   }, this));
   this._view.addListener('select', fun.bind(function(e) {
     this.select();
-    this.trigger(e);
   }, this));
 
   this.on('blur', this._blur);

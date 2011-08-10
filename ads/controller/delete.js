@@ -27,7 +27,7 @@ var view   = require("../../uki-core/view"),
     env    = require("../../uki-core/env"),
     evt    = require("../../uki-core/event"),
 
-    DeferredList = require("../lib/deferredList").DeferredList;
+    DeferredList = require("../../lib/deferredList").DeferredList;
 
 
 

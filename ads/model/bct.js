@@ -30,7 +30,7 @@ var fun   = require("../../uki-core/function"),
   props = require("../lib/props"),
   ResultSet  = require("../../storage/resultSet").ResultSet,
   Util = require("../../uki-fb/view/typeahead/util").Util,
-  FB = require("../../storage/lib/connect").FB;
+  FB = require("../../lib/connect").FB;
 
 /**
  * BCT
@@ -75,9 +75,6 @@ BCT.loadFromRESTAPI = function(options, callback) {
       utils.forEach(data, function(raw, key) {
         var item = BCT.newInstance(raw.id);
         items.push(item.fromRemoteObject(raw));
-
-        var index = BCT.newInstance(raw.id + "_index");
-        items.push(item);
       });
       this.storeMulti(items, callback);
     }, this)

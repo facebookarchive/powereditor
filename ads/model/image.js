@@ -28,11 +28,11 @@ var fun   = require("../../uki-core/function"),
     storage = require("../../storage/storage"),
 
     props   = require("../lib/props"),
-    asyncUtils = require("../../storage/lib/async"),
+    asyncUtils = require("../../lib/async"),
 
     Ad = require("./ad").Ad,
-    DeferredList  = require("../lib/deferredList").DeferredList,
-    FB            = require("../../storage/lib/connect").FB;
+    DeferredList  = require("../../lib/deferredList").DeferredList,
+    FB            = require("../../lib/connect").FB;
 
 
 /**

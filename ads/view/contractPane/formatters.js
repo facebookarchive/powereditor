@@ -22,8 +22,8 @@
 *
 */
 
-var formatters = require("../../lib/formatters"),
-    dateRange  = require("../../lib/dateRange");
+var formatters = require("../../../lib/formatters"),
+    dateRange  = require("../../../lib/dateRange");
 
 function date(d) {
   if (d) {

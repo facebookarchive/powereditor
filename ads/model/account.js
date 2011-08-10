@@ -28,11 +28,11 @@ var fun   = require("../../uki-core/function"),
 
     props = require("../lib/props"),
     userRole = require("../lib/adsUserRole"),
-    FB = require("../../storage/lib/connect").FB,
-    storeUtils = require("../../storage/lib/utils"),
+    FB = require("../../lib/connect").FB,
+    libUtils = require("../../lib/utils"),
 
     storage = require("../../storage/storage"),
-    pathUtils = require("../../storage/lib/pathUtils");
+    pathUtils = require("../../lib/pathUtils");
 
 
 /**
@@ -144,7 +144,7 @@ Account.loadFromIds = function(account_ids, callback) {
     var path = pathUtils.join('/me', '/adaccounts');
     Account.fetchAndStoreEdges(path, callback);
   } else {
-    var paths = storeUtils.wrapArray(account_ids).map(
+    var paths = libUtils.wrapArray(account_ids).map(
       function(account_id) {
         return pathUtils.join('act_' + account_id);
       }

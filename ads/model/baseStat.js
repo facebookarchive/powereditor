@@ -27,13 +27,14 @@ var fun       = require("../../uki-core/function"),
 
     storage   = require("../../storage/storage"),
 
-    dateRange = require("../lib/dateRange"),
+    dateRange = require("../../lib/dateRange"),
     props     = require("../lib/props"),
-    asyncUtils = require("../../storage/lib/async"),
-    storeUtils   = require("../../storage/lib/utils"),
+    asyncUtils = require("../../lib/async"),
+    libUtils   = require("../../lib/utils"),
+    pathUtils = require("../../lib/pathUtils"),
 
-    FB        = require("../../storage/lib/connect").FB,
-    formatters = require("../lib/formatters"),
+    FB        = require("../../lib/connect").FB,
+    formatters = require("../../lib/formatters"),
     TabSeparated  = require("../lib/model/tabSeparated").TabSeparated;
 
 /**
@@ -58,71 +59,84 @@ BaseStat.addProp({
 
 BaseStat.addProp({
   name: 'spent',
+  type: props.Number,
   db: true, remote: true,
   tabSeparated: 'Spent'
 });
 
 BaseStat.addProp({
   name: 'clicks',
+  type: props.Number,
   db: true, remote: true,
   tabSeparated: 'Clicks'
 });
 
 BaseStat.addProp({
   name: 'impressions',
+  type: props.Number,
   db: true, remote: true,
   tabSeparated: 'Impressions'
 });
 
 BaseStat.addProp({
   name: 'date_range',
+  //type:
   remote: true,
   indexed: 'TEXT NOT NULL'
 });
 
 BaseStat.addProp({
   name: 'actions',
+  //type:
   db: true, remote: true,
   tabSeparated: 'Actions'
 });
 
 BaseStat.addProp({
   name: 'connections',
+  //type
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'social_clicks',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'social_impressions',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'social_spent',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'social_unique_clicks',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'social_unique_impressions',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'unique_clicks',
+  type: props.Number,
   db: true, remote: true
 });
 
 BaseStat.addProp({
   name: 'unique_impressions',
+  type: props.Number,
   db: true, remote: true
 });
 
@@ -145,7 +159,7 @@ BaseStat.addProp({
 
 BaseStat.loadFromAccountsAndRange = function(accounts, from, to, callback) {
 
-  accounts = storeUtils.wrapArray(accounts);
+  accounts = libUtils.wrapArray(accounts);
 
   var range = dateRange.encode(from, to),
       start_time,
@@ -154,21 +168,20 @@ BaseStat.loadFromAccountsAndRange = function(accounts, from, to, callback) {
     start_time = 0;
     end_time = 0;
   } else {
-    start_time = (new Date(from)).getTime();
-    end_time = (new Date(to)).getTime();
+    start_time = from.getTime() / 1000;
+    end_time = to.getTime() / 1000;
   }
 
   var edgeCall = true;
-  var options = {
-    start_time: start_time,
-    end_time: end_time
-  };
   // clear old stats
   this.clear(fun.bind(function() {
     var paths = accounts.map(fun.bind(function(account) {
-      return this.pathFormat(account.id());
+      return pathUtils.join(
+                    this.pathFormat(account.id()),
+                    start_time,
+                    end_time);
     }, this));
-    BaseStat.fetchAndStoreEdges.call(this, paths, options, callback);
+    BaseStat.fetchAndStoreEdges.call(this, paths, callback);
   }, this));
 };
 

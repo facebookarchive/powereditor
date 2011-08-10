@@ -65,7 +65,7 @@ Paste.init = function() {
   // FF only allows paste event on editable elements,
   // something that we cannot do here. So manually check
   // keydown event
-  if (!env.ua.match(/Gecko/)) {
+  if (!env.ua.match(/Gecko\/\d+/)) {
     return;
   }
   evt.on(env.doc.body, 'keydown', function(e) {
@@ -114,18 +114,19 @@ function copyDummy() {
 * @param text the text the user pasted
 */
 Paste.handler = function(v, text) {
-    // Windows tends to replace \n -> \r\n during copy
-    text = text.replace(/(\r\n|\r|\n)/g, '\n').replace(/\r/g, '\n');
+  // Windows tends to replace \n -> \r\n during copy
+  text = text.replace(/(\r\n|\r|\n)/g, '\n').replace(/\r/g, '\n');
 
-    var row = view.byId('campaignList-list').selectedRow();
-    var account = row.account ? row.account() : row;
+  var row = view.byId('campaignList-list').selectedRow();
+  var account = row.account ? row.account() : row;
 
-    Paste.resetDialog();
-    if (v.copySourceId && v.copySourceId() === 'campaigns') {
-      Paste.pasteIntoCamps(account, text);
-    } else {
-      Paste.pasteIntoAds(account, text, view.byId('content').campaigns());
-    }
+  Paste.resetDialog();
+  require("../lib/completions").dialog = Paste.dialog();
+  if (v.copySourceId && v.copySourceId() === 'campaigns') {
+    Paste.pasteIntoCamps(account, text);
+  } else {
+    Paste.pasteIntoAds(account, text, view.byId('content').campaigns());
+  }
 };
 
 // Error logging
@@ -134,7 +135,8 @@ Paste.handler = function(v, text) {
 // for that error. Dialog will grow with more errors being added.
 // User can close dialog with 'Close' button
 Paste.dialog = function() {
-  return this._dialog || (this._dialog = new LogDialog().title('Paste Errors'));
+  return this._dialog ||
+    (this._dialog = new LogDialog().title('Paste Progress'));
 };
 
 Paste.resetDialog = function() {

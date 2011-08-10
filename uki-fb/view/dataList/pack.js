@@ -140,6 +140,8 @@ var Pack = view.newClass('dataList.Pack', Base, {
 
   setSelected: function(index, state) {
     var row = this._rowAt(index);
+
+    state = !!state;
     if (row) {
       dom.toggleClass(row, 'ufb-dataList-row_selected', state);
       this._selection[index] = state;

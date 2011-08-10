@@ -35,10 +35,6 @@
     position: relative;
 }
 
-.adPane-number-editor .dataList-editor-input {
-    text-align: right;
-}
-
 .adPane-status {
     margin-top: -2px;
     display: inline-block;

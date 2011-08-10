@@ -31,20 +31,23 @@ var fun = require("../../../uki-core/function"),
 var GraphAPIDataSource = fun.newClass(APIDataSource, {
 
     _callFBAPI: function(endpoint, data, callback) {
-        FB.api(endpoint,
-            utils.extend({ limit: this.maxResults(),
-              type: data.type,
-              q: data.query_string }, data),
-            callback);
+      FB.api(
+        endpoint,
+        utils.extend(
+          { limit: this.maxResults(),
+            q: data.query_string },
+          data),
+          callback);
     },
 
     _preprocessResponse: function(response) {
-        if (!response.accounts || !response.accounts.length) {
-            response.accounts = [];
-        }
-        return response.accounts.map(function(x) {
-            return {id: x.id, text: x.name, subtext: x.id};
-        });
+      return (response.data || []).map(function(entry) {
+        return {
+          id: entry.id || entry.key || entry.name,
+          text: entry.name,
+          subtext: entry.subtext
+        };
+      });
     }
 
 });

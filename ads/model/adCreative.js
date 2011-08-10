@@ -23,10 +23,10 @@
 */
 
 
-var pathUtils = require("../../storage/lib/pathUtils"),
-    graphlink = require("../../storage/lib/graphlink"),
-    storeUtils = require("../../storage/lib/utils"),
-    asyncUtils = require("../../storage/lib/async");
+var pathUtils = require("../../lib/pathUtils"),
+    graphlink = require("../../lib/graphlink"),
+    libUtils = require("../../lib/utils"),
+    asyncUtils = require("../../lib/async");
 
 var AdCreative = {};
 
@@ -34,7 +34,7 @@ var AdCreative = {};
  * @param creative_ids = array of creative_ids
  */
 AdCreative.loadFromIds = function(creative_ids, callback) {
-  graphlink.fetchObjectsById(creative_ids, callback);
+  graphlink.fetchObjectsById(creative_ids, {}, callback, this);
 };
 
 exports.AdCreative = AdCreative;

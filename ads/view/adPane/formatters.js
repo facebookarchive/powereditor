@@ -23,7 +23,7 @@
 */
 
 var utils = require("../../../uki-core/utils");
-var formatters = require("../../lib/formatters");
+var formatters = require("../../../lib/formatters");
 var dom = require("../../../uki-core/dom");
 var DemoLinkBuilder = require("../../lib/demoLinkBuilder");
 
@@ -116,19 +116,19 @@ function adlink(ad) {
 }
 
 function demolinks(_, ad) {
-  if (!ad.isNew() && (!ad.demolinks() || !ad.demolinks().length)) {
+  if (!ad.isNew()) {
     // profile, home
     var demo_links = DemoLinkBuilder.getDemoLinks(ad);
-    var links = [];
-    links[0] = '<a class="adPane-link" target="_blank" href=' +
-      demo_links.PROFILE + '> Profile </a>';
+    var rendered_links = [];
+    rendered_links.push('<a class="adPane-link" target="_blank" href=' +
+      demo_links.PROFILE + '>Profile</a>');
     if (ad.isCorporate()) {
-      links[1] = '<a class="adPane-link" target="_blank" href=' +
-        demo_links.HOME + '> Home </a>';
+      rendered_links.push('<a class="adPane-link" target="_blank" href=' +
+        demo_links.HOME + '>Home</a>');
     }
-    ad.demolinks(links);
+    return rendered_links.join(', ');
   }
-  return ad.demolinks() || null;
+  return null;
 }
 
 exports.adlink = adlink;

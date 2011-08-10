@@ -22,14 +22,15 @@
 *
 */
 
-var fun = require("../../../uki-core/function"),
-    Base = require("./base").Base;
+var fun = require("../../../uki-core/function");
+var Base = require("./flatArray").FlatArray;
 
 var UserAdClusters = fun.newClass(Base, {
   def: [],
 
-  tsFindByName: function(name, obj) {
-    return name;
+  tsFindByName: function(name, obj, callback) {
+    var splits = name.split(":");
+    callback({id: splits[0], name: splits[1]});
   },
 
   getTabSeparated: function(obj) {
@@ -38,21 +39,6 @@ var UserAdClusters = fun.newClass(Base, {
       cluster_name_pairs.push(cluster.id + ":" + cluster.name);
     }, this));
     return cluster_name_pairs.join(', ');
-  },
-
-  setTabSeparated: function(obj, value, callback) {
-    var clusters = [];
-    value.split(',').forEach(function(cluster_name_pair) {
-      cluster_name_pair = cluster_name_pair.trim();
-      if (!cluster_name_pair) {
-        return;
-      }
-      var splits = cluster_name_pair.split(":");
-      var cluster = {id: splits[0], name: splits[1]};
-      clusters.push(cluster);
-    }, this);
-    this.setValue(obj, clusters);
-    callback();
   },
 
   compare: function(a, b) {

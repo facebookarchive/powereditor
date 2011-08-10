@@ -24,7 +24,7 @@
 
 var fun = require("../../../uki-core/function"),
 
-    dateRange = require("../dateRange"),
+    dateRange = require("../../../lib/dateRange"),
 
     TabSeparated = require("./base").TabSeparated,
     StorageTS = require("../../../storage/prop/timestamp").Timestamp;

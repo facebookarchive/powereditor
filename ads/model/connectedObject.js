@@ -26,13 +26,13 @@ var fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
 
     storage = require("../../storage/storage"),
-    pathUtils = require("../../storage/lib/pathUtils"),
+    pathUtils = require("../../lib/pathUtils"),
 
     props   = require("../lib/props"),
 
     Util = require("../../uki-fb/view/typeahead/util").Util,
 
-    storeUtils = require("../../storage/lib/utils");
+    libUtils = require("../../lib/utils");
 
 /**
 * Facebook content you own
@@ -173,11 +173,7 @@ ConnectedObject.loadFromAccountIds = function(account_ids, callback) {
     callback([], true);
     return;
   }
-  var paths = storeUtils.wrapArray(account_ids).map(
-    function(account_id) {
-      return pathUtils.join('act_' + account_id, '/connectionobjects');
-    }
-  );
+  var paths = ['/act_' + account_ids[0] + '/connectionobjects'];
   // clear caches
   this._cache = this._cacheMap = null;
   ConnectedObject.fetchAndStoreEdges(paths, callback);

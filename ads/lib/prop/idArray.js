@@ -22,40 +22,23 @@
 *
 */
 
-var fun   = require("../../../uki-core/function"),
-    utils = require("../../../uki-core/utils"),
+var fun   = require("../../../uki-core/function");
+var utils = require("../../../uki-core/utils");
 
-    Base = require("./base").Base;
+var Base = require("./flatArray").FlatArray;
 
 
 var IdArray = fun.newClass(Base, {
   def: [],
-  delimiter: ',',
 
-  tsFindByName: function(name, obj) {
-    return false;
+  tsFindByName: function(name, obj, callback) {
+    callback(false);
   },
 
   getTabSeparated: function(obj) {
     return utils.pluck(this.getValue(obj), 'name').map(function(string) {
       return string.replace(/\s*,.*/, '');
     }).join(this.delimiter + ' ');
-  },
-
-  setTabSeparated: function(obj, value, callback) {
-    var result = [];
-    value.split(this.delimiter).forEach(function(name) {
-      name = name.trim();
-      if (!name) {
-        return;
-      }
-      var item = this.tsFindByName(name, obj);
-      if (item) {
-        result.push(item);
-      }
-    }, this);
-    this.setValue(obj, result);
-    callback();
   },
 
   compare: function(a, b) {

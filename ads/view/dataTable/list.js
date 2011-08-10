@@ -84,13 +84,19 @@ var DataTableList = view.newClass('ads.DataTableList', Base, {
   },
 
   _dataForClipboard: function() {
-    return this.selectedRows().map(function(row, i) {
-      if (i === 0) {
-        return row.tabSeparatedHeader() + DELIMITER_LINE +
-          row.toTabSeparated();
-      }
-      return row.toTabSeparated();
-    }).join(DELIMITER_LINE);
+    var rows = this.selectedRows();
+
+    // nothing selected
+    if (rows.length === 0) {
+      return '';
+    }
+
+    var options = {isCorpAct: rows[0].isCorporate()};
+
+    return rows[0].tabSeparatedHeader(options) + DELIMITER_LINE +
+      rows.map(function(row) {
+        return row.toTabSeparated(options);
+      }).join(DELIMITER_LINE);
   }
 });
 

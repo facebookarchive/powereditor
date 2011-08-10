@@ -24,29 +24,24 @@
 
 var utils   = require("../../uki-core/utils"),
     fun     = require("../../uki-core/function"),
-    storage = require("../../storage/storage"),
-    App     = require("./app").App,
-    storeUtils = require("../../storage/lib/utils"),
-
-    asyncUtils = require("../../storage/lib/async"),
     evt     = require("../../uki-core/event"),
     env     = require("../../uki-core/env"),
-    DownloadDialog = require("../view/downloadDialog").DownloadDialog,
-    DownloadProgress = require("../view/downloadProgress").DownloadProgress;
 
-var Account         = require("../model/account").Account,
+    storage = require("../../storage/storage"),
+    libUtils = require("../../lib/utils"),
+    asyncUtils = require("../../lib/async"),
+    graphlink = require("../../lib/graphlink"),
+
+    App     = require("./app").App,
+    DownloadDialog = require("../view/downloadDialog").DownloadDialog,
+    DownloadProgress = require("../view/downloadProgress").DownloadProgress,
+
+    Account         = require("../model/account").Account,
     Ad              = require("../model/ad").Ad,
     AdCreative      = require("../model/adCreative").AdCreative,
-    AdGroup         = require("../model/ad/group").Group,
     Img             = require("../model/image").Image,
-    AdStat          = require("../model/adStat").AdStat,
     Campaign        = require("../model/campaign").Campaign,
-    CampGroup       = require("../model/campaign/group").Group,
-    CampStat        = require("../model/campStat").CampStat,
     ConnectedObject = require("../model/connectedObject").ConnectedObject,
-    Group           = require("../model/group").Group,
-    Completion      = require("../model/completion").Completion,
-
     Contract        = require("../model/contract").Contract,
     Topline         = require("../model/topline").Topline;
 
@@ -59,28 +54,9 @@ var META_REFRESH_TIMEOUT = 1000 * 60 * 60 * 24 * 7; // once per week
 var Download = {};
 
 
-
 // -------- DOWNLOAD DIALOG SETUP -----------
 // Logic from old sync.js
 // Moved flow logic to make syncing easier later
-
-/**
-* Helper to create DownloadProgress status
-*/
-function createProgressStatus() {
-  return {
-    accounts: 0,
-    contracts: 0,
-    toplines: 0,
-    campaigns: 0,
-    accounts_with_campaigns: 0,
-    contracts_with_toplines: 0,
-    ads: 0,
-    adcreatives: 0,
-    campaigns_with_ads: 0,
-    objects: 0
-  };
-}
 
 Download.dialog = function() {
   if (!this._dialog) {
@@ -113,18 +89,13 @@ Download.handle = function() {
 };
 
 Download._ondownload = function(e) {
-  var progress = this._progress || (this._progress = new DownloadProgress());
+  var progress = new DownloadProgress();
   progress.visible(true);
 
   Download.loadModels(
-    function(status) { progress.status(status); },
+    progress,
     function() {
       progress.visible(false);
-      require("./downloadCompletions")
-        .DownloadCompletions.download(function() {
-          // force app update upon completion
-          App.reload();
-        });
       require("./downloadBCT")
       .DownloadBCT.download(function() {
         // force app update upon completion
@@ -139,34 +110,47 @@ Download._ondownload = function(e) {
 /**
 * handler to start downloading including contract/topline
 *
-* @param pc DownloadProgress callback
+* @param progress DownloadProgress instance
 * @param callback called on finish
-* @param account_ids limit donwload to account_ids specified
+* @param account_ids array of account ids being dl'd
 */
-Download.loadModels = function(pc, callback, account_ids) {
-  var status = createProgressStatus();
-  pc = pc || fun.FT;
-
+Download.loadModels = function(progress, callback, account_ids) {
+  progress = progress || fun.FT;
   callback = callback || fun.FT;
-  pc(status);
+
+  progress.statusUpdate();
+  graphlink.progress = progress;
 
   var state = null;
+
+  // If you manually enter accounts, they should be valid account numbers
+  // if you just ask to download your own accounts though, that should work
+  if (!!account_ids) {
+    // strip out invalid accounts
+    account_ids = account_ids.filter(function(acc_id) {
+      // nothing but numbers
+      return (/^\d+$/).test(acc_id + '');
+    });
+    if (!account_ids.length) {
+      callback();
+      return;
+    }
+  }
   account_ids = account_ids || [];
-  account_ids = account_ids.filter(function(acc_id) {
-    // is true for numbers too apparently
-    return (/\d+/).test(acc_id);
-  });
 
   // Special treatment since we need the account_ids for everything
   // subsequently, and the download may be invoked without explicitly
   // specifying ids
-  loadAccounts(account_ids, null, status, pc, function(used_account_ids) {
-    account_ids = storeUtils.wrapArray(used_account_ids).filter(
+  loadAccounts(account_ids, null, progress, function(used_account_ids) {
+
+    account_ids = libUtils.wrapArray(used_account_ids).filter(
       function(acc_id) {
         return !!acc_id;
       }
     );
 
+    // numerous checks for valid account_ids since things can go wrong
+    // server or client side
     if (!account_ids || !account_ids.length) {
       callback();
       return;
@@ -178,7 +162,7 @@ Download.loadModels = function(pc, callback, account_ids) {
     asyncUtils.forEach(loaders,
       function(loader, i, iterCallback) {
 
-        loader(account_ids, state, status, pc, function(returnedState) {
+        loader(account_ids, state, progress, function(returnedState) {
           state = returnedState;
           iterCallback();
         });
@@ -187,7 +171,6 @@ Download.loadModels = function(pc, callback, account_ids) {
         // all loading is done.
         // dismiss the progress loader
         // celebrate!
-        // alert("We're all done loading here!");
         callback();
       },
       this);
@@ -201,18 +184,18 @@ Download.loadModels = function(pc, callback, account_ids) {
 * Download all accounts in one chunk. Clears related ads and
 * campaigns in next loader
 *
-* @param accounts array of campaigns to download from
-* @param status current download status for DownloadProgress
-* @param pc DownloadProgress callback
+* @param account_ids array of account ids being dl'd
+* @param state unused
+* @param progress DownloadProgress instance
 * @param callback called on finish
 */
-function loadAccounts(account_ids, state, status, pc, callback) {
+function loadAccounts(account_ids, state, progress, callback) {
+  progress.setStep('accounts');
   var allAccounts = [];
   Account.loadFromIds(
     account_ids,
     function(accounts) {
-      status.accounts = accounts.length;
-      pc(status);
+      progress.completeStep('accounts');
       allAccounts.push.apply(allAccounts, accounts);
       callback(utils.pluck(allAccounts, 'id'));
     }
@@ -223,7 +206,7 @@ function loadAccounts(account_ids, state, status, pc, callback) {
 /**
  * removing data associated with accounts being refreshed
  */
-function removeOldData(account_ids, state, status, pc, callback) {
+function removeOldData(account_ids, state, progress, callback) {
   // clean up all previous contracts and toplines
   Contract.findAllBy(
     'id',
@@ -263,38 +246,36 @@ function removeOldData(account_ids, state, status, pc, callback) {
 /**
 * Download ConnectedObjects
 *
-* @param accounts array of campaigns to download from
-* @param status current download status for DownloadProgress
-* @param pc DownloadProgress callback
+* @param account_ids array of account ids being dl'd
+* @param state unused
+* @param progress DownloadProgress instance
 * @param callback called on finish
 */
-function loadObjects(account_ids, state, status, pc, callback) {
-    status.objects = 1;
-    pc(status);
-    ConnectedObject.loadFromAccountIds(account_ids,
-      function(cobjs) {
-        // filter objects here?
-        status.objects = 2;
-        pc(status);
-        ConnectedObject.prepare(function() {
-          callback(null);
-        }, true);
-    });
+function loadObjects(account_ids, state, progress, callback) {
+  progress.setStep('objects');
+  ConnectedObject.loadFromAccountIds(account_ids,
+    function(cobjs) {
+      // filter objects here?
+      progress.completeStep('objects');
+      ConnectedObject.prepare(function() {
+        callback(null);
+      }, true);
+  });
 }
 
 
 /**
  * load contracts
  */
-function loadContracts(account_ids, state, status, pc, callback) {
+function loadContracts(account_ids, state, progress, callback) {
+  progress.setStep('contracts');
   var account_options = {};
   if (account_ids) {
     account_options.account_ids = account_ids;
   }
 
   Contract.loadFromRESTAPI(account_options, function(contracts) {
-    status.contracts = contracts.length;
-    pc(status);
+    progress.completeStep('contracts');
     contracts.prefetch && contracts.prefetch();
     callback(contracts);
   });
@@ -307,16 +288,17 @@ function loadContracts(account_ids, state, status, pc, callback) {
 * Download all toplines in contracts[0], then
 * in contracts[1], etc
 *
+* @param account_ids array of account ids being dl'd
 * @param contracts array of contracts to download from
-* @param status current download status for DownloadProgress
-* @param pc DownloadProgress callback
+* @param progress DownloadProgress instance
 * @param callback called on finish with all topliness downloaded
 *                 as a parameter
 */
-function loadToplines(acc_ids, contracts, status, pc, callback,
-  totalToplines) {
+function loadToplines(acc_ids, contracts, progress, callback,
+  _totalToplines) {
 
-  totalToplines = totalToplines || [];
+  progress.setStep('toplines');
+  _totalToplines = _totalToplines || [];
 
   if (!contracts.length) {
     Topline.prepare(function(toplines) {
@@ -328,13 +310,11 @@ function loadToplines(acc_ids, contracts, status, pc, callback,
   Topline.loadFromRESTAPI(
     { account_id: contracts[0].id() },
     function(toplines) {
-      status.contracts_with_toplines++;
-      status.toplines += toplines.length;
-      pc(status);
-      totalToplines = totalToplines.concat(toplines);
+      progress.completeStep('toplines');
+      _totalToplines = _totalToplines.concat(toplines);
 
       loadToplines(acc_ids, contracts.slice(1),
-        status, pc, callback, totalToplines);
+        progress, callback, _totalToplines);
     }
   );
 }
@@ -345,26 +325,23 @@ function loadToplines(acc_ids, contracts, status, pc, callback,
 * Download all campaigns in accounts[0], then
 * in accounts[1], etc
 *
-* @param accounts array of accounts to download from
-* @param status current download status for DownloadProgress
-* @param pc DownloadProgress callback
+* @param account_ids array of account ids to download from
+* @param state unused
+* @param progress DownloadProgress instance
 * @param callback called on finish with all campaigns downloaded
 *                 as a parameter
 */
-function loadCampaigns(account_ids, state, status, pc, callback) {
+function loadCampaigns(account_ids, state, progress, callback) {
 
+  progress.setStep('campaigns');
   var totalCampaigns = [];
 
   Campaign.loadFromAccountIds(
     account_ids,
     function(campaigns) {
 
-      status.campaigns += campaigns.length;
-      pc(status);
+      progress.completeStep('campaigns');
       totalCampaigns = totalCampaigns.concat(campaigns);
-
-      status.campaigns_isdone = true;
-      pc(status);
 
       Campaign.prepare(function(campaigns) {
         totalCampaigns.prefetch && totalcampaigns.prefetch();
@@ -379,24 +356,21 @@ function loadCampaigns(account_ids, state, status, pc, callback) {
 * Downloads ads from up to 10 campaigns from a single account
 * in on chunk
 *
-* @param campaigns array of campaigns to download from
-* @param status current download status for DownloadProgress
-* @param pc DownloadProgress callback
+* @param account_ids array of account ids to dl from
+* @param state unused
+* @param progress DownloadProgress instance
 * @param callback called on finish
 */
-function loadAds(account_ids, state, status, pc, callback) {
+function loadAds(account_ids, state, progress, callback) {
 
+  progress.setStep('ads');
   var totalAds = [];
 
   Ad.loadFromAccountIds(account_ids,
     function(ads, isDone) {
-      status.ads += ads.length;
-      pc(status);
 
+      progress.completeStep('ads');
       totalAds.push.apply(totalAds, ads);
-
-      status.ads_isdone = true;
-      pc(status);
 
       totalAds.prefetch && totalAds.prefetch();
       callback(totalAds);
@@ -408,8 +382,9 @@ function loadAds(account_ids, state, status, pc, callback) {
 /**
  * load ad creatives
  */
-function loadAdCreatives(account_ids, ads, status, pc, callback) {
+function loadAdCreatives(account_ids, ads, progress, callback) {
 
+  progress.setStep('adcreatives');
   if (!ads.length) {
     callback([]);
     return;
@@ -417,7 +392,7 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
 
   var adMapByCreative = {};
   var creative_ids = [];
-  storeUtils.wrapArray(ads).map(function(ad) {
+  libUtils.wrapArray(ads).map(function(ad) {
     var creativeId = (ad.creative_ids() || [])[0];
     if (creativeId) {
       adMapByCreative[creativeId] = adMapByCreative[creativeId] || [];
@@ -431,15 +406,11 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
   // load creatives all together
   AdCreative.loadFromIds(creative_ids,
     function(data) {
-
-      status.adcreatives += data.length;
-      pc(status);
-
-      storeUtils.wrapArray(data).map(function(creative) {
+      libUtils.wrapArray(data).map(function(creative) {
         var creativeId = String(creative.creative_id);
         if (adMapByCreative[creativeId]) {
           delete creative.name;
-          storeUtils.wrapArray(adMapByCreative[creativeId]).map(function(ad) {
+          libUtils.wrapArray(adMapByCreative[creativeId]).map(function(ad) {
             ad
               .muteChanges(true)
               .fromRemoteObject(creative)
@@ -448,8 +419,7 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
         }
       });
 
-      status.adcreatives_isdone = true;
-      pc(status);
+      progress.completeStep('adcreatives');
 
       // commit the ad changes back to db
       storage.Storage.storeMulti.call(Ad, ads, function(data) {
@@ -464,7 +434,8 @@ function loadAdCreatives(account_ids, ads, status, pc, callback) {
  * Ultimately load adimages distinctly
  * for now, update images / hashes in ads from the creatives
  */
-function loadAdImages(account_ids, ads, status, pc, callback) {
+function loadAdImages(account_ids, ads, progress, callback) {
+  progress.setStep('adimages');
   // when you're done loading ads
   // populate image lookup table with newly downloaded ads
   if (!ads.length) {
@@ -474,7 +445,9 @@ function loadAdImages(account_ids, ads, status, pc, callback) {
   Img.updateImagesInAllAccounts(account_ids, ads, function() {
     // commit the ad changes back to db
     storage.Storage.storeMulti.call(Ad, ads, function(data) {
-        callback(null);
+      progress.statusUpdate(ads.length);
+      progress.completeStep('adimages');
+      callback(null);
     });
   });
 }

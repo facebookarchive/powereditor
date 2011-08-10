@@ -29,7 +29,7 @@ var fun = require("../uki-core/function"),
     storage = require("../storage/storage");
 
 
-var DB_VERSION = '1.0';
+var IDB_VERSION = '1.1';
 var DB;
 var init, drop;
 
@@ -44,14 +44,14 @@ if (storage.impl === 'IndexedDB') {
 
       var models = require("./models");
       [models.Account, models.Ad, models.Image, models.AdStat,
-       models.Campaign, models.CampStat, models.Completion, models.Contract,
+       models.Campaign, models.CampStat, models.Contract,
        models.Topline, models.ConnectedObject,
        models.BCT].forEach(function(m) {
         m.db(DB);
       });
 
-      if (DB.version != DB_VERSION) {
-        DB.setVersion(DB_VERSION).onsuccess = function() {
+      if (DB.version != IDB_VERSION) {
+        DB.setVersion(IDB_VERSION).onsuccess = function() {
           req.result.oncomplete = callback;
           models.Account.dbInit();
           models.Ad.dbInit();
@@ -59,11 +59,12 @@ if (storage.impl === 'IndexedDB') {
           models.AdStat.dbInit();
           models.Campaign.dbInit();
           models.CampStat.dbInit();
-          models.Completion.dbInit();
           models.Contract.dbInit();
           models.Topline.dbInit();
           models.ConnectedObject.dbInit();
           models.BCT.dbInit();
+          require("./controller/migrateDB/removeCompletions")
+            .migrateIndexDB(uid, DB);
         };
       } else {
         callback();
@@ -87,7 +88,6 @@ if (storage.impl === 'IndexedDB') {
       models.Contract.dbDrop();
       models.Topline.dbDrop();
       if (!soft) {
-        models.Completion.dbDrop();
         models.BCT.dbDrop();
       }
     };
@@ -101,13 +101,13 @@ if (storage.impl === 'IndexedDB') {
     DB = global.openDatabase(
       uid + '_powereditor',
       // 'bamboo',
-      DB_VERSION,
+      '1.0',
       'PowerEditor main storage',
       100 * 1000 * 1000);
 
     var models = require("./models");
     [models.Account, models.Ad, models.Image, models.AdStat,
-     models.Campaign, models.CampStat, models.Completion, models.Contract,
+     models.Campaign, models.CampStat, models.Contract,
      models.Topline, models.ConnectedObject,
      models.BCT].forEach(function(m) {
       m.db(DB);
@@ -121,18 +121,16 @@ if (storage.impl === 'IndexedDB') {
       models.AdStat.withTransaction(tx, function() { this.dbInit(); });
       models.Campaign.withTransaction(tx, function() { this.dbInit(); });
       models.CampStat.withTransaction(tx, function() { this.dbInit(); });
-      models.Completion.withTransaction(tx, function() { this.dbInit(); });
       models.ConnectedObject.withTransaction(tx, function() { this.dbInit(); });
       models.Contract.withTransaction(tx, function() { this.dbInit(); });
       models.Topline.withTransaction(tx, function() { this.dbInit(); });
       models.BCT.withTransaction(tx, function() { this.dbInit(); });
     }, storage.errorCallback, function() {
-      // callback();
-      var migrate = require("./controller/migrateDb");
-
-      migrate.migrateToUIDStorage(uid, DB, function() {
-        migrate.migrateToTEXTIds(uid, DB, callback || fun.FT);
-      });
+      require("./controller/migrateDB/textIDs")
+        .migrate(uid, DB, function() {
+          require("./controller/migrateDB/removeCompletions")
+            .migrate(uid, DB, callback || fun.FT);
+        });
     });
   };
 
@@ -150,7 +148,6 @@ if (storage.impl === 'IndexedDB') {
       models.Contract.withTransaction(tx, function() { this.dbDrop(); });
       models.Topline.withTransaction(tx, function() { this.dbDrop(); });
       if (!soft) {
-        models.Completion.withTransaction(tx, function() { this.dbDrop(); });
         models.BCT.withTransaction(tx, function() { this.dbDrop(); });
       }
     }, storage.errorCallback, callback || fun.FT);

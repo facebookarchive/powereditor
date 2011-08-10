@@ -24,7 +24,7 @@
 
 var fun   = require("../../../uki-core/function");
 var utils = require("../../../uki-core/utils");
-var async = require("../../../storage/lib/async");
+var async = require("../../../lib/async");
 
 var DELIMITER = '\t';
 var DELIMITER_LINE = '\n';
@@ -53,12 +53,18 @@ var TabSeparated = {
    */
   fromTabSeparatedMap: function(row, map, callback) {
     async.forEach(map, function(item, index, iteratorCallback) {
+      try { // error report
+
       var prop = this.storage().prop(item.name);
       var value = row[item.index] || '';
       if (prop.importFormatter) {
         value = prop.importFormatter(value);
       }
       prop.setTabSeparated(this, value, iteratorCallback);
+
+      } catch (e) {
+        require("../../../lib/errorReport").handleException(e, 'ts:fromMap');
+      }
     }, callback, this);
   },
 

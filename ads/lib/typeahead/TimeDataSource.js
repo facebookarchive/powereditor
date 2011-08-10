@@ -24,7 +24,7 @@
 
 var fun = require("../../../uki-core/function"),
 
-    dateRange = require("../dateRange"),
+    dateRange = require("../../../lib/dateRange"),
 
     DataSource = require("../../../uki-fb/view/typeahead/dataSource").DataSource;
 

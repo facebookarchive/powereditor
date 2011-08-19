@@ -57,7 +57,8 @@ function revert(id) {
   });
 
   if (!reverted) {
-    alert('Nothing to revert');
+    require("../../uki-fb/view/dialog").Dialog
+      .alert(tx('ads:pe:revert-nothing-selected'));
     return;
   } else {
     view.byId(id).refreshAndSelect(items);

@@ -214,7 +214,7 @@ var Topline = storage.newStorage(Validatable, {
 
     var spent_perc = 0;
     if (line_budget <= 0 && line_spent > 0) {
-      spent_perc = 'N/A (no budget)';
+      spent_perc = tx('ads:pe:delivery-info-na');
     } else if (line_budget <= 0 && line_spent === 0) {
       spent_perc = 0;
     } else {

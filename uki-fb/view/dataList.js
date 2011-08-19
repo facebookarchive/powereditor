@@ -155,6 +155,8 @@ var DataList = view.newClass('DataList', Container, Focusable, {
   * Scroll the parent so row at position gets into view
   */
   scrollToIndex: function(index) {
+    if (!this.scrollableParent()) { return this; }
+
     var range = this._visibleRange();
     var dm    = this.metrics().rowDimensions(index);
     var maxY  = dm.top + dm.height;

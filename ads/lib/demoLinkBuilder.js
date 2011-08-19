@@ -8,7 +8,7 @@ var fun = require("../../uki-core/function"),
     Ad = require("../model/ad").Ad,
     StatusMap = require("./prop/adgroupStatus").STATUS_MAP;
 
-var PROFILE_BASE = "http://www.facebook.com/profile.php/",
+var PROFILE_BASE = "http://www.facebook.com/profile.php",
     HOME_BASE = "http://www.facebook.com/";
 
 var headerArr = [
@@ -53,8 +53,9 @@ function _fillCSV(accountId, callback) {
         values.push(ad.name());
         values.push(ad.id());
         values.push(StatusMap[ad.adgroup_status()]);
-        values.push(_buildDemoAdLink(PROFILE_BASE, ad.id()));
-        values.push(_buildDemoAdLink(HOME_BASE, ad.id()));
+        values.push(_buildDemoAdLink(PROFILE_BASE, ad.id(),
+          ad.demolink_hash()));
+        values.push(_buildDemoAdLink(HOME_BASE, ad.id(), ad.demolink_hash()));
 
         dataCSV += values.map(function(value) {
           return '"' + value.replace(/"/g, '""') + '"';
@@ -77,10 +78,9 @@ function _fillCSV(accountId, callback) {
  * return: string the 10 digit hash that must match the 'h' param
  *
  */
-// XXX TODO zahanm fix demo link hash generation
-
-function _buildDemoAdLink(base, adgroup_id) {
-  var str = base + '?demo_ad=' + adgroup_id;
+function _buildDemoAdLink(base, adgroup_id, hash) {
+  var str = base + '?demo_ad=' + adgroup_id +
+    '&h=' + hash;
   return str;
 }
 
@@ -88,8 +88,9 @@ function _buildDemoAdLink(base, adgroup_id) {
 function getDemoLinks(ad) {
   var links = {};
   if (!ad.isNew()) {
-    links.PROFILE = _buildDemoAdLink(PROFILE_BASE, ad.id());
-    links.HOME = _buildDemoAdLink(HOME_BASE, ad.id());
+    links.PROFILE = _buildDemoAdLink(PROFILE_BASE, ad.id(),
+      ad.demolink_hash());
+    links.HOME = _buildDemoAdLink(HOME_BASE, ad.id(), ad.demolink_hash());
   }
 
   return links;

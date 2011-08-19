@@ -54,7 +54,7 @@ function addProps(Ad) {
   Ad.addProp({
     type: props.AdgroupStatusAccessor,
     name: 'status',
-    originalName: 'adgroup_status'
+    originalName: 'real_adgroup_status'
   });
 
   Ad.addProp({
@@ -64,6 +64,21 @@ function addProps(Ad) {
         obj.original().adgroup_status || obj.adgroup_status();
     }
   });
+
+  // adgroup_status that incorporates campaign status info
+  Ad.addProp({
+    type: props.RealAdgroupStatus,
+    name: 'real_adgroup_status',
+    originalName: 'adgroup_status'
+  });
+
+  // original_status that incorporates campaign status info
+  Ad.addProp({
+    type: props.RealAdgroupStatus,
+    name: 'real_original_status',
+    originalName: 'original_status'
+  });
+
 
   Ad.addProp({
     type: props.Number,
@@ -280,12 +295,12 @@ function addProps(Ad) {
       obj.toggleError(
         !value && !obj.object_id(),
         'title',
-        'Title or Destination required'
+        tx('ads:pe:title-or-destination-required')
       );
       obj.toggleError(
         !obj.object_id() && value.length > limit,
         'title_limit',
-        'Title should be less than ' + limit + ' characters long'
+        tx('ads:pe:title-limit', { limit: limit })
       );
     },
     creative: true
@@ -309,7 +324,7 @@ function addProps(Ad) {
       obj.toggleError(
         value.length > limit,
         'body_limit',
-        'Body should be less than ' + limit + ' characters long'
+        tx('ads:pe:body-limit', { limit: limit })
       );
     },
     creative: true
@@ -326,7 +341,7 @@ function addProps(Ad) {
       obj.toggleError(
         !this.getValue(obj) && !obj.object_id(),
         'link_url',
-        'Link or Destination required'
+        tx('ads:pe:link-or-destination-required')
       );
     },
     setTabSeparated: function(obj, value, callback) {
@@ -356,6 +371,7 @@ function addProps(Ad) {
       return header == 'image';
     },
     setTabSeparated: function(obj, value, callback) {
+      value = (value + '').toLowerCase();
       if (value && obj.imageLookup) {
         var imageLookup = obj.imageLookup;
         if (imageLookup.hashes[value]) {
@@ -388,57 +404,65 @@ function addProps(Ad) {
       obj.toggleError(
         !this.getValue(obj) && !obj.object_id(),
         'image',
-        'Image required'
+        tx('ads:pe:image-required')
       );
     },
     creative: true,
     humanName: 'Image',
     tabSeparated: 'Image Hash',
     setTabSeparated: function(obj, value, callback) {
-      if (value && obj.imageLookup) {
-        var imageLookup = obj.imageLookup;
-        var Img = require("../image").Image;
+      if (!value || !obj.imageLookup) {
+        callback();
+        return;
+      }
 
-        Img.findAllBy('id', value, fun.bind(function(imgs) {
-          if (imgs.length < 1) {
-            // do nothing, unknown or invalid hash
+      var imageLookup = obj.imageLookup;
+      var Img = require("../image").Image;
+      if (imageLookup.hashes[value] !== undefined) {
+        obj.image_hash(imageLookup.hashes[value]);
+        callback();
+        return;
+      }
+
+      Img.findAllBy('id', value, fun.bind(function(imgs) {
+        if (imgs.length < 1) {
+          // do nothing, unknown or invalid hash
+          imageLookup.hashes[value] = null;
+          callback();
+          return;
+        }
+        imgs.prefetch();
+
+        for (var i = 0; i < imgs.length; i++) {
+          // we have an image with the given hash in the same account
+          // hash is valid, set it
+          if (imgs[i].account_id() == obj.account_id()) {
+            this.setValue(obj, value);
             callback();
             return;
           }
-          imgs.prefetch();
+        }
 
-          for (var i = 0; i < imgs.length; i++) {
-            // we have an image with the given hash in the same account
-            // hash is valid, set it
-            if (imgs[i].account_id() == obj.account_id()) {
-              this.setValue(obj, value);
-              callback();
-              return;
-            }
-          }
+        if (!imageLookup.data[imgs[0].url()]) {
+          var image = new Img();
+          image
+            .id(Img.generateLocalHash())
+            .url(imgs[0].url())
+            .account_id(obj.account_id());
 
-          if (!imageLookup.data[imgs[0].url()]) {
-            var image = new Img();
-            image
-              .id(Img.generateLocalHash())
-              .url(imgs[0].url())
-              .account_id(obj.account_id());
+          imageLookup.data[imgs[0].url()] = image.id();
+          imageLookup.hashes[value] = image.id();
 
-            imageLookup.data[imgs[0].url()] = image.id();
-
-            image.store(fun.bind(function() {
-              this.setValue(obj, image.id());
-              callback();
-            }, this));
-          } else {
-            this.setValue(obj, imageLookup.data[imgs[0].url()]);
+          image.store(fun.bind(function() {
+            this.setValue(obj, image.id());
             callback();
-          }
+          }, this));
+        } else {
+          this.setValue(obj, imageLookup.data[imgs[0].url()]);
+          callback();
+        }
 
-        }, this));
-      } else {
-        callback();
-      }
+      }, this));
     }
   });
 
@@ -458,18 +482,21 @@ function addProps(Ad) {
     trackChanges: true,
     def: 1,
     creative: true,
-    tabSeparated: ['creative_type', 'creative type'],
+    tabSeparated: ['Creative Type', 'creative_type'],
     setTabSeparated: function(obj, value, callback) {
       // if we have id instead of link simply skip it
-      var map = require("../../lib/adCreativeType").AD_CREATIVE_TYPE;
-      for (var type_name in map) {
-        value = (value + '').toUpperCase();
-        if (value == type_name) {
-          value = map[type_name];
-        }
+      if (value.match(/^\d+$/)) {
+        this.setValue(obj, value);
+        callback();
+        return;
       }
-      this.setValue(obj, value);
+
+      this.setValue(obj, require("../../lib/adCreativeType").string2id(value));
       callback();
+    },
+
+    getTabSeparated: function(obj) {
+      return require("../../lib/adCreativeType").id2string(this.getValue(obj));
     }
   });
 
@@ -507,7 +534,7 @@ function addProps(Ad) {
       
       obj.toggleError(error,
         'object_id',
-        'You do not own this facebook content'
+        tx('ads:pe:unowned-content')
       );
     },
     creative: true
@@ -566,7 +593,7 @@ function addProps(Ad) {
       obj.toggleError(
         !obj.countries().length,
         'countries',
-        'Countries required'
+        tx('ads:pe:countries-required')
       );
     },
     targeting: true
@@ -715,7 +742,8 @@ function addProps(Ad) {
     name: 'education_status',
     originalName: 'education_statuses',
     tabSeparated: 'Education Status',
-    targeting: true
+    targeting: true,
+    commitAs: 'education_statuses'
   });
 
   Ad.addProp({
@@ -1020,6 +1048,12 @@ function addProps(Ad) {
   Ad.addProp({
     name: 'stat',
     def: new AdStat()
+  });
+
+  Ad.addProp({
+    name: 'demolink_hash',
+    remote: true,
+    db: true
   });
 
   

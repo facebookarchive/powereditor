@@ -38,13 +38,13 @@ var Group = fun.newClass(Base, {
   },
 
   /**
-  * Handle adgroup_status specialy since we want to change status
+  * Handle adgroup_status specially since we want to change status
   * only to one of the allowes statuses
   */
-  commit_adgroup_status: function(value) {
+  commit_real_adgroup_status: function(value) {
     this._items.forEach(function(item) {
       if (item.allowedStatusTransitions().indexOf(value * 1) !== -1) {
-        item.adgroup_status(value).commitChanges('adgroup_status');
+        item.real_adgroup_status(value).commitChanges('adgroup_status');
       }
     });
   },

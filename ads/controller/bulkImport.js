@@ -78,7 +78,7 @@ function startImport() {
       BulkImport.importInto(
         models.Account.byId(importDialog.accountId()),
         data,
-        { data: lookup, hashes: {} });
+        lookup);
     });
   });
 }
@@ -90,7 +90,7 @@ function readData(callback) {
       callback(reader.result);
     };
     if (importDialog.dataFileInput().files().length !== 1) {
-      BulkImport.logError('Please select file with tab separated data');
+      BulkImport.logError(tx('ads:pe:import-nonts-error'));
       return;
     }
     reader.readAsText(importDialog.dataFileInput().files()[0]);
@@ -100,12 +100,14 @@ function readData(callback) {
 }
 
 function readImages(callback) {
+  var lookup = { data: {}, hashes: {} };
+
   if (importDialog.importImageFromZip()) {
     if (importDialog.imageZipInput().files().length !== 1) {
-      BulkImport.logError('Please select zip file with images');
+      BulkImport.logError(tx('ads:pe:import-nozip-error'));
       return;
     }
-    BulkImport.log('Sending zip file to the server to unpack.');
+    BulkImport.log(tx('ads:pe:import-zip-upload-message'));
     var progressBar =
       BulkImport.progressDialog()
       .append({ view: 'ProgressBar', value: 0, visible: false });
@@ -113,65 +115,39 @@ function readImages(callback) {
       BulkImport.progressDialog()
       .append({ view: 'Text' });
 
-    var UnzipImagesRequest = require("../lib/unzipImages").UnzipImagesRequest;
-    var req = new UnzipImagesRequest();
-
-    req.file(importDialog.imageZipInput().files()[0]);
-    req.on('progress', function(e) {
-      progressMeter.text((e.loaded / 1024 << 0) + ' KB');
-      progressBar
-        .visible(!!e.lengthComputable)
-        .value(e.loaded / e.total * 100);
-    });
-    req.on('fail', function() {
-      BulkImport.log('Failed to upload zip file to the server. ' +
-                     'Check your connection and try again');
-    });
-    req.on('load', function(e) {
-      if (e.data.error) {
-        BulkImport.logError(e.data.error);
-        return;
-      }
-      var result = {};
-      var list = new DeferredList();
-
-      utils.forEach(e.data.files, function(dataUri, name) {
-        var handler = list.newWaitHandler();
-        imageReader.resizeIfNeeded(dataUri, function(resizedData) {
-          result[name] = resizedData;
-          handler();
+    require("../lib/unzipImages").unzip(
+      importDialog.accountId(),
+      importDialog.imageZipInput().files()[0],
+      function(result) {
+        if (result.error) {
+          BulkImport.logError(result.error.message);
+          return;
+        }
+        utils.forEach(result.images, function(img, name) {
+          var parts = name.split('/');
+          var filename = parts[parts.length - 1].toLowerCase();
+          lookup.hashes[filename] = img.hash;
         });
+        callback(lookup);
       });
-
-      list.complete(function() {
-        progressBar.parent().removeChild(progressBar);
-        progressMeter.parent().removeChild(progressMeter);
-
-        BulkImport.log('Unpacking complete.');
-        callback(result);
-      });
-    });
-    req.send();
   } else {
     var list = new DeferredList();
-
     var files = utils.reduce(
       importDialog.imageFileInputs(),
       function(arr, view) {
         return arr.concat(utils.toArray(view.files()));
       }, []);
 
-    var result = {};
     utils.forEach(files, function(f) {
       var handler = list.newWaitHandler();
       imageReader.read(f, function(dataUri) {
-        result[f.name] = dataUri;
+        lookup.data[f.name.toLowerCase()] = dataUri;
         handler();
       });
     });
 
     list.complete(function() {
-      callback(result);
+      callback(lookup);
     });
   }
 }
@@ -184,7 +160,11 @@ function initErrors() {
 BulkImport.importInto = function(account, text, imageLookup) {
   require("../lib/completions").dialog = BulkImport.progressDialog();
 
+  var message = BulkImport.log(tx(
+    'ads:pe:import-parsets-message',
+    { percent: formatter(0) }));
   var parser = new ParserJob(account, text, imageLookup);
+  var formatter = require("../../lib/formatters").createPercentFormatter(2);
 
   parser.oncomplete(function() {
     if (parser.errors().length) {
@@ -192,7 +172,7 @@ BulkImport.importInto = function(account, text, imageLookup) {
       return;
     }
     if (parser.foundCampProps().length < 1) {
-      BulkImport.logError('Data does not campaign info.');
+      BulkImport.logError(tx('ads:pe:import-nocampaigns-error'));
       return;
     }
 
@@ -208,37 +188,67 @@ BulkImport.importInto = function(account, text, imageLookup) {
           .adPropsToCopy(utils.pluck(parser.foundAdProps(), 'name'));
       }
 
+      var importMessage = BulkImport.log(
+        tx('ads:pe:import-create-camps-message', { percent: formatter(0) }));
+
+      var firstZerro = true;
+      var secondMessage = false;
       importer
         .onerror(function(e) { BulkImport.logWarning(e.error.message()); })
-        .oncomplete(function() { BulkImport.complete(); }).start();
+        .oncomplete(function() { BulkImport.complete(); })
+        .onprogress(function(e) {
+          var status = e.status;
+          if (status.complete === 0 && !firstZerro) {
+            importMessage = BulkImport.log(
+              tx(
+                'ads:pe:import-create-ads-message',
+                { percent: formatter(0) }));
+            secondMessage = true;
+          }
+          firstZerro = false;
+          var data = { percent: formatter(status.complete / status.total) };
+          importMessage.text(secondMessage ?
+            tx('ads:pe:import-create-ads-message', data) :
+            tx('ads:pe:import-create-camps-message', data));
+        })
+        .start();
     } else {
       // import ads only
       BulkImport.importAds(account, parser.ads(), parser);
     }
-  }).start();
+  })
+  .onprogress(function(e) {
+    var status = e.status;
+    var percent = status.complete / status.total;
+    message.text(tx(
+      'ads:pe:import-parsets-message',
+      { percent: formatter(percent) }));
+  })
+  .start();
 };
 
 BulkImport.complete = function() {
-  BulkImport.log('Finished importing', 'message');
+  var row = BulkImport.log(tx('ads:pe:import-finished-message'), 'message');
   App.reload();
+  return row;
 };
 
 BulkImport.logError = function(msg) {
-  BulkImport.log(msg, 'error');
+  return BulkImport.log(msg, 'logDialog-error');
 };
 
 BulkImport.logWarning = function(msg) {
-  BulkImport.log(msg, 'warning');
+  return BulkImport.log(msg, 'logDialog-warning');
 };
 
 BulkImport.progressDialog = function() {
   return this._progressDialog || (this._progressDialog =
-    new LogDialog().title('Importing'));
+    new LogDialog().title(tx('ads:pe:import-title')));
 };
 
 BulkImport.log = function(msg, type) {
   BulkImport.errors.push({ type: type, msg: msg });
-  this.progressDialog().log(msg, 'bulkImport-' + type);
+  return this.progressDialog().log(msg, type);
 };
 
 

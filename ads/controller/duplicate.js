@@ -42,7 +42,8 @@ var Duplicate = {};
 Duplicate.duplicateAdsHandler = function() {
   var ads = view.byId('adPane-data').selectedRows();
   if (!ads.length) {
-    alert('Please select ads to duplicate');
+    require("../../uki-fb/view/dialog").Dialog
+      .alert(tx('ads:pe:no-ads-to-duplicate'));
     return;
   }
 
@@ -64,7 +65,8 @@ Duplicate.duplicateAdsHandler = function() {
 Duplicate.duplicateCampsHandler = function() {
   var camps = view.byId('campPane-data').selectedRows();
   if (!camps.length) {
-    alert('Please select campaigns to duplicate');
+    require("../../uki-fb/view/dialog").Dialog
+      .alert(tx('ads:pe:no-camps-to-duplicate'));
     return;
   }
 

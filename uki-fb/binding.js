@@ -8,17 +8,16 @@ var fun = require("../uki-core/function"),
 
 
 var Binding = fun.newClass(Base, {
-    commitChangesViewEvent: 'blur',
+  commitChangesViewEvent: 'blur',
 
-    updateModel: function(e) {
-        Base.prototype.updateModel.call(this, e);
+  updateModel: function(e) {
+    Base.prototype.updateModel.call(this, e);
 
-        if (e && e.type == this.commitChangesViewEvent &&
-            this.model.commitChanges) {
-
-            this.model.commitChanges(this.modelProp);
-        }
+    if (e && e.type == this.commitChangesViewEvent &&
+      this.model.commitChanges) {
+      this.model.commitChanges(this.modelProp);
     }
+  }
 });
 
 

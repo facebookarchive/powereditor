@@ -85,7 +85,7 @@ Mutator.selectTopline = function(accountId, lineNumbers, callback) {
   var dialog = Mutator.selectToplineDialog();
 
   dialog.view('select').options(
-    [{ text: 'Select line number', value: '' }].concat(
+    [{ text: tx('ads:pe:select-line-number-option'), value: '' }].concat(
       lineNumbers.map(function(s) {
         var line_id =
           models.Topline.getIdbyLineNumber(accountId, s);
@@ -120,17 +120,16 @@ Mutator.selectToplineDialog = function() {
   if (!this._selectToplineDialog) {
     this._selectToplineDialog =
       build({ view: 'Dialog', childViews: [
-        { view: 'DialogHeader', html: "Select target line number" },
+        { view: 'DialogHeader', text: tx('ads:pe:select-line-number-title') },
         { view: 'DialogContent', childViews: [
           { view: 'DialogBody', childViews: [
-            { view: 'Text', text:
-              'Please select the line for the campaign.' },
+            { view: 'Text', text: tx('ads:pe:select-line-number-text') },
             { view: 'Select', options: [], as: 'select' }
           ] },
           { view: 'DialogFooter', childViews: [
-            { view: 'Button', label: 'OK', large: true, as: 'ok',
+            { view: 'Button', label: tx('sh:ok-button'), large: true, as: 'ok',
               use: 'confirm' },
-            { view: 'Button', label: 'Close', large: true,
+            { view: 'Button', label: tx('sh:confirm-button'), large: true,
               on: { click: function() {
                 Mutator.selectToplineDialog().visible(false);
             } } }

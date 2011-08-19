@@ -27,12 +27,12 @@ var view  = require("../../uki-core/view"),
     env   = require("../../uki-core/env"),
     evt   = require("../../uki-core/event"),
     dom   = require("../../uki-core/dom"),
-    build   = require("../../uki-core/builder").build,
 
     ParserJob = require("../job/tabSeparatedParser").Parser,
     CampImporterJob = require("../job/campImporter").Importer,
     AdImporterJob = require("../job/adImporter").Importer,
     LogDialog = require("../view/logDialog").LogDialog,
+    SelectDialog = require("../view/selectDialog").SelectDialog,
 
     Copy = require("./copy").Copy,
     App  = require("./app").App;
@@ -49,6 +49,8 @@ Paste.init = function() {
   // bind high level paste hanlder, so we can
   // support campaign and ad tab separated pastes
   var normalPasteCompletedBefore = false;
+  this._selectDialog = new SelectDialog('campaign');
+  this._selectDialog.text(tx('ads:pe:select-one-campaign-for-paste'));
 
   evt.on(env.doc.body, 'paste', function(e) {
     var pasteView = targetView(e);
@@ -136,7 +138,7 @@ Paste.handler = function(v, text) {
 // User can close dialog with 'Close' button
 Paste.dialog = function() {
   return this._dialog ||
-    (this._dialog = new LogDialog().title('Paste Progress'));
+    (this._dialog = new LogDialog().title(tx('ads:pe:paste-title')));
 };
 
 Paste.resetDialog = function() {
@@ -149,46 +151,23 @@ Paste.logError = function(error) {
 
 // Select campaign
 // If user pastes from power editor and more than one campaign is selected
-// (account is selected) ask which particular campaign user whants to use.
+// (account is selected) ask which particular campaign user wants to use.
 // Use selected ad as a hint to preselect campaign.
-Paste.selectCampaignDialog = function() {
-  if (!this._selectCampaignDialog) {
-    this._selectCampaignDialog = build({ view: 'Dialog', childViews: [
-      { view: 'DialogHeader', html: "Select target campaign" },
-      { view: 'DialogContent', childViews: [
-        { view: 'DialogBody', childViews: [
-          { view: 'Text', text:
-            'More then one campaign selected in the left panel. ' +
-            'Please select the one you want to paste to.' },
-          { view: 'Select', options: [], as: 'select' }
-        ] },
-        { view: 'DialogFooter', childViews: [
-          { view: 'Button', label: 'OK', large: true, as: 'ok',
-            use: 'confirm' },
-          { view: 'Button', label: 'Close', large: true,
-            on: { click: function() {
-              Paste.selectCampaignDialog().visible(false);
-          } } }
-        ] }
-      ] }
-    ]});
-  }
-  return this._selectCampaignDialog;
-};
-
 Paste.selectCampaign = function(callback) {
   var selectedCampaigns = view.byId('content').campaigns();
   var selectedAd = view.byId('adPane-data').selectedRow();
-  var dialog = Paste.selectCampaignDialog();
-  dialog.view('select').options(selectedCampaigns.map(function(camp) {
+  var dialog = this._selectDialog;
+  dialog.selectOptions(selectedCampaigns.map(function(camp) {
     return { text: camp.name() + ' (' + camp.id() + ')', value: camp.id() };
   }));
   if (selectedAd) {
-    dialog.view('select').value(selectedAd.campaign_id());
+    dialog.selectValue(selectedAd.campaign_id());
   }
-  dialog.view('ok').removeListener('click').on('click', function() {
+  dialog.on('select.campaign', function handler(e) {
+    dialog.removeListener('select.campaign', handler);
+    e.stopPropagation();
     dialog.visible(false);
-    var id = dialog.view('select').value();
+    var id = dialog.selectValue();
     for (var i = 0, l = selectedCampaigns.length; i < l; i++) {
       if (id === selectedCampaigns[i].id()) {
         callback([selectedCampaigns[i]]);
@@ -226,11 +205,12 @@ Paste.pasteIntoAdsContinue = function(account, text, selectedCamps) {
       return;
     }
     if (parser.foundAdProps().length < 2) {
-      alert('Pasted text does not look like ads.');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:paste-garbage-ads-error'));
       return;
     }
     if (parser.foundCampProps().length > 1) {
-      Paste.logError('Pasted text contains campaign data. Ignoring.');
+      Paste.logError(tx('ads:pe:paste-campaign-into-ads-warning'));
     }
 
     if (parser.ads().length) {
@@ -280,7 +260,8 @@ Paste.pasteIntoCamps = function(account, text) {
       return;
     }
     if (parser.foundCampProps().length < 2) {
-      alert('Pasted text does not look like campaign.');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:paste-garbage-camps-error'));
       return;
     }
 

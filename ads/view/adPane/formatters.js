@@ -54,7 +54,7 @@ function destination(c, row) {
     if (row.object_id()) {
         var obj = row.object();
         if (obj) {
-            return obj.name();
+            return dom.escapeHTML(obj.name());
         }
         return row.object_id();
     }

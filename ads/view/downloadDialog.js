@@ -141,7 +141,7 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
         return;
       }
     } else if (col.view('option-account-id').checked()) {
-      ids = [col.view('account-id').value()];
+      ids = [col.view('account-id').value().trim()];
     } else if (col.view('option-account-name').checked()) {
       var matches = col.view('account-name').value();
 

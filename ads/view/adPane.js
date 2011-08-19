@@ -48,7 +48,7 @@ var fun   = require("../../uki-core/function"),
 
 
 var AdPane = view.newClass('ads.AdPane', BasePane, {
-  _initSetup: function(callback) {
+  _initDataSetup: function(callback) {
     ResultSet = AdRS;
     Ad.findAllBy(
       'campaign_id', utils.pluck(this._campaigns, 'id'),
@@ -77,7 +77,7 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               on: { click: Duplicate.duplicateAdsHandler } },
             { view: 'Button', label: 'Export', requireActive: true,
               on: { click: Export.handleAds } },
-            { view: controls.DateRange, id: 'statDates',
+            { view: controls.DateRange, as: 'statDates',
               requireActive: true,
               action: 'dataRange', addClass: 'mlm',
               persistent: {
@@ -127,9 +127,9 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
           { desc: 'Status',
             sortable: true,
-            label: '', key: 'adgroup_status',
+            label: '', key: 'real_adgroup_status',
             width: 20, maxWidth: 20, minWidth: 20,
-            changeOnKeys: ['adgroup_status'],
+            changeOnKeys: ['real_adgroup_status'],
             className: 'adPane-cell_status',
             formatter: paneFormatters.status,
             editor: { view: StatusEditor } },
@@ -139,7 +139,7 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
             changeOnKeys: ['max_bid'],
             sortable: true,
             compareFn: compare.numbers,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             formatter: paneFormatters.money,
             editor: {
               view: 'dataList.Editor',
@@ -148,7 +148,6 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
           { label: 'Type', key: 'bid_type_name',
             width: 50, maxWidth: 50, minWidth: 50,
-            className: 'dataTable-cell_number',
             changeOnKeys: ['bid_type'],
             sortable: true,
             editor: {
@@ -208,7 +207,7 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
           { label: 'Impressions', key: 'impressions',
             width: 80, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             compareFn: compare.numbers,
             sortable: true,
             formatter: formatters.createNumberFormatter(),
@@ -216,7 +215,7 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
           { label: 'Social %', key: 'social_percent',
             width: 60, maxWidth: 60, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: formatters.createPercentFormatter(1),
@@ -224,41 +223,39 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
           { label: 'Clicks', key: 'clicks',
             width: 60, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: formatters.createNumberFormatter() },
 
           { label: 'CTR %', key: 'ctr',
             width: 60, maxWidth: 60, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: formatters.createPercentFormatter(3) },
 
           { label: 'Avg. CPC', key: 'avg_cpc',
             width: 70, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: paneFormatters.money },
 
           { label: 'Avg. CPM', key: 'avg_cpm',
             width: 70, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: paneFormatters.money },
 
           { label: 'Demo links', key: 'demolinks',
             width: 70, maxWidth: 150, minWidth: 60,
-            sortable: true,
-            className: 'dataTable-cell_number',
             formatter: paneFormatters.demolinks },
 
           { label: 'Spent', key: 'spent_100',
             width: 70, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             sortable: true,
             compareFn: compare.numbers,
             formatter: paneFormatters.money,
@@ -286,17 +283,10 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
     this._editor = find('> AdEditor', this)[0];
     find('DataTableList', this._dataTable)[0].copySourceId('ads');
     this._searchInput = this._refs.view('search');
-    this.on('tableSorted', fun.bind(function(e) {
-      var table = this._dataTable;
-      if (!table) {
-        return;
-      }
-      table.data(this._objects);
-      table.sortColumn(e.index, e.direction);
-      this._searchModel.updateData(table.data());
-      this._lastQuery = '';
-      this._searchHandler();
-    }, this));
+    this._statDates = this._refs.view('statDates');
+
+    this._statType = 'AdStat';
+    this._setupListeners();
   },
 
   _editorResized: function(e) {
@@ -305,14 +295,30 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
   },
 
   _addAd: function(e) {
-    var ad = new Ad();
     if (!this.campaigns().length) {
       alert('Cannot create an ad without a campaign. ' +
         'Create campaign first.');
       return;
     }
+
+    if (this.campaigns().length > 1) {
+      this.trigger({ type: 'createAd',
+          callback: fun.bind(this._completeAdCreation, this) });
+    } else {
+      this._completeAdCreation(0);
+    }
+  },
+
+  /**
+   * Creates a new ad for the given campaign index
+   *
+   * @param index of campaign to create ad in
+   * @return none
+   */
+  _completeAdCreation: function(campIndex) {
+    var ad = new Ad();
     require("../controller/mutator").Mutator
-      .initAdInCampaign(this.campaigns()[0], ad);
+      .initAdInCampaign(this.campaigns()[campIndex], ad);
 
     var table = this._dataTable;
 

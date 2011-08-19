@@ -53,9 +53,7 @@ var DownloadBCT = {
         { view: 'DialogHeader', text: "Downloading BCT" },
         { view: 'DialogContent', childViews: [
           { view: 'DialogBody', childViews: [
-            { view: 'Text',
-              text: 'Your BCT data is out of date. Updating. ' +
-                    'This may take several minutes on a slow connection.' },
+            { view: 'Text', text: tx('ads:pe:bct-needs-update') },
             { view: 'Text', as: 'progress' }
           ] }
         ] }

@@ -22,46 +22,45 @@
 *
 */
 
-var fun   = require("../../../uki-core/function"),
-
-    SingleValueArray =
-        require("./singleValueArray").SingleValueArray,
-    SingleValueArrayAccessor =
-        require("./singleValueArray").SingleValueArrayAccessor;
+var fun   = require("../../../uki-core/function");
+var SingleValueArray =
+  require("./singleValueArray").SingleValueArray;
+var SingleValueArrayAccessor =
+  require("./singleValueArray").SingleValueArrayAccessor;
 
 
 var EducationStatus = fun.newClass(SingleValueArray, {
-    def: [0]
+  def: [0]
 });
 
 var EducationStatusAccessor = fun.newClass(SingleValueArrayAccessor, {
-    def: 0,
+  def: 0,
 
-    setTabSeparated: function(obj, value, callback) {
-        value = (value + '').toLowerCase();
+  setTabSeparated: function(obj, value, callback) {
+    value = (value + '').toLowerCase();
 
-        var number = 0;
+    var number = 0;
 
-        if (value === 1 || value.match(/high/)) {
-            number = 1;
-        } else if (value === 2 || value.match(/college|undergrad/)) {
-            number = 2;
-        } else if (value === 3 || value.match(/grad/)) {
-            number = 3;
-        }
-        this.setValue(obj, number);
-        callback();
-    },
-
-    getTabSeparated: function(obj) {
-        var value = this.getValue(obj),
-            text  = value + '' === '0' ? 'All' :
-                    value + '' === '1' ? 'High School' :
-                    value + '' === '2' ? 'College'     :
-                    'College Grad';
-
-        return text;
+    if (value === 1 || value.match(/high/)) {
+      number = 1;
+    } else if (value === 3 || value.match(/(^|\s)grad/)) {
+      number = 3;
+    } else if (value === 2 || value.match(/college|undergrad/)) {
+      number = 2;
     }
+    this.setValue(obj, number);
+    callback();
+  },
+
+  getTabSeparated: function(obj) {
+    var value = this.getValue(obj);
+    var text = value + '' === '0' ? 'All' :
+               value + '' === '1' ? 'High School' :
+               value + '' === '2' ? 'College'     :
+               'College Grad';
+
+    return text;
+  }
 });
 
 

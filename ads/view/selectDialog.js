@@ -21,62 +21,49 @@
 *
 *
 */
-requireCss("./logDialog/loadDialog.css");
 
-var fun   = require("../../uki-core/function"),
-    view  = require("../../uki-core/view"),
+var view  = require("../../uki-core/view"),
     build = require("../../uki-core/builder").build,
-
+    fun   = require("../../uki-core/function"),
     Dialog = require("../../uki-fb/view/dialog").Dialog;
 
-
-var LogDialog = view.newClass('ads.LogDialog', Dialog, {
-  header: function() {
-    return this._collection.view('header');
-  },
-
-  closeButton: function() {
-    return this._collection.view('closeButton');
-  },
-
-  title: fun.newDelegateProp('header', 'html'),
-
-  log: function(message, className) {
-    return build({ view: 'Text', text: message, addClass: className })
-      .appendTo(this._collection.view('log'));
-  },
-
-  append: function(view) {
-    return build(view).appendTo(this._collection.view('log'))[0];
-  },
-
-  clear: function(message, className) {
-    this._collection.view('log').html('');
-    return this;
-  },
-
+var SelectDialog = view.newClass('ads.SelectDialog', Dialog, {
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);
 
-    this
-      .modal(true)
-      .addClass('logDialog');
-
+    this.selectType = initArgs.toString().toLowerCase();
     this._collection = build([
-      { view: 'DialogHeader', html: "Log", as: 'header' },
+      { view: 'DialogHeader', html: ("Select target " + this.selectType),
+          as: 'header' },
       { view: 'DialogContent', childViews: [
-        { view: 'DialogBody', as: 'log', addClass: 'logDialog-log' },
+        { view: 'DialogBody', childViews: [
+          { view: 'Text', text: '', as: 'text' },
+          { view: 'Select', options: [], as: 'select' }
+        ] },
         { view: 'DialogFooter', childViews: [
-          { view: 'Button', label: 'Close', large: true, as: 'closeButton' }
+          { view: 'Button', label: 'OK', large: true, as: 'ok',
+            use: 'confirm',
+            on: { click: fun.bind(function() {
+              this.trigger({ type: ('select.' + this.selectType) });
+            }, this) }
+          },
+          { view: 'Button', label: 'Close', large: true,
+            on: { click: fun.bind(function() {
+              this.visible(false);
+          }, this) } }
         ] }
       ] }
     ]).appendTo(this);
+    this._text = this._collection.view('text');
+    this._select = this._collection.view('select');
+  },
 
-    this.closeButton().on('click', fun.bind(function() {
-      this.visible(false);
-    }, this));
-  }
+
+  text: fun.newDelegateProp('_text', 'text'),
+
+  selectOptions: fun.newDelegateProp('_select', 'options'),
+
+  selectValue: fun.newDelegateProp('_select', 'value')
 });
 
-
-exports.LogDialog = LogDialog;
+exports.SelectDialog = SelectDialog;

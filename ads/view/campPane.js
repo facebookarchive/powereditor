@@ -45,7 +45,7 @@ var fun   = require("../../uki-core/function"),
 
 
 var CampPane = view.newClass('ads.CampPane', BasePane, {
-  _initSetup: function(callback) {
+  _initDataSetup: function(callback) {
     ResultSet = CampRS;
     this._objects = this._campaigns;
     this._setupData(callback);
@@ -80,7 +80,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
             { view: 'Button', label: 'Export',
               on: { click: Export.handleCampaigns } },
 
-            { view: controls.DateRange, id: 'campStatDates',
+            { view: controls.DateRange, as: 'statDates',
               requireActive: true,
               action: 'dataRange', addClass: 'mlm',
               persistent: {
@@ -151,7 +151,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
             width: 80, minWidth: 40,
             changeOnKeys: ['daily_budget',
               'lifetime_budget', 'inflation'],
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             formatter: campFormatters.budget,
             compareFn: compare.numbers,
             sortable: true,
@@ -170,7 +170,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
 
           { label: 'Remaining', key: 'budget_remaining_100',
             width: 70, maxWidth: 150, minWidth: 60,
-            className: 'dataTable-cell_number',
+            className: 'ufb-dataTable-cell_number',
             compareFn: compare.numbers,
             sortable: true,
             formatter: paneFormatters.money }
@@ -196,17 +196,10 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
     this._dataTable = find('> DataTable', this)[0];
     find('DataTableList', this._dataTable)[0].copySourceId('campaigns');
     this._searchInput = this._refs.view('search');
-    this.on('tableSorted', fun.bind(function(e) {
-      var table = this._dataTable;
-      if (!table) {
-        return;
-      }
-      table.data(this._objects);
-      table.sortColumn(e.index, e.direction);
-      this._searchModel.updateData(table.data());
-      this._lastQuery = '';
-      this._searchHandler();
-    }, this));
+    this._statDates = this._refs.view('statDates');
+
+    this._statType = 'CampStat';
+    this._setupListeners();
   }
 });
 

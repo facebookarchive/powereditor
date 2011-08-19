@@ -22,12 +22,15 @@
 *
 */
 
-var fun   = require("../../../uki-core/function"),
-    utils = require("../../../uki-core/utils"),
+var fun   = require("../../../uki-core/function");
+var utils = require("../../../uki-core/utils");
 
-    campConst = require("../../model/campaign/constants"),
-    Base = require("./base").Base,
-    Num = require("./number").Number;
+var campConst = require("../../model/campaign/constants");
+var Base = require("./base").Base;
+var Num = require("./number").Number;
+
+var inflationConverter = require("../budgetImpsConverter").Converter;
+
 
 
 var TYPE_MAP = {
@@ -38,25 +41,43 @@ var TYPE_MAP = {
 var MULTI_REX = /multi/gi;
 
 var CampaignType = fun.newClass(Num, {
-    setTabSeparated: function(obj, value, callback) {
-        value = (value + '').toLowerCase();
-        value = value.replace(MULTI_REX, 'moo');
-        var number = 1;
+  setTabSeparated: function(obj, value, callback) {
+    value = (value + '').toLowerCase();
+    value = value.replace(MULTI_REX, 'moo');
+    var number = 1;
 
-        utils.forEach(TYPE_MAP, function(status, id) {
-            if (status.toLowerCase() == value.trim()) {
-                number = id;
-            }
-        });
+    utils.forEach(TYPE_MAP, function(status, id) {
+      if (status.toLowerCase() == value.trim()) {
+        number = id;
+      }
+    });
 
-        this.setValue(obj, number);
-        callback();
-    },
+    this.setValue(obj, number);
+    callback();
+  },
 
-    getTabSeparated: function(obj) {
-        var value = this.getValue(obj);
-        return TYPE_MAP[value];
+  getTabSeparated: function(obj) {
+    var value = this.getValue(obj);
+    return TYPE_MAP[value];
+  },
+
+  setValue: function(obj, value) {
+    Num.prototype.setValue.call(this, obj, value);
+    if (value == campConst.CAMP_CLASSIC_TYPE) {
+      obj.lifetime_imps(0);
+      obj.daily_imps(0);
+    } else {
+      if (obj.daily_budget()) {
+        obj.daily_imps(inflationConverter.convertToImps(
+          obj.daily_budget(), obj.func_price()));
+      }
+
+      if (obj.lifetime_budget()) {
+        obj.lifetime_imps(inflationConverter.convertToImps(
+          obj.lifetime_budget(), obj.func_price()));
+      }
     }
+  }
 });
 
 exports.TYPE_MAP   = TYPE_MAP;

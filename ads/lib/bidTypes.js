@@ -31,8 +31,10 @@ var BID_TYPE_MULTI_SS = 6;
 
 function options(isCorporate) {
   var result = [
-    { text: 'CPC', value: BID_TYPE_CPC, tabSeparated: 'cpc' },
-    { text: 'CPM', value: BID_TYPE_CPM, tabSeparated: 'cpm' }
+    { text: tx('ads:pe:bid-type:cpc'), value: BID_TYPE_CPC,
+      tabSeparated: 'cpc' },
+    { text: tx('ads:pe:bid-type:cpm'), value: BID_TYPE_CPM,
+      tabSeparated: 'cpm' }
 // Uncomment when we're ready to release BBB to self server
 //  { text: 'Multi', value: BID_TYPE_MULTI_SS, tabSeparated: 'multi_ss' }
   ];
@@ -41,9 +43,9 @@ function options(isCorporate) {
     // remove multi_ss, DSO has a different multi
     // result = result.slice(0, 2);
 
-    result.push({ text: 'FCPM', value: BID_TYPE_FCPM,
+    result.push({ text: tx('ads:pe:bid-type:fcpm'), value: BID_TYPE_FCPM,
       tabSeparated: 'cpm_fixed' });
-    result.push({ text: 'Multi', value: BID_TYPE_MULTI,
+    result.push({ text: tx('ads:pe:bid-type:multi'), value: BID_TYPE_MULTI,
       tabSeparated: 'multi' });
   }
 

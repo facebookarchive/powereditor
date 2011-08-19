@@ -36,7 +36,7 @@ var fun   = require("../uki-core/function"),
     libUtils = require("../lib/utils"),
     urllib = require("../lib/urllib"),
     async = require("../lib/async"),
-    graphlink = require("../lib/graphlink"),
+    graphlink = require("../lib/graphlink").gl,
 
     pathUtils = require("../lib/pathUtils"),
     Storable = require("./storable").Storable,

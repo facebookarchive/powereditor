@@ -67,6 +67,10 @@ var SearchInput = view.newClass('fb.SearchInput', Base, Focusable, {
     return this._input.select();
   },
 
+  setSelectionRange: function(from, to) {
+    return this._input.setSelectionRange(from, to);
+  },
+
   flex: view.newToggleClassProp('ufb-search-input_flex'),
   buttonless: view.newToggleClassProp('ufb-search-input_buttonless')
 });

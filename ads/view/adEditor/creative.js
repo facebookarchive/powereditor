@@ -32,6 +32,8 @@ var fun   = require("../../../uki-core/function"),
     connectObj = require("../../model/connectedObject"),
     creativeType = require("../../lib/adCreativeType"),
     controls = require("../controls"),
+    ConnectedObjectDialog =
+      require("../connectedObjectDialog").ConnectedObjectDialog,
     Base = require("./base").Base;
 
 var MAX_TITLE_LENGTH = require("../../model/ad/constants").MAX_TITLE_LENGTH;
@@ -279,7 +281,18 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
     // change the anchor type
     this.child('facebook').addListener('change',
-      fun.bindOnce(this._onAnchorTypeChange, this));
+      fun.bindOnce(function(e) {
+        var obj_id = this.child('facebook').value();
+        if (obj_id === 'Others') {
+          // reset object_id to first valid while download happpens
+          this.child('facebook').value(
+              this.child('facebook').options()[0].options[0].value);
+          var dialog = new ConnectedObjectDialog();
+          dialog.visible(true);
+        } else {
+          this._onAnchorTypeChange();
+        }
+      }, this));
 
     // change the creative type
     this.child('story_type').addListener('change',
@@ -345,12 +358,6 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
   _onAnchorTypeChange: function() {
     var obj_id = this.child('facebook').value();
-
-    if (obj_id === 'Others') {
-      require("../../controller/downloadConnectedObject")
-        .ObjectDownload.handle();
-      return;
-    }
 
     var obj = connectObj.ConnectedObject.byId(obj_id);
 

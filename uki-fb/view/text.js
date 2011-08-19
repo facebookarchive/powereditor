@@ -40,10 +40,10 @@ var fun  = require("../../uki-core/function"),
 var Text = view.newClass('fb.Text', Container, {}),
     proto = Text.prototype;
 
-proto._createDom = function() {
+proto._createDom = function(initArgs) {
   this._content = dom.createElement('span', { className: 'ufb-text-content' });
   this._dom = dom.createElement(
-    'div',
+    initArgs.tagName || 'div',
     { className: 'ufb-text ufb-text_size-normal' },
     [this._content]);
 };

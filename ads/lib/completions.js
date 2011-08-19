@@ -85,9 +85,11 @@ exports.findBest = function(type, query, callback) {
   if (type == 'country') {
     callback(
       bestMatch(query, this.searchCountries(query, BEST_MATCH_LIMIT)));
+      return;
   } else if (type == 'locale') {
     callback(
       bestMatch(query, this.searchLocales(query, BEST_MATCH_LIMIT)));
+      return;
   } else if (type == 'city' || type == 'region') {
     key = type + ':' + query.country + ':' + query.query;
     options.q = query.query;

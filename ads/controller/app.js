@@ -80,12 +80,12 @@ function checkInstalled() {
         { view: 'DialogContent', childViews: [
           { view: 'DialogBody', childViews: [
             { view: 'Text',
-              text: 'Please install Power Editor Chrome Extension before using.'
+              text: tx('ads:pe:please-install-chrome')
               }
           ] },
           { view: 'DialogFooter', childViews: [
-            { view: 'Button', use: 'confirm', label: 'Install',
-              large: true,
+            { view: 'Button', use: 'confirm',
+              label: tx('ads:pe:chrome-install-button'), large: true,
               on: { click: function() { location.href = installLink; } } }
           ] }
         ] }
@@ -294,6 +294,7 @@ function layout() {
 function _initHandler() {
     require("./paste").Paste.init();
     require("./delete").Delete.init();
+    require("./newAd").NewAd.init();
 
     view.byId('adPane-data').list().on('selection', function() {
         if (this.selectedIndexes().length > 1) {
@@ -316,64 +317,6 @@ function _initHandler() {
             view.byId('campEditor').model(this.selectedRow() || null);
         }
     });
-
-    // treat statDates as global control
-    // probably should be moved to Head in ui
-    view.byId('statDates').on('change.range', function(e) {
-      var dateRange = this;
-      dateRange.loading(true);
-
-      // load remote stat for all campaigns/ads
-      models.Account.findAll(function(accounts) {
-        // to fetch all accounts
-        accounts = accounts.slice();
-        models.AdStat.loadFromAccountsAndRange(
-          accounts, e.from, e.to,
-          function() {
-
-            dateRange.loading(false);
-            var pane = view.byId('adPane-data'),
-                indexes = pane.selectedIndexes(),
-                lcIndex = pane.lastClickIndex();
-
-            pane.data().statRange(e);
-            pane
-              .data(pane.data())
-              .selectedIndexes(indexes)
-              .lastClickIndex(lcIndex)
-              .layoutIfVisible();
-        });
-      });
-    });
-
-
-    view.byId('campStatDates').on('change.range', function(e) {
-      var dateRange = this;
-      dateRange.loading(true);
-
-      // load remote stat for all campaigns
-      models.Account.findAll(function(accounts) {
-        // again fetch all accounts from db
-        accounts = accounts.slice();
-        models.CampStat.loadFromAccountsAndRange(
-          accounts, e.from, e.to,
-          function() {
-
-            dateRange.loading(false);
-            var pane = view.byId('campPane-data'),
-                indexes = pane.selectedIndexes(),
-                lcIndex = pane.lastClickIndex();
-
-            pane.data().statRange(e);
-            pane
-              .data(pane.data())
-              .selectedIndexes(indexes)
-              .lastClickIndex(lcIndex)
-              .layoutIfVisible();
-        });
-      });
-    });
-
 
     _initCampaignListHandler();
 }

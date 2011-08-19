@@ -105,6 +105,11 @@ var Importer = fun.newClass(Job, {
       .adMapById(mapById)
       .adMapByName(mapByName);
 
+    this._status = {
+      complete: 0,
+      total: this.ads().length
+    };
+    this._progress(this._status);
     require("../../lib/async").forEach(
       this.ads(),
       this._routeAd,
@@ -198,6 +203,8 @@ var Importer = fun.newClass(Job, {
   _routeAd: function(newAd, index, callback) {
     try {
 
+    this._status.complete++;
+    this._progress(this._status);
     var campMapById = this.campMapById();
     var adMapById = this.adMapById();
     var adMapByName = this.adMapByName();
@@ -344,28 +351,43 @@ function nameKey(ad) {
 
 var AdCannotBeMovedError = AdError.newClass(
   1305338615454,
-  'Ad ({{#ad}}id: {{id}}, name: {{name}}{{/ad}}) cannot be moved between ' +
-  ' campaigns:' +
-  ' from {{#oldCamp}}{{id}} {{/oldCamp}}to {{#newCamp}}{{id}}{{/newCamp}}'
+  function() {
+    var data = this.data();
+    data.ad_id = data.ad.id();
+    data.ad_name = data.ad.name();
+    data.old_id = data.oldCamp.id();
+    data.new_id = data.newCamp.id();
+    return tx('ads:pe:import-ad-cannot-be-moved-error', data);
+  }
 );
 
 var AdCannotBeMovedToNowhereError = AdError.newClass(
   1305338900547,
-  'Ad ({{#ad}}id: {{id}}, name: {{name}}{{/ad}}) cannot be moved between ' +
-  ' campaigns:' +
-  ' from {{#oldCamp}}{{id}} {{/oldCamp}}to non-existent campaign' +
-  ' {{#ad}}{{campaign_id}}{{/ad}}'
+  function() {
+    var data = this.data();
+    data.ad_id = data.ad.id();
+    data.ad_name = data.ad.name();
+    data.old_id = data.oldCamp.id();
+    data.new_id = data.ad.campaign_id();
+    return tx('ads:pe:import-ad-cannot-be-moved-to-nowhere-error', data);
+  }
 );
 
 var MissingAdUpdateError = AdError.newClass(
   1305339005820,
-  'Trying to update ad ({{id}}) that does not exist'
+  function() {
+    var data = { id: this.data().id() };
+    return tx('ads:pe:import-missing-ad-update-error', data);
+  }
 );
 
 var CreateAdWithoutCampaignError = AdError.newClass(
   1305339379733,
-  'Cannot create ad (name: {{#ad}}{{name}}{{/ad}}, index: {{index}})' +
-  ' without campaign id or campaign name'
+  function() {
+    var data = this.data();
+    data.ad_name = data.ad.name();
+    return tx('ads:pe:import-cannot-create-ad-without-camp-error', data);
+  }
 );
 
 exports.Importer = Importer;

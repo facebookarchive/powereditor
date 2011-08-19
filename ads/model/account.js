@@ -68,8 +68,6 @@ var Account = storage.newStorage({
       } else if (obj.length == 1) {
         return obj[0].role;
       } else {
-        alert('Account' + this.id() +
-          ' has more than one role for the user ' + cur_uid);
         // My linter would not let this go. :)
         return userRole.ROLE_NONE;
       }
@@ -180,10 +178,11 @@ Account.prepare = function(callback, force) {
   }, this));
 };
 
-Account.hasCorpAct = function() {
-  if (Account.cached()) {
-    for (var i = 0, l = this._cache.length; i < l; i++) {
-      if (this._cache[i].isCorporate()) {
+Account.hasCorpAct = function(accounts) {
+  var acts = accounts || this._cache;
+  if (acts) {
+    for (var i = 0, l = acts.length; i < l; i++) {
+      if (acts[i].isCorporate()) {
         return true;
       }
     }

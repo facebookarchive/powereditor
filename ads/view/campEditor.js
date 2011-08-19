@@ -1,26 +1,26 @@
 /**
-* Copyright 2011 Facebook, Inc.
-*
-* You are hereby granted a non-exclusive, worldwide, royalty-free license to
-* use, copy, modify, and distribute this software in source code or binary
-* form for use in connection with the web services and APIs provided by
-* Facebook.
-*
-* As with any software that integrates with the Facebook platform, your use
-* of this software is subject to the Facebook Developer Principles and
-* Policies [http://developers.facebook.com/policy/]. This copyright notice
-* shall be included in all copies or substantial portions of the software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-* DEALINGS IN THE SOFTWARE.
-*
-*
-*/
+ * Copyright 2011 Facebook, Inc.
+ *
+ * You are hereby granted a non-exclusive, worldwide, royalty-free license to
+ * use, copy, modify, and distribute this software in source code or binary
+ * form for use in connection with the web services and APIs provided by
+ * Facebook.
+ *
+ * As with any software that integrates with the Facebook platform, your use
+ * of this software is subject to the Facebook Developer Principles and
+ * Policies [http://developers.facebook.com/policy/]. This copyright notice
+ * shall be included in all copies or substantial portions of the software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ *
+ */
 requireCss("./campEditor/campEditor.css");
 
 var fun   = require("../../uki-core/function"),
@@ -65,9 +65,15 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
 
         callback();
 
-        if (this.model().isNew && !this.model().isNew()) {
+        // Only show campaign link on non-new campaigns
+        // when only one is selected
+        if (!this.model().isNew() && this.model().id()) {
           this.content().camp_link.visible(true);
-          this.content().camp_link.html(campFormatters.camplink(this.model()));
+          var camp_link = '/ads/manage/adgroups.php?campaign_id=' +
+            this.model().id() + '&act=' + this.model().account_id();
+          this.content().camp_link.html(
+            '<a class="adPane-link" target="_blank" href="' +
+              camp_link + '">' + (this.model().id() * 1) + '</a>');
         } else {
           this.content().camp_link.visible(false);
         }
@@ -93,11 +99,9 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
         // the selector should only be visible for new topline-attached camp
         this.content().campaign_type.toggleClass
           ('campEditor_hide-campType', !(this.model().line_number()));
-        if (this.model().isNew && this.model().isNew()) {
-          this.content().campaign_type.disabled(false);
-        } else {
-          this.content().campaign_type.disabled(true);
-        }
+
+        // if none of the selected items are new, disable field
+        this.content().campaign_type.disabled(!this.model().isNew());
 
         this.content().budget_label.text('Budget (' + curcode + ')');
     },

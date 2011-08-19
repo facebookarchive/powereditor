@@ -25,6 +25,8 @@
 var fun   = require("../../../uki-core/function"),
     utils = require("../../../uki-core/utils"),
 
+    rs    = require("../runStatus"),
+
     Base = require("./base").Base,
     Num  = require("./number").Number;
 
@@ -69,7 +71,25 @@ var AdgroupStatusAccessor = fun.newClass(Base, {
     }
 });
 
+var RealAdgroupStatus = fun.newClass(Base, {
+  originalName: '',
+
+  getValue: function(obj) {
+    return obj.realStatus(obj[this.originalName]());
+  },
+
+  setValue: function(obj, value) {
+    // status needs to be an int in order for realStatus to work
+    value *= 1;
+    if (value != this.getValue(obj)) {
+      // store into adgroup_status in the format of campaign.original_status
+      obj.adgroup_status(obj.realStatus(value,
+        obj.campaign() && obj.campaign().original_status()));
+    }
+  }
+});
 
 exports.STATUS_MAP = STATUS_MAP;
 exports.AdgroupStatus = AdgroupStatus;
 exports.AdgroupStatusAccessor = AdgroupStatusAccessor;
+exports.RealAdgroupStatus = RealAdgroupStatus;

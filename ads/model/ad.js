@@ -91,7 +91,8 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
     }
 
     var transitions = [];
-    switch (this.original_status()) {
+    // Use the "real" status to determine legal transitions
+    switch (this.real_original_status()) {
       case rs.ACTIVE:
       case rs.CAMPAIGN_PAUSED:
       case rs.PREAPPROVED:
@@ -108,8 +109,13 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
         break;
     }
 
-    transitions.unshift(this.original_status() || rs.ACTIVE);
-    return transitions;
+    // Add current option too
+    transitions.unshift(this.real_original_status() || rs.ACTIVE);
+
+    // Make sure to incorporate campaign status information
+    return transitions.map(fun.bind(function(status) {
+      return this.realStatus(status);
+    }, this));
   },
 
   isNew: function() {
@@ -233,6 +239,36 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
     return store;
   },
 
+  /**
+   * Convert ad_status to the correct value given the campaign status
+   */
+  realStatus: function(ad_status, camp_status) {
+    if (!camp_status) {
+      if (this.campaign()) {
+        camp_status = this.campaign().campaign_status();
+      } else {
+        return ad_status;
+      }
+    }
+
+    // Campaign paused ads of active campaigns should be active
+    if (camp_status === 1 && ad_status === rs.CAMPAIGN_PAUSED) {
+      return rs.ACTIVE;
+    }
+
+    // Active ads of paused campaigns should be campaign paused
+    if (camp_status === 2 && ad_status === rs.ACTIVE) {
+      return rs.CAMPAIGN_PAUSED;
+    }
+
+    // Ads of deleted campaigns should be deleted
+    if (camp_status === 3) {
+      return rs.DELETED;
+    }
+
+    return ad_status;
+  },
+
   adlink: fun.newProp('adlink'),
 
   searchFields: function() {
@@ -295,7 +331,6 @@ fun.delegateCall(proto, [
   'unique_impressions'
 ], 'stat');
 
-fun.delegateCall(proto, 'camplink', 'campaign', 'camplink');
 fun.delegateCall(proto, 'social_connections', 'stat', 'connections');
 
 
@@ -363,7 +398,7 @@ Ad.loadFromAccountIds = function(account_ids, callback) {
       return pathUtils.join('act_' + account_id, '/adgroups');
     }
   );
-  Ad.fetchAndStoreEdges(paths, callback);
+  Ad.fetchAndStoreEdges(paths, { 'include_demolink_hashes': true }, callback);
 };
 
 // --- END Syncing with Graph API stuff ---

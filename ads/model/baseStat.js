@@ -61,7 +61,14 @@ BaseStat.addProp({
   name: 'spent',
   type: props.Number,
   db: true, remote: true,
-  tabSeparated: 'Spent'
+  tabSeparated: 'Spent',
+  getTabSeparated: function(obj) {
+    // TODO: revisit the spent_100 and spent logic after
+    // currency offset is implemented
+    var value = this.getValue(obj);
+    value /= 100;
+    return value;
+  }
 });
 
 BaseStat.addProp({
@@ -181,7 +188,7 @@ BaseStat.loadFromAccountsAndRange = function(accounts, from, to, callback) {
                     start_time,
                     end_time);
     }, this));
-    BaseStat.fetchAndStoreEdges.call(this, paths, callback);
+    BaseStat.fetchAndStoreEdges.call(this, paths, { limit: 200 }, callback);
   }, this));
 };
 

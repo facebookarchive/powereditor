@@ -32,12 +32,10 @@ var AD_EXPORT_OPTIONS = {
 
 var Export = {};
 
+
 Export.handleCampaigns = function() {
   var campaigns = view.byId('campPane-data').selectedRows();
-  var isCorpAct = (campaigns.length > 0) ?
-    campaigns[0].account().isCorporate() : false;
-
-  var text = [Export.exportHeader(isCorpAct)];
+  var text = [Export.exportHeader(isCorpActSelected())];
   function processChunk() {
     if (campaigns.length > 0) {
       var chunk = campaigns.slice(0, ITEMS_PER_CHUNK);
@@ -69,11 +67,8 @@ Export.handleCampaigns = function() {
 
 Export.handleAds = function() {
   var ads = view.byId('adPane-data').selectedRows();
-  var isCorpAct = (ads.length > 0) ?
-    ads[0].isCorporate() : false;
-
   var adIds = utils.pluck(ads, 'id');
-  var text = [Export.exportHeader(isCorpAct)];
+  var text = [Export.exportHeader(isCorpActSelected())];
   var map = {};
 
   function processChunk() {
@@ -188,6 +183,20 @@ function createBase64URL(text) {
   startDownload('data:' + MIME_TYPE + ';base64,' + btoa(binary));
 }
 
+function isCorpActSelected() {
+  var list_selected = view.byId('campaignList-list').selectedRows();
+  var isCorpAct = false;
+
+  if (list_selected.length) {
+    if (list_selected[0] instanceof Campaign) {
+      isCorpAct = list_selected[0].account().isCorporate();
+    } else {
+      isCorpAct = require("../model/account").Account.hasCorpAct(list_selected);
+    }
+  }
+
+  return isCorpAct;
+}
 
 
 exports.Export = Export;

@@ -1,4 +1,25 @@
 /**
+* Copyright 2011 Facebook, Inc.
+*
+* You are hereby granted a non-exclusive, worldwide, royalty-free license to
+* use, copy, modify, and distribute this software in source code or binary
+* form for use in connection with the web services and APIs provided by
+* Facebook.
+*
+* As with any software that integrates with the Facebook platform, your use
+* of this software is subject to the Facebook Developer Principles and
+* Policies [http://developers.facebook.com/policy/]. This copyright notice
+* shall be included in all copies or substantial portions of the software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+* DEALINGS IN THE SOFTWARE.
+*
+*
 */
 
 
@@ -7,7 +28,7 @@ var AD_CREATIVE_CATEGORY = {
   SPONSORED_STORIES : 'sponsored_stories'
 };
 
-var AD_CREATIVE_TYPE_MAP = {
+var AD_CREATIVE_TYPE_TS = {
     1:  'Standard',
     2:  'Fan',
     3:  'RSVP',
@@ -33,6 +54,34 @@ var AD_CREATIVE_TYPE_MAP = {
     23: 'Bass Sparkbox Comment',
     24: 'Page Endorsement',
     999: 'Invalid'
+};
+
+var AD_CREATIVE_TYPE_MAP = {
+  1:   tx('ads:pe:creative-type:standard'),
+  2:   tx('ads:pe:creative-type:fan'),
+  3:   tx('ads:pe:creative-type:rsvp'),
+  4:   tx('ads:pe:creative-type:platform-context'),
+  5:   tx('ads:pe:creative-type:social-poll'),
+  6:   tx('ads:pe:creative-type:comment'),
+  7:   tx('ads:pe:creative-type:sample'),
+  8:   tx('ads:pe:creative-type:bass-platform-story'),
+  9:   tx('ads:pe:creative-type:bass-page-connections'),
+  10:  tx('ads:pe:creative-type:bass-page-checkins'),
+  11:  tx('ads:pe:creative-type:bass-page-posts'),
+  12:  tx('ads:pe:creative-type:premium-standard'),
+  13:  tx('ads:pe:creative-type:premium-fan'),
+  14:  tx('ads:pe:creative-type:premium-event'),
+  15:  tx('ads:pe:creative-type:premium-platform'),
+  16:  tx('ads:pe:creative-type:bass-app-connection'),
+  17:  tx('ads:pe:creative-type:bass-engagement'),
+  18:  tx('ads:pe:creative-type:bass-buy-with-friend'),
+  19:  tx('ads:pe:creative-type:bass-link-share'),
+  20:  tx('ads:pe:creative-type:bass-questions-vote'),
+  21:  tx('ads:pe:creative-type:questions'),
+  22:  tx('ads:pe:creative-type:bass-sparkbox'),
+  23:  tx('ads:pe:creative-type:bass-sparkbox-comment'),
+  24:  tx('ads:pe:creative-type:page-endorsement'),
+  999: tx('ads:pe:creative-type:invalid')
 };
 
 var AD_CREATIVE_TYPE = {
@@ -74,6 +123,26 @@ var AD_CREATIVE_BASS_TYPE_MAP = {
   BASS_LINK_SHARE: 19,
   BASS_QUESTIONS_VOTE: 20
 };
+
+function id2string(id) {
+  return AD_CREATIVE_TYPE_TS[id] || AD_CREATIVE_TYPE_TS[1];
+}
+
+var re = /[^a-z]/g;
+function string2id(string) {
+  string = string.toLowerCase().replace(re, '');
+  var found = 1;
+  try {
+    require("../../uki-core/utils").forEach(AD_CREATIVE_TYPE_TS, function(text, id) {
+      text = text.toLowerCase().replace(re, '');
+      if (text == string) {
+        found = id;
+        throw 'break';
+      }
+    });
+  } catch (e) {}
+  return found;
+}
 
 function is_bass_type(creative_type) {
   return AD_CREATIVE_BASS_TYPE_MAP[creative_type];
@@ -117,7 +186,9 @@ function getDefaultCreativeTypeByAnchor(
         default_type = AD_CREATIVE_TYPE.PREMIUM_PLATFORM;
         break;
       default:
-        alert('not supported anchor type - (premium)');
+        require("../../lib/errorReport").report(
+          'not supported anchor type - (premium): ' + anchor_type,
+          'adCreativeType');
         break;
     }
   } else {
@@ -150,7 +221,9 @@ function getDefaultCreativeTypeByAnchor(
          AD_CREATIVE_TYPE.PREMIUM_PLATFORM;
        break;
      default:
-       alert('not supported anchor type');
+     require("../../lib/errorReport").report(
+       'not supported anchor type: ' + anchor_type,
+       'adCreativeType');
        break;
     }
   }
@@ -161,6 +234,8 @@ function getDefaultCreativeTypeByAnchor(
 exports.getDefaultCreativeTypeByAnchor = getDefaultCreativeTypeByAnchor;
 exports.is_bass_type = is_bass_type;
 exports.getCategoryByCreativeType = getCategoryByCreativeType;
+exports.id2string = id2string;
+exports.string2id = string2id;
 exports.AD_CREATIVE_TYPE = AD_CREATIVE_TYPE;
 exports.AD_CREATIVE_TYPE_MAP = AD_CREATIVE_TYPE_MAP;
 exports.AD_CREATIVE_CATEGORY = AD_CREATIVE_CATEGORY;

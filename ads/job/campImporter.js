@@ -87,6 +87,12 @@ var Importer = fun.newClass(Job, {
       .mapById(mapById)
       .mapByName(mapByName);
 
+    this._status = {
+      complete: 0,
+      total: this.camps().length
+    };
+    this._progress(this._status);
+
     require("../../lib/async").forEach(
       this.camps(),
       this._routeCamp,
@@ -112,13 +118,15 @@ var Importer = fun.newClass(Job, {
     }
 
     if (adsToImport.length) {
-      var importer = new AdImporter(
-        this.account(),
-        adsToImport,
-        this.adPropsToCopy()
-      );
-      importer.useNameMatching(this.useNameMatching());
-      this._startChild(importer);
+      Campaign.prepare(fun.bind(function() {
+        var importer = new AdImporter(
+          this.account(),
+          adsToImport,
+          this.adPropsToCopy()
+        );
+        importer.useNameMatching(this.useNameMatching());
+        this._startChild(importer);
+      }, this), true);
     } else {
       this._complete();
     }
@@ -151,6 +159,8 @@ var Importer = fun.newClass(Job, {
    */
   _routeCamp: function(newCamp, index, callback) {
     try {
+    this._status.complete++;
+    this._progress(this._status);
     var mapById = this.mapById();
     var mapByName = this.mapByName();
     var name = (newCamp.name() || '').toLowerCase();
@@ -246,7 +256,10 @@ var Importer = fun.newClass(Job, {
 
 var MissingCampaignUpdateError = AdError.newClass(
   1305338182794,
-  'Trying to update campaign ({{id}}) that does not exist'
+  function() {
+    var data = { id: this.data().id() };
+    return tx('ads:pe:import-missing-camp-update-error', data);
+  }
 );
 
 exports.Importer = Importer;

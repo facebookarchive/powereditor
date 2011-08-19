@@ -56,6 +56,7 @@ var EduWork = view.newClass('ads.adEditor.EduWork', Base, {
       model: m,
       viewProp: 'education_status',
       viewEvent: 'change',
+      commitChangesViewEvent: 'change',
       modelProp: 'education_status',
       modelEvent: 'change.education_statuses'
     });

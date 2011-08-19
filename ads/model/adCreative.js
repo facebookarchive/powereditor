@@ -24,7 +24,7 @@
 
 
 var pathUtils = require("../../lib/pathUtils"),
-    graphlink = require("../../lib/graphlink"),
+    graphlink = require("../../lib/graphlink").gl,
     libUtils = require("../../lib/utils"),
     asyncUtils = require("../../lib/async");
 

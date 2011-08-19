@@ -149,25 +149,18 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
   },
 
   isChangedSelf: function(name) {
-    if (!name && this.id() < 0) {
-      return true;
-    }
-    return Changeable.isChanged.call(this, name);
+    return !name && this.isNew() ||
+      Changeable.isChanged.call(this, name);
   },
 
   isChanged: function(name) {
-    if (name === undefined && this.changes() && this.changes().count > 0) {
-      return true;
-    }
-    return this.isChangedSelf(name);
+    // Either children changed or campaign itself changed
+    return !name && this.changes() && this.changes().count > 0 ||
+      this.isChangedSelf(name);
   },
 
   isFromTopline: function() {
-    if (this.line_number() > 0 && this.line_id() > 0 && this.topline()) {
-      return true;
-    } else {
-      return false;
-    }
+    return this.line_number() > 0 && this.line_id() > 0 && this.topline();
   },
 
   isImpressionBased: function() {
@@ -201,10 +194,10 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
         var value = f.getRemoteValue(this);
         store[f.remote] = value;
       }
-      }, this);
+    }, this);
 
-      fix.call(this, store);
-      return store;
+    fix.call(this, store);
+    return store;
   },
 
   delivery_info: fun.newProp('delivery_info'),
@@ -243,7 +236,7 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
 
     var spent_perc = 0;
     if (camp_budget <= 0 && camp_spent > 0) {
-      spent_perc = 'N/A (no budget)';
+      spent_perc = tx('ads:pe:delivery-info-na');
     } else if (camp_budget <= 0 && camp_spent === 0) {
       spent_perc = 0;
     } else {
@@ -270,8 +263,6 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
   match: function(query) {
     return getSearchIndex.call(this).indexOf(query) > -1;
   },
-
-  camplink: fun.newProp('camplink'),
 
   graphCreatePath: function() {
     return '/act_' + this.account_id() + '/adcampaigns/';
@@ -427,7 +418,7 @@ Campaign.addProp({
     obj.toggleError(
       !this.getValue(obj),
       'name',
-      'Name of campaign is required'
+      tx('ads:pe:campaign-name-required')
     );
   }
 });
@@ -447,7 +438,7 @@ Campaign.addProp({
       obj.toggleError(
         error,
         'start_time',
-        'Start time can not be eariler than the flight start time'
+        tx('ads:pe:start-time-before-flight-time')
       );
     }
   }
@@ -478,8 +469,8 @@ Campaign.addProp({
       obj.toggleError(
         error,
         'end_time',
-        is_past ? 'Stop time can not be in the past'
-          :'Stop time can not be later than the flight end time'
+        is_past ? tx('ads:pe:stop-time-in-the-past') :
+          tx('ads:pe:stop-time-after-flight-time')
       );
     }
   }
@@ -903,7 +894,8 @@ Campaign.create = function(parent, lineNumber) {
     topline = Topline.byId(line_id);
 
     if (topline.adjusted_flight_end_date() < new Date()) {
-      alert('Can not create campaigns for an ended topline');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:creating-camp-for-ended-topline'));
       return '';
     }
   }

@@ -30,7 +30,7 @@ var utils   = require("../../uki-core/utils"),
     storage = require("../../storage/storage"),
     libUtils = require("../../lib/utils"),
     asyncUtils = require("../../lib/async"),
-    graphlink = require("../../lib/graphlink"),
+    graphlink = require("../../lib/graphlink").gl,
 
     App     = require("./app").App,
     DownloadDialog = require("../view/downloadDialog").DownloadDialog,
@@ -52,7 +52,6 @@ var META_REFRESH_TIMEOUT = 1000 * 60 * 60 * 24 * 7; // once per week
 * @namespace
 */
 var Download = {};
-
 
 // -------- DOWNLOAD DIALOG SETUP -----------
 // Logic from old sync.js
@@ -114,12 +113,24 @@ Download._ondownload = function(e) {
 * @param callback called on finish
 * @param account_ids array of account ids being dl'd
 */
-Download.loadModels = function(progress, callback, account_ids) {
+Download.loadModels = function(progress, cb, account_ids) {
   progress = progress || fun.FT;
-  callback = callback || fun.FT;
+  var callback = function() {
+    // unset progress handler
+    graphlink.removeListener('progress');
+    graphlink.removeListener('error');
+    cb && cb();
+  };
 
   progress.statusUpdate();
-  graphlink.progress = progress;
+  graphlink.on('progress', function(e) {
+     progress.statusUpdate(e.update);
+  });
+  graphlink.on('error', function(e) {
+    var err = e.error;
+    alert(err.message);
+    callback();
+  });
 
   var state = null;
 
@@ -275,6 +286,7 @@ function loadContracts(account_ids, state, progress, callback) {
   }
 
   Contract.loadFromRESTAPI(account_options, function(contracts) {
+    progress.statusUpdate(contracts.length);
     progress.completeStep('contracts');
     contracts.prefetch && contracts.prefetch();
     callback(contracts);
@@ -294,8 +306,7 @@ function loadContracts(account_ids, state, progress, callback) {
 * @param callback called on finish with all topliness downloaded
 *                 as a parameter
 */
-function loadToplines(acc_ids, contracts, progress, callback,
-  _totalToplines) {
+function loadToplines(acc_ids, contracts, progress, callback, _totalToplines) {
 
   progress.setStep('toplines');
   _totalToplines = _totalToplines || [];
@@ -307,11 +318,15 @@ function loadToplines(acc_ids, contracts, progress, callback,
     return;
   }
 
+  
+
   Topline.loadFromRESTAPI(
     { account_id: contracts[0].id() },
     function(toplines) {
+      progress.statusUpdate(toplines.length);
       progress.completeStep('toplines');
       _totalToplines = _totalToplines.concat(toplines);
+      
 
       loadToplines(acc_ids, contracts.slice(1),
         progress, callback, _totalToplines);

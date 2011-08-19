@@ -34,6 +34,7 @@ var evt   = require("../../uki-core/event");
 var fun   = require("../../uki-core/function");
 var dom   = require("../../uki-core/dom");
 var utils = require("../../uki-core/utils");
+var build = require("../../uki-core/builder").build;
 var view  = require("../../uki-core/view");
 
 var Attaching = require("../../uki-core/attaching").Attaching;
@@ -147,6 +148,22 @@ var DialogFooter = view.newClass('fb.DialogFooter', Container, {
         this.addClass('ufb-dialog-footer');
     }
 });
+
+
+Dialog.alert = function(message, title) {
+  var dialog = build(
+    { view: 'Dialog', modal: true, visible: true, closeOnEsc: true,
+      childViews: [
+      { view: 'DialogHeader', text: title || 'Facebook' },
+      { view: 'DialogContent', childViews: [
+        { view: 'DialogBody', text: message },
+        { view: 'DialogFooter', childViews: [
+          { view: 'Button', label: 'Close', large: true,
+            on: { click: function() { dialog.visible(false).destruct(); } } }
+        ] }
+      ] }
+    ]});
+};
 
 
 exports.Dialog        = Dialog;

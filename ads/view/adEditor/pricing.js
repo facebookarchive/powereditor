@@ -49,7 +49,8 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
           viewEvent: 'keyup change blur paste'
         });
 
-        this.child('status').binding({ model: m, modelProp: 'adgroup_status' });
+        this.child('status').binding({ model: m,
+          modelProp: 'real_adgroup_status' });
         this.child('moo_clicks').binding({ model: m, modelProp: 'moo_clicks' });
         this.child('moo_reach').binding({ model: m, modelProp: 'moo_reach' });
         this.child('moo_social').binding({ model: m, modelProp: 'moo_social' });

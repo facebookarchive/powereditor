@@ -23,9 +23,6 @@
 */
 
 
-var AD_CREATIVE_TYPE = require("./adCreativeType").AD_CREATIVE_TYPE;
-var AD_CREATIVE_TYPE_MAP = require("./adCreativeType").AD_CREATIVE_TYPE_MAP;
-
 var creativeTypesByAnchor_map =
 {"external_webpage":{"facebook_ads":{"standard":[1],"premium":[12]}},"1":{"facebook_ads":{"standard":[2],"premium":[5,6,7,13,21,22,24]},"sponsored_stories":{"standard":[9,11,17],"premium":[20,23]}},"4":{"facebook_ads":{"standard":[2]}},"5":{"facebook_ads":{"standard":[2]},"sponsored_stories":{"standard":[10]}},"6":{"facebook_ads":{"standard":[2],"premium":[5,6,13,21,22,24]},"sponsored_stories":{"standard":[9,10,11,17],"premium":[20,23]}},"3":{"facebook_ads":{"standard":[3],"premium":[14]}},"2":{"facebook_ads":{"standard":[4],"premium":[15]},"sponsored_stories":{"standard":[16,8,18]}},"7":{"sponsored_stories":{"standard":[19]}}};
 

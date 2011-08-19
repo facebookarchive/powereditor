@@ -30,10 +30,20 @@ var find  = require("../../uki-core/selector").find;
 var utils = require("../../uki-core/utils");
 var Dialog = require("../../uki-fb/view/dialog").Dialog;
 
+var App = require("../controller/app").App,
+    ConnectedObject = require("../model/connectedObject").ConnectedObject;
+
 var MESSAGE_OBJS = 'Downloading {objs} Objects ...';
 
 var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog',
   Dialog, {
+
+  init: function(initArgs) {
+    Dialog.prototype.init.call(this, initArgs);
+    this.on('download', this._ondownload);
+    this.reset();
+    return this;
+  },
 
   _createDom: function(initArgs) {
 
@@ -75,24 +85,45 @@ var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog',
       return;
     }
 
-    var options = {};
     var row = view.byId('campaignList-list').selectedRow();
     var account = row.account ? row.account() : row;
-    options.account = account;
 
     // testing obj id (techcrunch, showroomprivate.com)
     // ['8062627951', '126321144088217'];
-    options.extra_fbids = ids;
     col.view('object-id').visible(false);
     col.view('download').visible(false);
 
     col.view('progress').visible(true);
-    this.trigger({ type: 'download', options: options });
+    this.trigger({
+      type: 'download',
+      account: account,
+      extra_fbids: ids
+    });
   },
 
-  updateProgress: function(objs) {
+  _ondownload: function(e) {
+    if (e.account && e.account.isCorporate()) {
+      ConnectedObject.loadExtraFromIds(e.account.id(), e.extra_fbids,
+        fun.bind(function(objects) {
+          this.updateProgress(objects.length);
+          // update is_extra_object to true
+          objects.forEach(function(obj) {
+            obj.is_extra_object(true);
+          });
+          ConnectedObject.storeMulti(objects, fun.bind(function() {
+            ConnectedObject.prepare(fun.bind(function() {
+              this.notifyComplete();
+              App.reload();
+            }, this));
+          }, this));
+        }, this)
+      );
+    }
+  },
+
+  updateProgress: function(num_objs) {
     var message = MESSAGE_OBJS;
-    message = message.replace('{objs}', objs);
+    message = message.replace('{objs}', num_objs);
 
     this._collection.view('progress')
       .visible(true).text(message);

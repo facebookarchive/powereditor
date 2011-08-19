@@ -36,9 +36,9 @@ var fun   = require("../../uki-core/function");
 var utils = require("../../uki-core/utils");
 var dom   = require("../../uki-core/dom");
 var view  = require("../../uki-core/view");
-var build = require("../../uki-core/builder").build;
 
 var compare   = require("./dataTable/compare");
+var Builder   = require("../../uki-core/builder").Builder;
 var DataList  = require("./dataList").DataList;
 var Mustache  = require("../../uki-core/mustache").Mustache;
 var Base      = require("../../uki-core/view/base").Base;
@@ -164,7 +164,8 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
   _createDom: function(initArgs) {
     this._dom = dom.createElement('div', {className: 'ufb-dataTable'});
 
-    var c = build([
+    // Temporary solution. TODO(voloko) Fix builder namespacing
+    var c = new Builder().build([
       { view: initArgs.headerView || DataTableHeader, as: 'header',
         addClass: 'ufb-dataTable-header-container',
         on: { resizeColumn: fun.bind(this._resizeColumn, this) } },
@@ -183,6 +184,12 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     this.on('sortColumn', fun.bind(this._sortColumn, this));
     this._container = c.view('container');
     this._list = c.view('list');
+    this._container.on('mousedown', function(e) {
+      if (e.targetView() == this) {
+        c.view('list').focus();
+        e.preventDefault();
+      }
+    });
   },
 
   _updateHeaderHeight: function() {
@@ -214,7 +221,7 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
 
     var dataKey = this.columns()[index].key;
 
-    //the sort function depends on whether the column data is numerical or not
+    // the sort function depends on whether the column data is numerical or not
     var compFn = this.columns()[index].compareFn;
     var sortFn;
     if (direction) {
@@ -309,7 +316,7 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     });
   },
 
- //traces back element to the header cell element (if it exists)
+  // traces back element to the header cell element (if it exists)
   _getHeaderCell: function(elem) {
     while (elem) {
       if (dom.hasClass(elem, 'ufb-dataTable-header-cell')) {

@@ -53,8 +53,9 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
 
     toplines: fun.newProp('toplines', function(toplines, callback) {
       this._toplines = toplines;
+      this._dataTable.data(this._toplines);
+
       this._dataTable
-          .binding({ model: toplines })
           .layoutIfVisible()
           .selectedIndex(0)
           .lastClickIndex(0)
@@ -169,42 +170,42 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
 
                 { label: 'Impressions', key: 'stat_impressions',
                   width: 80, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.number },
 
                 { label: 'Clicks', key: 'stat_clicks',
                   width: 60, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.number },
 
                 { label: 'Spent', key: 'stat_spent_100',
                   width: 70, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.money },
 
                 { label: 'Last Update', key: 'stat_last_update_time',
                   width: 70, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.date },
 
                 { label: 'OverDelivery %', key: 'overdelivery_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: formatters.createPercentFormatter(2) },
 
                 { label: 'Spent %', key: 'spent_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: formatters.createPercentFormatter(2) },
 
                 { label: 'Complete %', key: 'complete_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: formatters.createPercentFormatter(2) },
 
                 { label: 'Allocation', key: 'unallocatedImps',
                   width: 80, maxWidth: 120, minWidth: 60,
-                  className: 'dataTable-cell_number',
+                  className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.allocation },
 
                 { label: 'Product Type', key: 'product_type', width: 80,

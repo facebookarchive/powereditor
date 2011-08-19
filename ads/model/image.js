@@ -108,6 +108,31 @@ Img.imageUrl = function(ad, callback) {
   }
 };
 
+Img.addImages = function(account_id, images, callback) {
+  var cache = Img.cache[account_id] || (Img.cache[account_id] = {});
+  var ids = utils.pluck(images, 'id');
+
+  // find old images with the same hashes...
+  Img.findAllBy('id', ids, function(oldImages) {
+    var list = new DeferredList();
+
+    // ... delete them
+    oldImages.forEach(function(oldImage) {
+      if (oldImage.account_id() == account_id) {
+        oldImage.remove(list.newWaitHandler());
+      }
+    });
+
+    // ... create new ones and update the cache
+    list.complete(function() {
+      images.forEach(function(image) {
+        cache[image.id()] = image.url();
+      });
+      Img.storeMulti(images, callback);
+    });
+  });
+};
+
 Img.updateImageHash = function(account_id, oldHash, newHash, newUrl, callback) {
   var cache = Img.cache[account_id] || (Img.cache[account_id] = {});
   cache[newHash] = cache[oldHash];
@@ -121,13 +146,15 @@ Img.updateImageHash = function(account_id, oldHash, newHash, newUrl, callback) {
 
   image.store(function() {
     Img.findAllBy('id', oldHash, function(images) {
-      images.forEach(function(image) {
-        if (image.account_id() === account_id) {
-          image.remove(callback);
-          return;
-        }
-      });
-      callback();
+      try {
+        images.forEach(function(image) {
+          if (image.account_id() === account_id) {
+            image.remove(callback);
+            throw 'break';
+          }
+        });
+        callback();
+      } catch (e) {}
     });
   });
 

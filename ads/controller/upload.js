@@ -28,8 +28,8 @@ var view  = require("../../uki-core/view"),
     build = require("../../uki-core/builder").build,
 
     asyncUtils = require("../../lib/async"),
-    FBConnection = require("../../lib/connect").FBConnection,
-    graphlink = require("../../lib/graphlink"),
+    FB = require("../../lib/connect").FBWithErrors,
+    graphlink = require("../../lib/graphlink").gl,
     pathUtils = require("../../lib/pathUtils"),
 
     App = require("./app").App,
@@ -39,10 +39,6 @@ var view  = require("../../uki-core/view"),
 
 
 var dialog = null;
-var FB = new FBConnection();
-FB.handleResponse = function(callback, response) {
-  callback(response);
-};
 
 
 /**
@@ -53,14 +49,14 @@ FB.handleResponse = function(callback, response) {
 * TODO: support separate creative update/create
 */
 var Upload = {
-  stoped: false,
+  stopped: false,
 
   uploaded: 0,
   ads: 0,
   campaigns: 0,
 
   handleUpload: function() {
-    Upload.stoped = false;
+    Upload.stopped = false;
     Upload.uploaded = Upload.ads = Upload.campaigns = 0;
 
     createDialog();
@@ -89,7 +85,7 @@ function updateProgress() {
 }
 
 function stop() {
-  Upload.stoped = true;
+  Upload.stopped = true;
 }
 
 function createDialog() {
@@ -116,6 +112,18 @@ function start() {
     return c.isChangedSelf();
   });
 
+  for (var i = 0; i < changedCamps.length; i++) {
+    var c = changedCamps[i];
+    if (c.isCorporate() && !c.isFromTopline()) {
+      // corp account's campaign needs to be attached to a topline
+      var message = 'Campaigns of ' + c.account().name() +
+        ' must belong to a line. Please try to ' +
+        'select a line for the campaign.';
+      dialog.logError(message);
+      return;
+    }
+  }
+
   if (changedCamps.length) {
     Upload.campaigns = changedCamps.length;
     updateProgress();
@@ -140,7 +148,7 @@ function start() {
  * @param callback to be called after uploading is complete
  */
 function uploadCamps(camps, callback) {
-  if (Upload.stoped) { return; }
+  if (Upload.stopped) { return; }
 
   if (camps.length === 0) {
     callback();
@@ -150,7 +158,13 @@ function uploadCamps(camps, callback) {
   var camp = camps.slice(0, 1)[0];
   camps = camps.slice(1);
 
-  var next = fun.bind(uploadCampsResponse, this, camp, camps, callback);
+  
+
+  var next = fun.bind(function(data) {
+    
+
+    uploadCampsResponse.call(this, camp, camps, callback, data);
+  }, this);
 
   if (camp.isNew()) {
     FB.api(camp.graphCreatePath(), 'post', camp.dataForRemoteCreate(), next);
@@ -174,10 +188,14 @@ function uploadCampsResponse(camp, camps, callback, result) {
   updateProgress();
   // find errors
   if (result.error) {
-    var action = camp.isNew() ? 'create' : 'update';
+    var data = {
+      name: camp.name(),
+      message: result.error.message || ''
+    };
 
-    var message = 'Failed to ' + action + ' campaign "' + camp.name() + '": ' +
-      (result.error.message || '');
+    var message = camp.isNew() ?
+      tx('ads:pe:upload-fail-create-camp', data) :
+      tx('ads:pe:upload-fail-update-camp', data);
 
     dialog.logError(message);
     next();
@@ -188,29 +206,26 @@ function uploadCampsResponse(camp, camps, callback, result) {
         '/' + (result.id || camp.id()),
         {},
         function(reloadedCampData) {
-
           if (!reloadedCampData) {
-            // if camp was deleted, delete local copy and continue
-            if (camp.campaign_status() !== 3) {
-              camp.remove(next);
-            } else {
-              var message =
-                'Failed to download campaign updates for "' + camp.name();
-              dialog.logError(message);
-            }
+            dialog.logError(tx(
+              'ads:pe:upload-fail-download-updates-camp',
+              { name: camp.name() }));
             next();
             return;
           }
-
           var reloadedCamp = models.Campaign.createFromRemote(reloadedCampData);
           function finish() {
             reloadedCamp.changes(camp.changes());
             reloadedCamp.store(next);
           }
+          if (reloadedCamp.campaign_status() === 3) {
+            next();
+            return;
+          }
 
           // if camp is new update all child ads
           if (camp.isNew()) {
-            models.Ad.findAllBy('campaign_id', [camp.id()], function(ads) {
+            models.Ad.findAllBy('campaign_id', camp.id(), function(ads) {
               camp.id(reloadedCamp.id());
               ads.forEach(function(ad) {
                 ad.campaign_id(reloadedCamp.id());
@@ -261,9 +276,11 @@ function uploadImages(ads, callback) {
           }, function(result) {
             if (result.error || !result.images || !result.images.bytes) {
               // if image uploading failed, fail the whole upload
-              var message = 'Failed to upload image for ad "' + ads[0].name() +
-                '": ' + (result.error ? result.error.message : '');
-              dialog.logError(message);
+              dialog.logError(tx(
+                'ads:pe:upload-fail-image', {
+                  name: ads[0].name(),
+                  message: result.error ? result.error.message : ''
+              }));
               complete();
               return;
             }
@@ -323,7 +340,7 @@ function startAds(camps) {
 */
 function uploadAds(ads, originalAds) {
   originalAds = originalAds || ads;
-  if (!Upload.stoped) {
+  if (!Upload.stopped) {
     var ad = ads.slice(0, 1)[0];
     ads = ads.slice(1);
     var next = fun.bind(uploadAdsResponse, this, ad, ads, originalAds);
@@ -356,10 +373,14 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
   updateProgress();
 
   if (result.error) {
-    var action = ad.isNew() ? 'create' : 'update';
+    var data = {
+      name: ad.name(),
+      message: result.error.message || ''
+    };
 
-    var message = 'Failed to ' + action + ' ad "' + ad.name() + '": ' +
-      (result.error.message || '');
+    var message = ad.isNew() ?
+      tx('ads:pe:upload-fail-create-ad', data) :
+      tx('ads:pe:upload-fail-update-ad', data);
 
     dialog.logError(message);
     next();
@@ -371,18 +392,19 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
     graphlink.fetchObject(path, {}, function(reloadedAdData) {
 
       if (!reloadedAdData) {
-        if (ad.adgroup_status() === 3) {
-          // if the ad has been deleted, remove local copy and continue
-          ad.remove(next);
-        } else {
-          var message = 'Failed to download ad updates for "' + ad.name();
-          dialog.logError(message);
-        }
+        dialog.logError(tx(
+          'ads:pe:upload-fail-download-updates-ad',
+          { name: ad.name() }));
         next();
         return;
       }
 
       var reloadedAd = models.Ad.createFromRemote(reloadedAdData);
+      if (reloadedAd.adgroup_status() === 3) {
+        ad.remove(next);
+        return;
+      }
+
       var path = '/' + reloadedAd.creative_ids()[0];
       graphlink.fetchObject(path, {}, function(creative) {
         delete creative.name;

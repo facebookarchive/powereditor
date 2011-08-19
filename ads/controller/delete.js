@@ -39,7 +39,7 @@ var Delete = {};
 
 /**
  * @param id the ID of the pane that contains the items
- * @param update_status The status field. For ads it's 'adgroup_status'.
+ * @param update_status The status field. For ads it's 'real_adgroup_status'.
  *  For campaigns it's 'campaign-status'
  */
 function delete_items(id, update_status) {
@@ -85,7 +85,7 @@ Delete.init = function() {
 };
 
 Delete.handleAds = function() {
-  delete_items('adPane', 'adgroup_status');
+  delete_items('adPane', 'real_adgroup_status');
 };
 
 Delete.handleCamps = function() {

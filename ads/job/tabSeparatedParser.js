@@ -46,7 +46,6 @@ var CHUNKER_RE_PASTE =
 
 function parseTSV(string, excelPaste) {
   try { // error report
-
   // exit fast
   if (!string) { return []; }
   var re = excelPaste ? CHUNKER_RE_PASTE : CHUNKER_RE;
@@ -160,11 +159,20 @@ var Parser = fun.newClass(Job, {
     this.foundCampProps(mapProps(campProps, rows[0]).found);
 
     if (this.foundAdProps().length < 2 && this.foundCampProps().length < 2) {
-      this._fail(new InvalideHeaderError());
+      this._fail(new InvalidHeaderError());
       return;
     }
 
     var dataRows = rows.slice(1);
+    this._status = {
+      ads: 0,
+      camps: 0,
+      complete: 0,
+      totalAds: dataRows.length,
+      totalCamps: dataRows.length,
+      total: dataRows.length * 2
+    };
+    this._progress(this._status);
     this._createAds(dataRows, function() {
       this._createCamps(dataRows, this._complete);
     });
@@ -189,10 +197,15 @@ var Parser = fun.newClass(Job, {
             .account_id(this.account().id());
           this.ads().push(ad);
 
+          // a bit faster then bind, we do this too many times
+          var _this = this;
           ad.fromTabSeparatedMap(
             row,
             this.foundAdProps(),
             function() {
+              _this._status.ads++;
+              _this._status.complete++;
+              _this._progress(_this._status);
               ad.muteChanges(false);
               iteratorCallback();
             },
@@ -222,7 +235,12 @@ var Parser = fun.newClass(Job, {
             .account_id(this.account().id());
           this.camps().push(camp);
 
+          // a bit faster then bind, we do this too many times
+          var _this = this;
           camp.fromTabSeparatedMap(row, this.foundCampProps(), function() {
+            _this._status.camps++;
+            _this._status.complete++;
+            _this._progress(_this._status);
             camp.muteChanges(false);
             iteratorCallback();
           });
@@ -237,12 +255,16 @@ var Parser = fun.newClass(Job, {
 
 var NotEnoughRowsError = AdError.newClass(
   1305338405270,
-  'Invalid data. Not enough rows.'
+  function() {
+    return tx('ads:pe:parse-not-enough-rows');
+  }
 );
 
-var InvalideHeaderError = AdError.newClass(
+var InvalidHeaderError = AdError.newClass(
   1305338470030,
-  'Invalid data. Cannot parse header.'
+  function() {
+    return tx('ads:pe:parse-invalid-header');
+  }
 );
 
 exports.Parser = Parser;

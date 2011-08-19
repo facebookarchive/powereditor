@@ -24,7 +24,7 @@
 
 var fun = require("../../uki-core/function");
 
-var graphlink = require("../../lib/graphlink"),
+var graphlink = require("../../lib/graphlink").gl,
     pathUtils = require("../../lib/pathUtils");
 
 var cache = {};

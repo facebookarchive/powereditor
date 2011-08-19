@@ -45,6 +45,24 @@ var Group = fun.newClass(Base, {
     });
   },
 
+  commit_campaign_type: function(value) {
+    this._items.forEach(function(item) {
+      if (item.isNew()) {
+        item.campaign_type(value).commitChanges('campaign_type');
+      }
+    });
+  },
+
+  // true if at least one item is new
+  isNew: function() {
+    for (var i = 0; i < this._items.length; ++i) {
+      if (this._items[i].isNew()) {
+        return true;
+      }
+    }
+    return false;
+  },
+
   allowedStatusTransitions: function() {
     if (!this._allowedStatusTransitions) {
       this._allowedStatusTransitions =

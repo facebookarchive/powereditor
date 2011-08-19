@@ -26,12 +26,12 @@ var fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
 
     storage = require("../../storage/storage"),
-    pathUtils = require("../../lib/pathUtils"),
 
     props   = require("../lib/props"),
 
     Util = require("../../uki-fb/view/typeahead/util").Util,
 
+    pathUtils = require("../../lib/pathUtils"),
     libUtils = require("../../lib/utils");
 
 /**
@@ -168,9 +168,23 @@ ConnectedObject.prepare = function(callback, force) {
 
 // --- Syncing with Graph API stuff ---
 
+ConnectedObject.loadExtraFromIds = function(account_id, obj_ids, callback) {
+  if (!obj_ids.length) {
+    callback([]);
+    return;
+  }
+  var paths = ['/act_' + account_id + '/connectionobjects/'];
+  var options = {
+    account_id: account_id,
+    extra_fbids: obj_ids.join(','),
+    extra_only: true
+  };
+  ConnectedObject.fetchAndStoreEdges(paths, options, callback);
+};
+
 ConnectedObject.loadFromAccountIds = function(account_ids, callback) {
   if (!account_ids.length) {
-    callback([], true);
+    callback([]);
     return;
   }
   var paths = ['/act_' + account_ids[0] + '/connectionobjects'];

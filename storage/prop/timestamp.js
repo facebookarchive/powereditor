@@ -51,8 +51,10 @@ var Timestamp = fun.newClass(Base, {
    * @return Date
    */
   getValue: function(obj) {
-    var value = Base.prototype.getValue.call(this, obj);
-    if (!value * 1) { return ''; }
+    var value = Base.prototype.getValue.call(this, obj) * 1;
+    if (!value) {
+      return '';
+    }
     var d = new Date();
     d.setTime(value * 1000);
     return d;
@@ -65,7 +67,7 @@ var Timestamp = fun.newClass(Base, {
   setValue: function(obj, value) {
     value = value ? Math.floor(value.getTime() / 1000) + '' : '';
     if (!value * 1) { value = ''; }
-    return Base.prototype.setValue.call(this, obj, value);
+    return Base.prototype.setValue.call(this, obj, value * 1);
   },
 
   compare: function(a, b) {

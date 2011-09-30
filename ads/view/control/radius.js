@@ -39,9 +39,9 @@ var Radius = view.newClass('ads.control.Radius', Checkbox, {
             env.doc.createTextNode('Include cities within '));
 
         this._select = build({ view: 'Select', parent: this, options: [
-            { text: 50, value: 50 },
+            { text: 10, value: 10 },
             { text: 25, value: 25 },
-            { text: 10, value: 10 }
+            { text: 50, value: 50 }
         ] })[0];
 
         this._label.appendChild(this._select.dom());

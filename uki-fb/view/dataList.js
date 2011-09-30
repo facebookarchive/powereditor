@@ -157,7 +157,7 @@ var DataList = view.newClass('DataList', Container, Focusable, {
   scrollToIndex: function(index) {
     if (!this.scrollableParent()) { return this; }
 
-    var range = this._visibleRange();
+    var range = this.visibleRange();
     var dm    = this.metrics().rowDimensions(index);
     var maxY  = dm.top + dm.height;
     var minY  = dm.top;
@@ -300,7 +300,7 @@ var DataList = view.newClass('DataList', Container, Focusable, {
     }
   }),
 
-  _visibleRange: function() {
+  visibleRange: function() {
     if (!this.scrollableParent()) {
       return { from: 0, to: 0 };
     }
@@ -315,7 +315,7 @@ var DataList = view.newClass('DataList', Container, Focusable, {
   },
 
   _rangeWithPrerender: function() {
-    var range = this._visibleRange();
+    var range = this.visibleRange();
     var h = (range.to - range.from) * this.prerender();
 
     range.from = Math.max(0, range.from - h);

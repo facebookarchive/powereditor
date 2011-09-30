@@ -72,7 +72,6 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         childName: 'user_clusters',
                         value2info: value2info, info2value: info2value,
                         data: (new GraphAPIDataSource())
-                          .queryEndpoint('search')
                           .queryData({ type: 'adusercluster' })
                           .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
@@ -87,7 +86,6 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         childName: 'user_clusters2',
                         value2info: value2info, info2value: info2value,
                         data: (new GraphAPIDataSource())
-                          .queryEndpoint('search')
                           .queryData({ type: 'adusercluster' })
                           .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
@@ -102,7 +100,6 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         childName: 'user_clusters3',
                         value2info: value2info, info2value: info2value,
                         data: (new GraphAPIDataSource())
-                          .queryEndpoint('search')
                           .queryData({ type: 'adusercluster' })
                           .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }
@@ -117,7 +114,6 @@ var DSTargeting = view.newClass('ads.adEditor.DSTargeting', Base, {
                         childName: 'excluded_user_clusters',
                         value2info: value2info, info2value: info2value,
                         data: (new GraphAPIDataSource())
-                          .queryEndpoint('search')
                           .queryData({ type: 'adusercluster' })
                           .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)
                     }

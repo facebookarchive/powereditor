@@ -31,11 +31,13 @@ var utils = require("../../uki-core/utils");
 var Dialog = require("../../uki-fb/view/dialog").Dialog;
 var LocalDataSource =
   require("../lib/typeahead/LocalDataSource").LocalDataSource;
-var GraphAPIDataSource =
-  require("../lib/typeahead/GraphAPIDataSource").GraphAPIDataSource;
+var AccountGraphAPIDataSource =
+  require("../lib/typeahead/graph/AccountsGraphAPIDataSource").AccountGraphAPIDataSource;
 var Searcher = require("../lib/accountSearcher").Searcher;
+var Account = require("../model/account").Account;
 
-var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
+var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('download_dialog'), {
 
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);
@@ -107,7 +109,7 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
   },
 
   _onshow: function() {
-    require("../model/account").Account.findAll(fun.bind(function(accounts) {
+    Account.findAll(fun.bind(function(accounts) {
       var childViews = accounts.map(function(a) {
         return {
           view: 'Checkbox',
@@ -121,8 +123,7 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
         (new LocalDataSource()).queryEndpoint(new Searcher(accounts))
       );
       this._collection.view('account-name').data(
-        (new GraphAPIDataSource())
-            .queryEndpoint('search')
+        (new AccountGraphAPIDataSource())
             .queryData({ type: 'adaccount' })
       );
     }, this));
@@ -131,6 +132,7 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
   _onok: function() {
     var ids = null;
     var col = this._collection;
+
     if (col.view('option-account-list').checked())  {
       ids = find('[checked]', col.view('account-list'))
         .map(function(acc) {
@@ -149,9 +151,62 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog, {
           return account.id;
       });
     }
+
+    var existingActs =
+      ids && ids.map(fun.bind(Account.byId, Account))
+                .filter(Boolean);
+
+    if (Account.hasChangedAct(existingActs)) {
+      this._onConfirm(ids);
+      return;
+    }
+
     this.visible(false);
     this.trigger({ type: 'download', ids: ids });
+  },
+
+  _onConfirm: function(ids) {
+    var dialog = this.getConfirmDialog();
+
+    dialog.view('continue').removeListener('click')
+      .on('click', fun.bind(function() {
+        dialog.visible(false);
+        this.trigger({ type: 'download', ids: ids });
+        return;
+      }, this)
+    );
+
+    dialog.visible(true);
+    this.visible(false);
+  },
+
+  getConfirmDialog: function() {
+    if (!this._confirmDialog) {
+      this._confirmDialog =
+        build({ view: 'Dialog', childViews: [
+          { view: 'DialogHeader', html: "Download Accounts" },
+          { view: 'DialogContent', childViews: [
+            { view: 'DialogBody', childViews: [
+              { view: 'Text', text:
+                'Downloading data will erase ' +
+                'any changes that have not been uploaded. Continue?' }
+            ] },
+
+            { view: 'DialogFooter', childViews: [
+              { view: 'Button', label: 'Continue',
+                large: true, as: 'continue', use: 'confirm' },
+              { view: 'Button', label: 'No', large: true,
+                on: { click: fun.bind(function() {
+                  this._confirmDialog.visible(false);
+                  this.visible(true);
+              }, this) } }
+            ] }
+          ] }
+        ] });
+    }
+    return this._confirmDialog;
   }
+
 });
 
 

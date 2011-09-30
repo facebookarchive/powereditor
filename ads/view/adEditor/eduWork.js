@@ -100,7 +100,6 @@ var EduWork = view.newClass('ads.adEditor.EduWork', Base, {
               value2info: function(v) { return { id: v.id, text: v.name }; },
               info2value: function(i) { return { id: i.id, name: i.text }; },
               data: (new GraphAPIDataSource())
-                .queryEndpoint('search')
                 .queryData({ type: 'adcollege' })
                 .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)},
             { view: 'Tokenizer', inline: true, id: 'eduWork-college_major',
@@ -109,7 +108,6 @@ var EduWork = view.newClass('ads.adEditor.EduWork', Base, {
               value2info: function(v) { return { id: v, text: v }; },
               info2value: function(i) { return i.text; },
               data: (new GraphAPIDataSource())
-                .queryEndpoint('search')
                 .queryData({ type: 'adcollegemajor' })
                 .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT)},
             { view: controls.GraduationYears, childName: 'college_years' }
@@ -125,7 +123,6 @@ var EduWork = view.newClass('ads.adEditor.EduWork', Base, {
           value2info: function(v) { return { id: v.id, text: v.name }; },
           info2value: function(i) { return { id: i.id, name: i.text }; },
           data: (new GraphAPIDataSource())
-            .queryEndpoint('search')
             .queryData({ type: 'adworkplace' })
             .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT) }
     });

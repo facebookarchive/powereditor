@@ -266,6 +266,11 @@ utils.dasherize = function(string) {
     });
 };
 
+utils.capitalize = function(string){
+  return string.replace(/(^|\s)([a-z])/g, function(m, p1, p2) {
+                          return p1 + p2.toUpperCase(); });
+};
+
 utils.path2obj = function(path, context) {
     var parts = path.split('.');
 

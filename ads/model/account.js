@@ -28,7 +28,6 @@ var fun   = require("../../uki-core/function"),
 
     props = require("../lib/props"),
     userRole = require("../lib/adsUserRole"),
-    FB = require("../../lib/connect").FB,
     libUtils = require("../../lib/utils"),
 
     storage = require("../../storage/storage"),
@@ -47,6 +46,10 @@ var Account = storage.newStorage({
   isCorporate: function() {
     return this.capabilities() && this.capabilities().length == 1 &&
       this.capabilities()[0] == 1;
+  },
+
+  hasContract: function() {
+    return this.isCorporate() && this.io_number() > 0;
   },
 
   displayName: function() {
@@ -76,7 +79,22 @@ var Account = storage.newStorage({
     }
   },
 
-  children: fun.newProp('children')
+  children: fun.newProp('children'),
+
+  // loop thru the children of the account (camps) to
+  // check if the account has been changed.
+  isChanged: function() {
+    var items = this.children();
+    for (var i = 0; i < items.length; i++) {
+      var c = items[i];
+      if (c.isChanged()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 });
 
 Account
@@ -125,6 +143,11 @@ Account.addProp({
 Account.addProp({
   name: 'timezone_name',
   def: 'Pacific Time',
+  remote: true, db: true
+});
+
+Account.addProp({
+  name: 'timezone_offsets',
   remote: true, db: true
 });
 
@@ -187,6 +210,20 @@ Account.hasCorpAct = function(accounts) {
       }
     }
   }
+
+  return false;
+};
+
+Account.hasChangedAct = function(accounts) {
+  var acts = accounts || this._cache;
+  if (acts) {
+    for (var i = 0, l = acts.length; i < l; i++) {
+      if (acts[i].isChanged()) {
+        return true;
+      }
+    }
+  }
+
   return false;
 };
 

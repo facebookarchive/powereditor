@@ -24,13 +24,45 @@
 
 var fun = require("../../../uki-core/function"),
 
-    dateRange = require("../../../lib/dateRange"),
+  dateRange = require("../../../lib/dateRange"),
+  DateUtil = require("../dateUtil").DateUtil,
 
-    TabSeparated = require("./base").TabSeparated,
-    StorageTS = require("../../../storage/prop/timestamp").Timestamp;
+  TabSeparated = require("./base").TabSeparated,
+  StorageTS = require("../../../storage/prop/timestamp").Timestamp;
 
 
-var Timestamp = fun.newClass(StorageTS, TabSeparated, {
+/**
+ * AdjustedTimestamp is a class that converts timestamps between local browser
+ * timezone and an account's specified timezone.
+ *
+ * A model property of type AdjustedTimestamp needs to specify another property
+ * of type Timestamp which to adjust its timestamp to display from local to
+ * account timezone.
+ */
+var AdjustedTimestamp = fun.newClass(StorageTS, TabSeparated, {
+  originalName: '',
+
+  isEndTime: false, // indicates default behavior for dates without specified
+                    // time (11:59PM) as opposed to 12:00AM default
+
+  getValue: function(obj) {
+    return obj[this.originalName]() &&
+     DateUtil.fromLocalToAccountOffset(obj.account(), obj[this.originalName]());
+  },
+
+  setValue: function(obj, value) {
+    if (!value) {
+      obj[this.originalName](null);
+      return;
+    }
+    if (!this.getValue(obj) ||
+        (value.getTime() != this.getValue(obj).getTime())) {
+      value = DateUtil.fromAccountToLocalOffset(obj.account(),
+        value);
+      obj[this.originalName](value);
+    }
+  },
+
   getTabSeparated: function(obj) {
     var value = this.getValue(obj);
     if (!value || value.getTime() < 1) { return ''; }
@@ -38,10 +70,15 @@ var Timestamp = fun.newClass(StorageTS, TabSeparated, {
   },
 
   setTabSeparated: function(obj, value, callback) {
-    this.setValue(obj, value && dateRange.decodeDateAndTime(value));
+    this.setValue(obj, value && dateRange.decodeDateAndTime(value,
+      this.isEndTime));
     callback();
   }
 });
 
 
-exports.Timestamp = Timestamp;
+
+
+
+exports.Timestamp = StorageTS;
+exports.AdjustedTimestamp = AdjustedTimestamp;

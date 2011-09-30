@@ -159,12 +159,12 @@ function initErrors() {
 
 BulkImport.importInto = function(account, text, imageLookup) {
   require("../lib/completions").dialog = BulkImport.progressDialog();
+  var formatter = require("../../lib/formatters").createPercentFormatter(2);
 
   var message = BulkImport.log(tx(
     'ads:pe:import-parsets-message',
     { percent: formatter(0) }));
   var parser = new ParserJob(account, text, imageLookup);
-  var formatter = require("../../lib/formatters").createPercentFormatter(2);
 
   parser.oncomplete(function() {
     if (parser.errors().length) {

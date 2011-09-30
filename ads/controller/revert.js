@@ -70,8 +70,10 @@ Revert.revertAdsHandler = function() {
 };
 
 Revert.revertCampsHandler = function() {
+  require("../lib/loggingState").startFlow('revert');
   revert('campPane');
   App.reload();
+  require("../lib/loggingState").endFlow('revert');
 };
 
 

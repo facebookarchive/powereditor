@@ -35,8 +35,8 @@ var fun   = require("../../uki-core/function"),
         require("../lib/typeahead/LocalDataSource").LocalDataSource,
     Searcher   = require("../lib/accountSearcher").Searcher;
 
-
-var BulkImportDialog = view.newClass('ads.BulkImportDialog', Dialog, {
+var BulkImportDialog = view.newClass('ads.BulkImportDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('bulk_import_dialog'), {
 
     _createDom: function(initArgs) {
         Dialog.prototype._createDom.call(this, initArgs);

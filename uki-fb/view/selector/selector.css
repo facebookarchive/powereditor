@@ -112,7 +112,7 @@
 
 .ufb-selector-toggler .ufb-selector-menu-wrapper {
   visibility: visible;
-  z-index: -1;
+  z-index: 10;
 }
 
 .ufb-selector_rigth .ufb-selector-menu-wrapper {

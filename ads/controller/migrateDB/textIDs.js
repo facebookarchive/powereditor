@@ -22,6 +22,9 @@
 *
 */
 
+var fun = require("../../../uki-core/function");
+var storage = require("../../../storage/storage");
+
 function migrate(uid, DB, callback) {
   DB.transaction(function(tx) {
     tx.executeSql('SELECT id FROM account LIMIT 1', [],

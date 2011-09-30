@@ -107,12 +107,7 @@ var AdEditor = view.newClass('ads.AdEditor', Container, PersistentState, {
           this._refs.view('require-active-message').visible(false);
           this._updateReachEstimate();
 
-          if (model.isNew && !model.isNew()) {
-            this._refs.view('adlink').visible(true);
-            this._refs.view('adlink').html(formatters.adlink(model));
-          } else {
-            this._refs.view('adlink').visible(false);
-          }
+          this._refs.view('adlink').html(formatters.adlink(model));
         }
       }
     }),

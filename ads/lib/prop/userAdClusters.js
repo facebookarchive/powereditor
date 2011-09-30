@@ -34,19 +34,27 @@ var UserAdClusters = fun.newClass(Base, {
   },
 
   getTabSeparated: function(obj) {
-    var cluster_name_pairs = [];
-    this.getValue(obj).forEach(fun.bind(function(cluster) {
-      cluster_name_pairs.push(cluster.id + ":" + cluster.name);
-    }, this));
-    return cluster_name_pairs.join(', ');
+    return this._objectToCommaSeparatedString(this.getValue(obj), false);
+  },
+
+  _objectToCommaSeparatedString: function(obj, sort) {
+    var list = obj.map(
+      function(cluster) {
+        return cluster.id + ":" + cluster.name;
+      }
+    );
+    if (sort) {
+      list = list.sort();
+    }
+    return list.join(', ');
   },
 
   compare: function(a, b) {
-    return this.getTabSeparated((a || [])) === this.getTabSeparated((b || []));
+    return this._objectToCommaSeparatedString(a, true) ===
+           this._objectToCommaSeparatedString(b, true);
   }
 });
 
 UserAdClusters.prototype.compareDB = UserAdClusters.prototype.compare;
-
 
 exports.UserAdClusters = UserAdClusters;

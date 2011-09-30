@@ -47,7 +47,7 @@ function money(v, obj) {
 }
 
 function allocation(v, obj) {
-  if (v === 0) {
+  if (v === 0 || v === '0') {
     return '0';
   }
   var positive = v > 0;

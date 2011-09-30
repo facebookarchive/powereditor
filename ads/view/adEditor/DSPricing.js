@@ -87,6 +87,11 @@ var DSPricing = view.newClass('ads.adEditor.DSPricing', Base, {
             modelProp: 'url_override'
         });
 
+        this.child('title_override').binding({
+            model: m,
+            modelProp: 'title'
+        });
+
         this.child('view_tags').binding({
             model: m,
             modelProp: 'view_tags',
@@ -187,6 +192,14 @@ var DSPricing = view.newClass('ads.adEditor.DSPricing', Base, {
                     data: { view: 'TextInput', childName: 'priority',
                       addClass: 'DSPricing-input' },
                     optional: '[0-9999] 0: self-serve, 10000: reach block'
+                },
+                {
+                    label: 'Title Override',
+                    data: {
+                      view: 'TextInput',
+                      addClass: 'DSPricing-long-input',
+                      childName: 'title_override'
+                    }
                 },
                 {
                     label: 'URL Override',

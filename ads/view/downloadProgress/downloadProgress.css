@@ -23,16 +23,25 @@
 */
 
 .downloadProgress .label {
-    padding-right: 0.5em;
+  padding-right: 0.5em;
 }
 
 .downloadProgress .complete {
-    color: #060;
-    font-weight: bold;
-    padding-left: 20px;
-    background: 0 50% no-repeat url(./check_mark.gif);
+  color: #060;
+  font-weight: bold;
+  padding-left: 20px;
+  background: 0 50% no-repeat url(./check_mark.gif);
 }
 
 .downloadProgress .extra {
-    color: #999;
+  color: #999;
+}
+
+.downloadProgress .conflicts {
+  color: #C00;
+  font-weight: bold;
+}
+
+.downloadProgress-bct {
+  padding: 2px;
 }

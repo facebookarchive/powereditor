@@ -33,7 +33,7 @@ var DAY_NAMES = [
     'Sunday',
     'Monday',
     'Tuesday',
-    'Wensday',
+    'Wednesday',
     'Thursday',
     'Friday',
     'Saturday'

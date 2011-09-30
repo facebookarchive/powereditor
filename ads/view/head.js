@@ -85,10 +85,6 @@ var Head = view.newClass('ads.Head', Container, {
   },
 
   _ondownload: function(e) {
-    if (e.shiftKey) {
-      require("../controller/downloadBCT")
-        .DownloadBCT.clearLastSync();
-    }
     if (e && e.baseEvent.altKey) {
       db.drop(!e.shiftKey, fun.bind(function() {
         location.reload();

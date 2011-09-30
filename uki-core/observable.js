@@ -33,7 +33,8 @@
 */
 
 var utils = require("./utils"),
-    fun = require("./function");
+    fun = require("./function"),
+    evt = require("./event");
 
 var Observable = {
     addListener: function(names, callback) {
@@ -65,9 +66,10 @@ var Observable = {
     trigger: function(e) {
         var type = e.type,
             listeners = this._listeners;
+        var wrapped = evt.createEvent(e, {});
         if (listeners && listeners[type]) {
             utils.forEach(listeners[type], function(callback) {
-                callback.call(this, e);
+                callback.call(this, wrapped);
             }, this);
         }
         return this;

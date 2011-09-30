@@ -29,6 +29,7 @@ var fun   = require("../../uki-core/function"),
 
     Validatable = require("../lib/model/validatable").Validatable,
     formatters = require("../../lib/formatters"),
+    DateUtil = require("../lib/dateUtil").DateUtil,
     CampResultSet = require("./campaign/campResultSet").CampResultSet,
     storage = require("../../storage/storage"),
     Converter = require("../lib/budgetImpsConverter").Converter;
@@ -64,7 +65,7 @@ var Topline = storage.newStorage(Validatable, {
 
   children: fun.newProp('children'),
 
-  _getAllCampaignsBudget: function() {
+  _getAllCampaignsBudget_100: function() {
     var budget_sum = 0;
     this.getCampaigns().forEach(function(c) {
       budget_sum += c.total_budget_100();
@@ -72,7 +73,7 @@ var Topline = storage.newStorage(Validatable, {
     return budget_sum;
   },
 
-  _getAllCampaignsUninflatedBudget: function() {
+  _getAllCampaignsUninflatedBudget_100: function() {
     var budget_sum = 0;
     this.getCampaigns().forEach(function(c) {
       budget_sum += Converter.uninflateBudget(
@@ -84,13 +85,13 @@ var Topline = storage.newStorage(Validatable, {
   _getUnallocatedBudget: function() {
     // in dollar format
     var line_budget = this.func_line_amount();
-    var allocated_budget = this._getAllCampaignsUninflatedBudget();
+    var allocated_budget = this._getAllCampaignsUninflatedBudget_100();
 
     if (allocated_budget === 0) {
       return line_budget;
     }
-    // round to the nearest cent
-    return Math.round(line_budget - allocated_budget);
+
+    return 100 * (line_budget - allocated_budget);
   },
 
   // for topline, we should use imps as OL to
@@ -98,7 +99,8 @@ var Topline = storage.newStorage(Validatable, {
   getUnallocatedImps: function() {
     var line_price = this.func_price();
     if (line_price === 0) {
-      alert('no price. cannot calculate unallocated imps.');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:dragon:line-price-na'));
       return;
     }
 
@@ -115,8 +117,12 @@ var Topline = storage.newStorage(Validatable, {
   },
 
   isBudgetBased: function() {
-    return this.uom() === 'CPC' ||
-      this.uom() == 'FCPC';
+    return this.uom() === 'CPC';
+  },
+
+  // this is a temp stage to indicate the source of the topline
+  isFromOL: function() {
+    return this.id() == this.line_id();
   },
 
   getCampaigns: function() {
@@ -190,19 +196,19 @@ var Topline = storage.newStorage(Validatable, {
    *    'complete_perc': Percentage complete in terms of duration
    */
   _prepareDeliveryInfo: function() {
-    var now = Date.now();
+    var now = DateUtil.fromNowToAccountOffset(this.account()).getTime();
     var line_budget = this.func_line_amount() * 100;
 
     // calcuate the time pass percentage
     var line_perc_complete = 0;
     if (now < this.flight_start_date().getTime()) {
       line_perc_complete = 0;
-    } else if (now > this.adjusted_flight_end_date().getTime()) {
+    } else if (now > this.shifted_flight_end_date().getTime()) {
       line_perc_complete = 1;
     } else {
       line_perc_complete =
         (now - this.flight_start_date().getTime()) /
-        (this.adjusted_flight_end_date().getTime() -
+        (this.shifted_flight_end_date().getTime() -
           this.flight_start_date().getTime()
         );
     }
@@ -254,7 +260,7 @@ Topline.addProp({
 Topline.addProp({
   name: 'id',
   type: props.LongNumber,
-  remote: 'line_id',
+  remote: 'id',
   indexed: 'TEXT NOT NULL PRIMARY KEY'
 });
 
@@ -262,11 +268,6 @@ Topline.addProp({
     type: props.LongNumber,
     name: 'account_id',
     indexed: "INTEGER NOT NULL",
-    remote: true, db: true
-});
-
-Topline.addProp({
-    name: 'io_header_id',
     remote: true, db: true
 });
 
@@ -286,6 +287,7 @@ Topline.addProp({
     }
 });
 
+// line_id is from OmegaLight
 Topline.addProp({
     name: 'line_id',
     remote: true, db: true
@@ -342,6 +344,25 @@ Topline.addProp({
 });
 
 Topline.addProp({
+    name: 'is_bonus_line',
+    remote: true, db: true
+});
+/**
+ * To clarify when to use what kinds of times:
+ * (more about campaign properties commented in campaign.js)
+ *
+ * - flight_start/flight_end dates are saved such that the Unix timestamp
+ *   is inaccurate, but when adjusted to the local browser time, the time
+ *   properly reflects the time in the account timezone. Therefore, these model
+ *   properties should be compared against the "adjusted" time props in
+ *   Campaign and other times reflected to be in the account timezone.
+ *
+ * - shifted_flight_end_date is like flight_end_date in that it should be
+ *   compared against "adjusted" time props. The only difference between normal
+ *   flight end date is that shifted_flight_end_date is shifted to 11:59PM of
+ *   the day represented in flight_end_date.
+ */
+Topline.addProp({
     type: props.Timestamp,
     name: 'flight_start_date',
     remote: true, db: true
@@ -353,13 +374,19 @@ Topline.addProp({
     remote: true, db: true
 });
 
+/**
+ * shifted_flight_end_date is simply the timestamp with the same date as
+ * the flight_end_date, except pushed to time of 11:59PM of that day.
+ */
 Topline.addProp({
-    name: 'adjusted_flight_end_date',
+    name: 'shifted_flight_end_date',
     getValue: function(obj) {
       // OL parity end_date will be the end of that day
       // flight_end_date always is the start of that day
-      // 11:59PM (60*24 - 1)*60 = 86340
-      return new Date(obj.flight_end_date().getTime() + 86340000);
+      // set to 11:59PM
+      var out = new Date(obj.flight_end_date().getTime());
+      out.setHours(23, 59);
+      return out;
     }
 });
 
@@ -423,12 +450,16 @@ Topline.addProp({
   name: 'budget_status',
   validate: function(obj) {
     var over_budget =
-      obj._getAllCampaignsBudget() > obj.func_line_amount();
+      obj._getAllCampaignsBudget_100() > obj.func_line_amount();
+    var data = {
+      camp_budget: money(obj._getAllCampaignsBudget_100()),
+      line_budget: money(obj.func_line_amount())
+    };
+
     obj.toggleError(
       over_budget,
       'budget_status',
-      'Total campaign budget [' + money(obj._getAllCampaignsBudget()) +
-      '] is over the topline budget [' + money(obj.func_line_amount()) + ']'
+      tx('ads:pe:dragon:campaign-budget-over-line-budget', data)
     );
   }
 });
@@ -439,19 +470,22 @@ Topline.addProp({
   name: 'delivery_status',
   validate: function(obj) {
     var delivery_info = obj.delivery_info();
+    var data = {
+      delivered_perc: perc(delivery_info.overdelivery_perc),
+      completed_perc: perc(delivery_info.complete_perc)
+    };
+
     if (delivery_info.overdelivery_perc > 0) {
       obj.toggleError(
         delivery_info.overdelivery_perc > 0,
         'delivery_info',
-        'Over [' + delivery_info.overdelivery_perc + '] ' +
-        delivery_info.complete_perc + ' completed'
+        tx('ads:pe:dragon:over-delivery-info', data)
       );
     } else if (delivery_info.overdelivery_perc < 0) {
       obj.toggleError(
         delivery_info.overdelivery_perc < 0,
         'delivery_info',
-        'Under [' + perc(delivery_info.overdelivery_perc) + '] ' +
-        perc(delivery_info.complete_perc) + ' Completed'
+        tx('ads:pe:dragon:under-delivery-info', data)
       );
     }
   }

@@ -29,7 +29,7 @@ requireCss('./common/base.css');
 requireCss('./common/utils.css');
 requireCss('./common/spacing.css');
 
-global.tx = require('tx');
+global.tx = require('./tx');
 global.App = require('ads/controller/app.js').App;
 document.getElementsByTagName('head')[0].appendChild(
   require('uki-core/dom').createStylesheet(__requiredCss)

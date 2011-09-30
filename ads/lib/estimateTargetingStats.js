@@ -24,11 +24,14 @@
 
 var fun = require("../../uki-core/function");
 
-var graphlink = require("../../lib/graphlink").gl,
+var GL = require("../../lib/graphlink").Graphlink,
     pathUtils = require("../../lib/pathUtils");
 
 var cache = {};
 var CACHE_TTL = 1000 * 60 * 60 * 24; // day
+
+// so as not to mess with progress handlers on static version
+var graphlink = new GL();
 
 function buildKey(account, targeting_spec) {
   return account.id() + ' ' + JSON.stringify(targeting_spec);

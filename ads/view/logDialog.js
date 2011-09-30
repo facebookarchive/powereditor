@@ -29,8 +29,9 @@ var fun   = require("../../uki-core/function"),
 
     Dialog = require("../../uki-fb/view/dialog").Dialog;
 
+var LogDialog = view.newClass('ads.LogDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('log_dialog'), {
 
-var LogDialog = view.newClass('ads.LogDialog', Dialog, {
   header: function() {
     return this._collection.view('header');
   },

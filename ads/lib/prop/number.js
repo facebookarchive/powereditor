@@ -22,13 +22,26 @@
 *
 */
 
+
+
 var fun = require("../../../uki-core/function"),
 
     TabSeparated = require("./base").TabSeparated,
     StorageNum = require("../../../storage/prop/number").Number;
 
+var Num = fun.newClass(StorageNum, TabSeparated, {
 
-var Num = fun.newClass(StorageNum, TabSeparated, {});
+  setTabSeparated: function(obj, value, callback) {
 
+    value = (value + '')
+      .replace(/\D(\d\d?)$/, '\u0001$1')  // preserve decimal separator
+      .replace(/[^0-9\u0001]/g, '')       // remove everything else
+      .replace('\u0001', '.');            // restore decimal separator
+
+    this.setValue(obj, value);
+    callback();
+  }
+
+});
 
 exports.Number = Num;

@@ -43,3 +43,11 @@ body {
 .intern {
     background: #FFF9D7;
 }
+
+/**
+ * Fix the min-width of the "content" pane, so that the UI
+ * form widgets don't overlap
+ */
+div#content {
+  min-width: 790px;
+}

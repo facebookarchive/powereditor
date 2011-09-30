@@ -30,4 +30,9 @@
 
 .ufb-checkbox-input {
   margin-left: 0;
+  cursor: pointer;
+}
+
+.ufb-checkbox-input-label {
+  cursor: pointer;
 }

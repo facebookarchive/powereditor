@@ -35,7 +35,8 @@ var MESSAGE_ADS = '{uploaded} of {ads} ads',
     MESSAGE_CAMPS = '{uploaded} of {campaigns} campaigns',
     MESSAGE_BOTH = '{uploaded} of {ads} ads and {campaigns} campaigns';
 
-var UploadDialog = view.newClass('ads.UploadDialog', Dialog, {
+var UploadDialog = view.newClass('ads.UploadDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('Upload Dialog'), {
 
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);

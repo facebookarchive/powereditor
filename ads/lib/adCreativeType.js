@@ -36,23 +36,27 @@ var AD_CREATIVE_TYPE_TS = {
     5:  'Social Poll',
     6:  'Comment',
     7:  'Sample',
-    8:  'Bass Platform Story',
-    9:  'Bass Page Connections',
-    10: 'Bass Page Checkins',
-    11: 'Bass Page Posts',
+    8:  'App Share Story',
+    9:  'Page Like Story',
+    10: 'Check-In Story',
+    11: 'Sponsored Page Post',
     12: 'Premium Standard',
     13: 'Premium Fan',
     14: 'Premium Event',
     15: 'Premium Platform',
-    16: 'Bass App Connection',
-    17: 'Bass Engagement',
-    18: 'Bass Buy With Friend',
-    19: 'Bass Link Share',
-    20: 'Bass Questions Vote',
+    16: 'App Used Story',
+    17: 'Page Post Like Story',
+    18: 'Buy with Friends Story',
+    19: 'Domain Story',
+    20: 'Questions Vote Story',
     21: 'Questions',
-    22: 'Bass Sparkbox',
-    23: 'Bass Sparkbox Comment',
+    22: 'Comment',
+    23: 'Comment Story',
     24: 'Page Endorsement',
+    25: 'Query Based',
+    26: 'Ego House Ad',
+    27: 'Page Posts Pinned',
+
     999: 'Invalid'
 };
 
@@ -81,6 +85,10 @@ var AD_CREATIVE_TYPE_MAP = {
   22:  tx('ads:pe:creative-type:bass-sparkbox'),
   23:  tx('ads:pe:creative-type:bass-sparkbox-comment'),
   24:  tx('ads:pe:creative-type:page-endorsement'),
+  25:  tx('ads:pe:creative-type:query-based'),
+  26:  tx('ads:pe:creative-type:ego-house-ad'),
+  27:  tx('ads:pe:creative-type:page-posts-pinned'),
+
   999: tx('ads:pe:creative-type:invalid')
 };
 
@@ -109,20 +117,34 @@ var AD_CREATIVE_TYPE = {
   BASS_SPARKBOX: 22,
   BASS_SPARKBOX_COMMENT: 23,
   PAGE_ENDORSEMENT: 24,
+  QUERY_BASED: 25,
+  EGO_HOUSE_AD: 26,
+  PAGE_POSTS_V2: 27,
+
   EXOTIC_OR_INVALID: 999
 };
 
-var AD_CREATIVE_BASS_TYPE_MAP = {
-  BASS_PLATFORM_STORY: 8,
-  BASS_PAGE_CONNECTIONS: 9,
-  BASS_PAGE_CHECKINS: 10,
-  BASS_PAGE_POSTS: 11,
-  BASS_APP_CONNECTIONS: 16,
-  BASS_ENGAGEMENT: 17,
-  BASS_BUY_WITH_FRIENDS: 18,
-  BASS_LINK_SHARE: 19,
-  BASS_QUESTIONS_VOTE: 20
-};
+var AD_CREATIVE_BASS_TYPE_ARR = [
+  8, //BASS_PLATFORM_STORY: 8,
+  9, //BASS_PAGE_CONNECTIONS: 9,
+  10, //BASS_PAGE_CHECKINS: 10,
+  11, //BASS_PAGE_POSTS: 11,
+  16, //BASS_APP_CONNECTIONS: 16,
+  17, //BASS_ENGAGEMENT: 17,
+  18, //BASS_BUY_WITH_FRIENDS: 18,
+  19, //BASS_LINK_SHARE: 19,
+  20, //BASS_QUESTIONS_VOTE: 20,
+  // BASS_SPARKBOX is a very misleading name
+  // since it is not a bass type ad.
+  23, //BASS_SPARKBOX_COMMENT: 23,
+  25 //QUERY_BASED: 25
+];
+
+var AD_NO_TITLE_SS_ARR = [
+  2, // INLINE_FAN
+  3, // INLINE_RSVP
+  4  // PLATFORM_CONTEXT
+];
 
 function id2string(id) {
   return AD_CREATIVE_TYPE_TS[id] || AD_CREATIVE_TYPE_TS[1];
@@ -145,7 +167,7 @@ function string2id(string) {
 }
 
 function is_bass_type(creative_type) {
-  return AD_CREATIVE_BASS_TYPE_MAP[creative_type];
+  return AD_CREATIVE_BASS_TYPE_ARR.indexOf(1 * creative_type) != -1;
 };
 
 function getCategoryByCreativeType(creative_type) {
@@ -165,7 +187,7 @@ function getDefaultCreativeTypeByAnchor(
     AD_CREATIVE_TYPE.STANDARD;
 
   var type = require("../model/connectedObject").OBJECT_TYPE;
-  if (premium) {
+  if (premium && !bass) {
     if (anchor_type == type.EXTERNAL_WEBPAGE) {
       default_type = AD_CREATIVE_TYPE.PREMIUM_STANDARD;
       return;
@@ -237,5 +259,6 @@ exports.getCategoryByCreativeType = getCategoryByCreativeType;
 exports.id2string = id2string;
 exports.string2id = string2id;
 exports.AD_CREATIVE_TYPE = AD_CREATIVE_TYPE;
+exports.AD_NO_TITLE_SS_ARR = AD_NO_TITLE_SS_ARR;
 exports.AD_CREATIVE_TYPE_MAP = AD_CREATIVE_TYPE_MAP;
 exports.AD_CREATIVE_CATEGORY = AD_CREATIVE_CATEGORY;

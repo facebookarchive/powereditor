@@ -47,258 +47,282 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
 
     _prepare: function(callback) {
 
-        this.content().camp_errors.model(this.model());
+      this.content().camp_errors.model(this.model());
 
-        this.content().status.options(
-            this.model().allowedStatusTransitions().map(function(s) {
-                return {
-                    text: require("../lib/prop/campaignStatus").STATUS_MAP[s],
-                    value: s
-                };
-            })
-        );
+      this.content().status.options(
+        this.model().allowedStatusTransitions().map(function(s) {
+          return {
+            text: require("../lib/prop/campaignStatus").STATUS_MAP[s],
+            value: s
+          };
+        })
+      );
 
-        this.content().tz_name_from.text("Local time");
-        this.content().tz_name_to.text("Local time");
+      var tz_text = this.model().account().timezone_offsets() ?
+       this.model().account().timezone_name() :
+       "Local time. Please update timezone offsets by re-downloading accounts.";
+      this.content().tz_name_from.text(
+        tz_text);
+      this.content().tz_name_to.text(
+        tz_text);
 
-        
 
-        callback();
+      
 
-        // Only show campaign link on non-new campaigns
-        // when only one is selected
-        if (!this.model().isNew() && this.model().id()) {
-          this.content().camp_link.visible(true);
-          var camp_link = '/ads/manage/adgroups.php?campaign_id=' +
-            this.model().id() + '&act=' + this.model().account_id();
-          this.content().camp_link.html(
-            '<a class="adPane-link" target="_blank" href="' +
-              camp_link + '">' + (this.model().id() * 1) + '</a>');
-        } else {
-          this.content().camp_link.visible(false);
-        }
+      callback();
 
-        var curcode = this.model().account().currency();
-        // imp_based or budget based
-        this.imps_based = false;
-        if (this.model().isFromTopline()) {
-          this.imps_based = this.model().isImpressionBased();
+      // Only show campaign link on non-new campaigns
+      // when only one is selected
+      if (!this.model().isNew() && this.model().id()) {
+        this.content().camp_link.visible(true);
+        var camp_link = '/ads/manage/adgroups.php?campaign_id=' +
+          this.model().id() + '&act=' + this.model().account_id();
+        this.content().camp_link.html(
+          '<a class="adPane-link" target="_blank" href="' +
+            camp_link + '">' + (this.model().id() * 1) + '</a>');
+      } else {
+        this.content().camp_link.visible(false);
+      }
 
-          var mf = formatters.createMoneyFormatter(2, curcode);
-          var price = this.model().topline().func_price();
-          var num_imps =
-            Math.round(1000 * this.content().budget_sum.value() / price);
-          this.content().cpm_price.text('Price: ' + mf(price));
-          this.content().as_imps.text(
-            '#Impressions: ' + num_imps);
-        } else {
-          this.content().cpm_price.text('');
-          this.content().as_imps.text('');
-        }
+      var curcode = this.model().account().currency();
+      // imp_based or budget based
+      this.imps_based = false;
+      if (this.model().isFromTopline()) {
+        this.imps_based = this.model().isImpressionBased();
 
-        // the selector should only be visible for new topline-attached camp
-        this.content().campaign_type.toggleClass
-          ('campEditor_hide-campType', !(this.model().line_number()));
+        var mf = formatters.createMoneyFormatter(2, curcode);
+        var price = this.model().topline().func_price();
+        var num_imps =
+          Math.round(1000 * this.content().budget_sum.value() / price);
+        this.content().budget_ui_imps.value(num_imps);
+        this.content().imps_label.visible(true);
+        this.content().cpm_price.text('Price: ' + mf(price));
+      } else {
+        this.content().budget_ui_imps.value('');
+        this.content().cpm_price.text('');
+        this.content().imps_label.visible(false);
+      }
 
-        // if none of the selected items are new, disable field
-        this.content().campaign_type.disabled(!this.model().isNew());
+      // the selector should only be visible for new topline-attached camp
+      this.content().campaign_type.toggleClass
+        ('campEditor_hide-campType', !(this.model().line_number()));
 
-        this.content().budget_label.text('Budget (' + curcode + ')');
+      // if none of the selected items are new, disable field
+      this.content().campaign_type.disabled(!this.model().isNew());
+
+      // the selector should only be visible for new topline-attached camp
+      this.content().budget_ui_imps.toggleClass
+        ('campEditor_hide-campType', !(this.model().line_number()));
+
+      this.content().budget_label.text('Budget (' + curcode + ')');
     },
 
     _setupBindings: function(m) {
-        this.content().name_input.binding({
-            model: m,
-            modelProp: 'name',
-            viewEvent: 'keyup change blur paste'
-        });
-        this.content().budget_type.binding({
-            model: m,
-            modelProp: 'budget_type'
-        });
-        this.content().campaign_type.binding({
-            model: m,
-            modelProp: 'campaign_type'
-        });
-        this.content().budget_sum.binding({
-            model: m,
-            modelProp: 'uninflated_ui_budget_100',
-            modelEvent: 'change.lifetime_budget change.daily_budget',
-            viewEvent: 'keyup change blur paste'
-        });
-        dateBinding(this.content().from_date, {
-            model: m,
-            modelProp: 'start_time',
-            viewEvent: 'select blur',
-            commitChangesViewEvent: 'select',
-            timeView: this.content().from_time
-        });
-        dateBinding(this.content().to_date, {
-            model: m,
-            modelProp: 'end_time',
-            viewEvent: 'select blur',
-            commitChangesViewEvent: 'select',
-            timeView: this.content().to_time
-        });
-        this.content().status.binding({
-            model: m,
-            modelProp: 'campaign_status'
-        });
-        this._prevTimeStop = null;
-        this.content().run_continuously
-            .checked(+m.end_time() < 1);
+      this.content().name_input.binding({
+        model: m,
+        modelProp: 'name',
+        viewEvent: 'keyup change blur paste'
+      });
+      this.content().budget_type.binding({
+        model: m,
+        modelProp: 'budget_type'
+      });
+      this.content().campaign_type.binding({
+        model: m,
+        modelProp: 'campaign_type'
+      });
+      this.content().budget_sum.binding({
+        model: m,
+        modelProp: 'uninflated_ui_budget_100',
+        modelEvent: 'change.lifetime_budget change.daily_budget',
+        viewEvent: 'keyup change blur paste'
+      });
 
+      dateBinding(this.content().from_date, {
+        model: m,
+        modelProp: 'adjusted_start_time',
+        viewEvent: 'select blur',
+        commitChangesViewEvent: 'select',
+        timeView: this.content().from_time
+      });
+      dateBinding(this.content().to_date, {
+        model: m,
+        modelProp: 'adjusted_end_time',
+        viewEvent: 'select blur',
+        commitChangesViewEvent: 'select',
+        timeView: this.content().to_time
+      });
+      this.content().status.binding({
+        model: m,
+        modelProp: 'campaign_status'
+      });
+      this._prevTimeStop = null;
+      this.content().run_continuously
+        .checked(+m.end_time() < 1);
 
-        
+      
 
-        this._budgetChange();
+      this._budgetChange();
     },
 
     _createDom: function(initArgs) {
-        Base.prototype._createDom.call(this, initArgs);
-        this.removeClass('adEditor-editor');
-        this.addClass('campEditor');
-        this.removeClass('pvs');
-        this.content({
+      Base.prototype._createDom.call(this, initArgs);
+      this.removeClass('adEditor-editor');
+      this.addClass('campEditor');
+      this.removeClass('pvs');
+      this.content({
+        camp_errors: { view: 'CampErrors' },
 
-            camp_errors: { view: 'CampErrors' },
+        name_label: 'Name',
+        name_input: { view: 'TextInput', addClass: 'campEditor-name' },
+        camp_link: { view: 'Text', addClass: 'campEditor-camplink' },
 
-            name_label: 'Name',
-            name_input: { view: 'TextInput', addClass: 'campEditor-name' },
-            camp_link: { view: 'Text', addClass: 'campEditor-camplink' },
+        budget_label: {view: 'Base',
+          initArgs: { tagName: 'span'}, text: 'Budget (USD):'},
+        budget_sum: { view: 'TextInput', addClass: 'campEditor-num',
+          on: { keyup: fun.bindOnce(this._budgetEdit, this) } },
+        budget_type: { view: 'Select', options: [
+            { text: 'Daily', value: 'd' },
+            { text: 'Lifetime', value: 'l' }
+        ], on: { change: fun.bindOnce(this._budgetChange, this) } },
 
-            budget_label: {view: 'Base',
-              initArgs: { tagName: 'span'}, text: 'Budget (USD):'},
-            budget_sum: { view: 'TextInput', addClass: 'campEditor-sum',
-              on: { keyup: fun.bindOnce(this._budgetEdit, this) } },
-            budget_type: { view: 'Select', options: [
-                { text: 'Daily', value: 'd' },
-                { text: 'Lifetime', value: 'l' }
-            ], on: { change: fun.bindOnce(this._budgetChange, this) } },
+        // dso only field
+        campaign_type: { view: 'Select', options: [
+            { text: 'Classic', value: campConst.CAMP_CLASSIC_TYPE },
+            { text: 'Multi-Objective', value: campConst.CAMP_MOO_TYPE }
+        ] },
 
-            // dso only field
-            campaign_type: { view: 'Select', options: [
-                { text: 'Classic', value: campConst.CAMP_CLASSIC_TYPE },
-                { text: 'Multi-Objective', value: campConst.CAMP_MOO_TYPE }
-            ] },
+        // imps_based value
+        imps_label: { view: 'Text', text: 'Imps:',
+          addClass: 'campEditor-impslabel' },
+        budget_ui_imps: { view: 'TextInput', addClass: 'campEditor-imps',
+          on: { keyup: fun.bindOnce(this._impsEdit, this) } },
 
-            // imps_based value
-            cpm_price: { view: 'Text', addClass: 'campEditor-price' },
-            as_imps: { view: 'Text', addClass: 'campEditor-imps' },
+        cpm_price: { view: 'Text', addClass: 'campEditor-price' },
 
-            schedule_label: 'Schedule',
-            from_date: { view: 'Typeahead', addClass: 'campEditor-date',
-              setValueOnSelect: true,
-              data: (new DateDataSource())
-                .maxResults(3) },
-            from_time: { view: 'Typeahead', addClass: 'campEditor-time',
-              setValueOnSelect: true,
-              data: (new TimeDataSource())
-                .maxResults(6) },
-            to_date: { view: 'Typeahead', addClass: 'campEditor-date',
-              setValueOnSelect: true,
-              data: (new DateDataSource())
-                .maxResults(3) },
-            to_time: { view: 'Typeahead', addClass: 'campEditor-time',
-              setValueOnSelect: true,
-              data: (new TimeDataSource())
-                .maxResults(6) },
-            run_continuously: { view: 'Checkbox',
-              text: 'Run my campaign continuously starting today',
-              on: { click: fun.bindOnce(this._contClick, this) } },
+        schedule_label: 'Schedule',
+        from_date: { view: 'Typeahead', addClass: 'campEditor-date',
+          setValueOnSelect: true,
+          data: (new DateDataSource())
+            .maxResults(3) },
+        from_time: { view: 'Typeahead', addClass: 'campEditor-time',
+          setValueOnSelect: true,
+          data: (new TimeDataSource())
+            .maxResults(6) },
+        to_date: { view: 'Typeahead', addClass: 'campEditor-date',
+          setValueOnSelect: true,
+          data: (new DateDataSource())
+            .maxResults(3) },
+        to_time: { view: 'Typeahead', addClass: 'campEditor-time',
+          setValueOnSelect: true,
+          data: (new TimeDataSource())
+            .maxResults(6) },
+        run_continuously: { view: 'Checkbox',
+          text: 'Run my campaign continuously starting today',
+          on: { click: fun.bindOnce(this._contClick, this) } },
 
-            status_label: 'Status',
-            status: { view: 'Select', options: [] },
+        status_label: 'Status',
+        status: { view: 'Select', options: [] },
 
-            at_txt: 'at',
-            tz_name_from: { view: 'Text', addClass: 'campEditor-timezone' },
-            tz_name_to: { view: 'Text', addClass: 'campEditor-timezone' },
+        at_txt: 'at',
+        tz_name_from: { view: 'Text', addClass: 'campEditor-timezone' },
+        tz_name_to: { view: 'Text', addClass: 'campEditor-timezone' },
 
-            
-            line_number_label: 'Line Number',
-            line_number: { view: 'Select', options: ['No IO', 1, 2, 3] }
-        });
+        
+        line_number_label: 'Line Number',
+        line_number: { view: 'Select', options: ['No IO', 1, 2, 3] },
+        inflation_label: 'Inflation (%)',
+        inflation: { view: 'TextInput', addClass: 'campEditor-num'}
+      });
     },
 
     _budgetEdit: function(e) {
-        if (this.model().isFromTopline()) {
-          var price = this.model().topline().func_price();
-          var num_imps =
-            Math.round(1000 * this.content().budget_sum.value() / price);
-          this.content().as_imps.text(
-            '#Impressions: ' + num_imps);
-        }
+      if (this.model().isFromTopline()) {
+        var price = this.model().topline().func_price();
+        var num_imps =
+          Math.round(1000 * this.content().budget_sum.value() / price);
+        this.content().budget_ui_imps.value(num_imps);
+      }
+    },
+
+    _impsEdit: function(e) {
+      if (this.model().isFromTopline()) {
+        var price = this.model().topline().func_price();
+        var budget = this.content().budget_ui_imps.value() / 1000 * price;
+        this.content().budget_sum.value(budget);
+        this.model().uninflated_ui_budget_100(budget);
+      }
     },
 
     _budgetChange: function(e) {
-        var lifetime = this.content().budget_type.value() === 'l';
-        this.content().run_continuously.disabled(lifetime);
-        if (lifetime) {
-            this.content().run_continuously.checked(false);
-        }
-        this._contClick(e);
+      var lifetime = this.content().budget_type.value() === 'l';
+      this.content().run_continuously.disabled(lifetime);
+      if (lifetime) {
+          this.content().run_continuously.checked(false);
+      }
+      this._budgetEdit(e);
+      this._contClick(e);
     },
 
     _contClick: function(e) {
-        var checked = this.content().run_continuously.checked();
-        this.content().to_date.disabled(checked);
-        this.content().to_time.disabled(checked);
-        if (checked) {
-            var d = new Date();
-            d.setTime(0);
-            this.model().end_time(d);
-            if (e) {
-                this.model().commitChanges('end_time');
-            }
-        }
+      var checked = this.content().run_continuously.checked();
+      this.content().to_date.disabled(checked);
+      this.content().to_time.disabled(checked);
+      if (checked) {
+          var d = new Date();
+          d.setTime(0);
+          this.model().end_time(d);
+          if (e) {
+              this.model().commitChanges('end_time');
+          }
+      }
     }
 });
 
 function dateBinding(c, options) {
-    if (utils.prop(c, 'date_binding')) {
-        utils.prop(c, 'date_binding').destruct();
-    }
-    utils.prop(c, 'date_binding', new DateBinding(
-        utils.extend({ view: c }, options)));
+  if (utils.prop(c, 'date_binding')) {
+      utils.prop(c, 'date_binding').destruct();
+  }
+  utils.prop(c, 'date_binding', new DateBinding(
+      utils.extend({ view: c }, options)));
 }
 
 var DateBinding = fun.newClass(BaseBinding, {
-    init: function() {
-        BaseBinding.apply(this, arguments);
-        if (this.model && this.view) {
-            this.timeView.addListener(this.viewEvent,
-                fun.bindOnce(this.updateModel, this));
-        }
-    },
-
-    destruct: function() {
-        this.timeView.removeListener(this.viewEvent,
-            fun.bindOnce(this.updateModel, this));
-        BaseBinding.prototype.destruct.apply(this, arguments);
-    },
-
-    updateModel: function(e) {
-      if (e.type == 'blur') {
-        var value = this.viewValue();
-        if (value && value.getTime()) { this.viewValue(value); }
-      }
-      BaseBinding.prototype.updateModel.call(this, e);
-    },
-
-    viewValue: function(value) {
-        if (value === undefined) {
-            return this.view.value() && dateRange.decodeDateAndTime(
-                this.view.value() + ' ' + this.timeView.value());
-
-        } else {
-            if (value && value.getTime() < 2) { value = null; }
-            this.view.value(value ?
-                dateRange.formatDate(value) : '');
-            this.timeView.value(value ?
-                dateRange.formatTime(value) : '');
-            return this;
-        }
+  init: function() {
+    BaseBinding.apply(this, arguments);
+    if (this.model && this.view) {
+      this.timeView.addListener(this.viewEvent,
+        fun.bindOnce(this.updateModel, this));
     }
+  },
+
+  destruct: function() {
+    this.timeView.removeListener(this.viewEvent,
+        fun.bindOnce(this.updateModel, this));
+    BaseBinding.prototype.destruct.apply(this, arguments);
+  },
+
+  updateModel: function(e) {
+    if (e.type == 'blur') {
+      var value = this.viewValue();
+      if (value && value.getTime()) { this.viewValue(value); }
+    }
+    BaseBinding.prototype.updateModel.call(this, e);
+  },
+
+  viewValue: function(value) {
+    if (value === undefined) {
+      return this.view.value() && dateRange.decodeDateAndTime(
+          this.view.value() + ' ' + this.timeView.value());
+    } else {
+      if (value && value.getTime() < 2) { value = null; }
+      this.view.value(value ?
+        dateRange.formatDate(value) : '');
+      this.timeView.value(value ?
+        dateRange.formatTime(value) : '');
+      return this;
+    }
+  }
 });
 
 

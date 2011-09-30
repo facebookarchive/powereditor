@@ -72,11 +72,6 @@ Contract.addProp({
 });
 
 Contract.addProp({
-    name: 'io_header_id',
-    remote: true, db: true
-});
-
-Contract.addProp({
     name: 'io_number',
     remote: true, db: true
 });

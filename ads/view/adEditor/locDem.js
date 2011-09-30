@@ -69,6 +69,10 @@ var LocDem = view.newClass('ads.adEditor.LocDem', Base, {
     if (!e || e.name === 'countries' || e.name === 'loc_targeting') {
       if (e) {
         this.model().cities([]).regions([]);
+
+        for (var fieldName in this.graphDataSources) {
+          this.graphDataSources[fieldName].dirty();
+        }
       }
       this._regionChange();
     }
@@ -114,6 +118,12 @@ var LocDem = view.newClass('ads.adEditor.LocDem', Base, {
   _createDom: function(initArgs) {
     Base.prototype._createDom.call(this, initArgs);
     this.addClass('adEditor-locDem');
+
+    this.graphDataSources = {
+      'regions' : new GraphAPIDataSource(),
+      'cities'    : new GraphAPIDataSource()
+    };
+
     this.content({
       location_label: 'Country',
       location:
@@ -154,8 +164,7 @@ var LocDem = view.newClass('ads.adEditor.LocDem', Base, {
               childName: 'regions',
               value2info: function(v) { return { id: v.id, text: v.name }; },
               info2value: function(i) { return { id: i.id, name: i.text }; },
-              data: (new GraphAPIDataSource())
-                .queryEndpoint('search')
+              data: (this.graphDataSources.regions)
                 .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT) },
 
             { view: 'Tokenizer', inline: true, id: 'locDem-cities',
@@ -164,8 +173,7 @@ var LocDem = view.newClass('ads.adEditor.LocDem', Base, {
               // renderer: citiesRenderer,
               value2info: function(v) { return { id: v.id, text: v.name }; },
               info2value: function(i) { return { id: i.id, name: i.text }; },
-              data: (new GraphAPIDataSource())
-                .queryEndpoint('search')
+              data: (this.graphDataSources.cities)
                 .maxResults(AdEditorConstants.MAX_RESULTS_DEFAULT) },
 
             { view: 'Tokenizer', inline: true, id: 'locDem-zips',

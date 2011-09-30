@@ -1,36 +1,40 @@
 /**
-* Copyright 2011 Facebook, Inc.
-*
-* You are hereby granted a non-exclusive, worldwide, royalty-free license to
-* use, copy, modify, and distribute this software in source code or binary
-* form for use in connection with the web services and APIs provided by
-* Facebook.
-*
-* As with any software that integrates with the Facebook platform, your use
-* of this software is subject to the Facebook Developer Principles and
-* Policies [http://developers.facebook.com/policy/]. This copyright notice
-* shall be included in all copies or substantial portions of the software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-* DEALINGS IN THE SOFTWARE.
-*
-*
-*/
+ * Copyright 2011 Facebook, Inc.
+ *
+ * You are hereby granted a non-exclusive, worldwide, royalty-free license to
+ * use, copy, modify, and distribute this software in source code or binary
+ * form for use in connection with the web services and APIs provided by
+ * Facebook.
+ *
+ * As with any software that integrates with the Facebook platform, your use
+ * of this software is subject to the Facebook Developer Principles and
+ * Policies [http://developers.facebook.com/policy/]. This copyright notice
+ * shall be included in all copies or substantial portions of the software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ *
+ */
 
 var utils   = require("../../uki-core/utils"),
     fun     = require("../../uki-core/function"),
     evt     = require("../../uki-core/event"),
     env     = require("../../uki-core/env"),
 
+    Dialog  = require("../../uki-fb/view/dialog").Dialog,
+
     storage = require("../../storage/storage"),
     libUtils = require("../../lib/utils"),
     asyncUtils = require("../../lib/async"),
     graphlink = require("../../lib/graphlink").gl,
+    pathUtils = require("../../lib/pathUtils"),
+    conflicter = require("../../lib/conflicter").cc,
 
     App     = require("./app").App,
     DownloadDialog = require("../view/downloadDialog").DownloadDialog,
@@ -38,14 +42,11 @@ var utils   = require("../../uki-core/utils"),
 
     Account         = require("../model/account").Account,
     Ad              = require("../model/ad").Ad,
-    AdCreative      = require("../model/adCreative").AdCreative,
     Img             = require("../model/image").Image,
     Campaign        = require("../model/campaign").Campaign,
     ConnectedObject = require("../model/connectedObject").ConnectedObject,
     Contract        = require("../model/contract").Contract,
     Topline         = require("../model/topline").Topline;
-
-var META_REFRESH_TIMEOUT = 1000 * 60 * 60 * 24 * 7; // once per week
 
 /**
 * Download ads and campaigns from server
@@ -94,9 +95,15 @@ Download._ondownload = function(e) {
   Download.loadModels(
     progress,
     function() {
-      progress.visible(false);
       require("./downloadBCT")
-      .DownloadBCT.download(function() {
+      .DownloadBCT.download(progress, function() {
+
+        // activate dismiss button
+        progress.disableDismiss(false);
+        if (!progress.conflicts) {
+          progress.triggerDismiss({ type: 'click' });
+        }
+
         // force app update upon completion
         App.reload();
       });
@@ -104,7 +111,20 @@ Download._ondownload = function(e) {
 };
 
 
-// --- Download Flow ---
+/** --- Download Flow ---
+ *
+ *  HERE BE
+ *
+ *        .==.        .==.
+ *       //`^\\      //^`\\
+ *      // ^ ^\(\__/)/^ ^^\\
+ *     //^ ^^ ^/6  6\ ^^ ^ \\
+ *    //^ ^^ ^/( .. )\^ ^ ^ \\
+ *   // ^^ ^/\| v""v |/\^ ^ ^\\
+ *  // ^^/\/ /  `~~`  \ \/\^ ^\\
+ *  -----------------------------
+ *  WARNING FOR THE WISE!
+ */
 
 /**
 * handler to start downloading including contract/topline
@@ -119,6 +139,7 @@ Download.loadModels = function(progress, cb, account_ids) {
     // unset progress handler
     graphlink.removeListener('progress');
     graphlink.removeListener('error');
+    conflicter.removeListener('conflict');
     cb && cb();
   };
 
@@ -128,8 +149,11 @@ Download.loadModels = function(progress, cb, account_ids) {
   });
   graphlink.on('error', function(e) {
     var err = e.error;
-    alert(err.message);
+    Dialog.alert(err.message);
     callback();
+  });
+  conflicter.on('conflict', function(e) {
+    progress.conflictsUpdate(e.numconflicts);
   });
 
   var state = null;
@@ -152,13 +176,10 @@ Download.loadModels = function(progress, cb, account_ids) {
   // Special treatment since we need the account_ids for everything
   // subsequently, and the download may be invoked without explicitly
   // specifying ids
-  loadAccounts(account_ids, null, progress, function(used_account_ids) {
+  loadAccounts(account_ids, null, progress, function(used_accounts) {
 
-    account_ids = libUtils.wrapArray(used_account_ids).filter(
-      function(acc_id) {
-        return !!acc_id;
-      }
-    );
+    used_accounts = used_accounts.filter(Boolean);
+    account_ids = utils.pluck(used_accounts, 'id');
 
     // numerous checks for valid account_ids since things can go wrong
     // server or client side
@@ -167,8 +188,9 @@ Download.loadModels = function(progress, cb, account_ids) {
       return;
     }
 
-    var loaders = [removeOldData, loadObjects, loadContracts, loadToplines,
-      loadCampaigns, loadAds, loadAdCreatives, loadAdImages];
+    state = used_accounts;
+    var loaders = [loadTimezoneOffsets, removeOldData, loadObjects,
+      loadContracts, loadToplines, loadCampaigns, loadAds];
 
     asyncUtils.forEach(loaders,
       function(loader, i, iterCallback) {
@@ -202,17 +224,67 @@ Download.loadModels = function(progress, cb, account_ids) {
 */
 function loadAccounts(account_ids, state, progress, callback) {
   progress.setStep('accounts');
-  var allAccounts = [];
   Account.loadFromIds(
     account_ids,
     function(accounts) {
       progress.completeStep('accounts');
-      allAccounts.push.apply(allAccounts, accounts);
-      callback(utils.pluck(allAccounts, 'id'));
+      callback(accounts);
     }
   );
 }
 
+/**
+ * Download account timezone offsets
+ *
+ * @param account_ids array of account ids being dl'd
+ * @param list of accounts
+ * @param progress DownloadProgress instance
+ * @param callback called on finish
+ * @return none
+ */
+function loadTimezoneOffsets(account_ids, accounts, progress, callback) {
+  progress.setStep('timezones');
+  this._updatedAccounts = 0;
+  this._totalAccounts = accounts.length;
+  for (var i = 0; i < accounts.length; i++) {
+    var act_id = accounts[i].id();
+    var path = pathUtils.join('act_' + act_id, 'timezoneoffsets');
+
+    // TODO use graphlink.batchFetchEdges when it's implemented
+    var offsets = [i]; // pass array index to the callback for fetchEdge
+    graphlink.fetchEdge(path, {},
+      fun.bind(function(fetched) {
+        var index = fetched[0];
+        fetched = fetched.slice(1);
+        accounts[index]
+          .fromRemoteObject({ 'timezone_offsets': fetched });
+        _updateTZProgress(accounts, progress, callback);
+      }, this),
+      null, offsets
+    );
+  }
+}
+
+/**
+ * Update the progress of the job when the timezone offsets for an account is
+ * fetched.
+ * TODO replace with graphlink.batchFetchEdges
+ *
+ * @param accounts to update
+ * @param progress DownloadProgress instance
+ * @param callback function after progress is complete
+ * @return none
+ */
+function _updateTZProgress(accounts, progress, callback) {
+  this._updatedAccounts++;
+  if (this._updatedAccounts == this._totalAccounts) {
+    progress.completeStep('timezones');
+    this._updatedAccounts = 0;
+    Account.storeMulti(accounts, function() {
+      callback(null);
+    });
+  }
+}
 
 /**
  * removing data associated with accounts being refreshed
@@ -234,25 +306,14 @@ function removeOldData(account_ids, state, progress, callback) {
       });
   });
 
-  // clean up all previous campaigns and ads
-  Campaign.findAllBy(
+  // clean up all previous campaigns
+  Campaign.deleteBy(
     'account_id',
     account_ids,
-    function(campaigns) {
-      Ad.deleteBy(
-        'campaign_id',
-        utils.pluck(campaigns, 'id'),
-        function() {
-          Campaign.deleteBy(
-            'account_id',
-            account_ids,
-            function() {
-              callback(null);
-          });
-      });
+    function() {
+      callback(null);
   });
 }
-
 
 /**
 * Download ConnectedObjects
@@ -349,22 +410,20 @@ function loadToplines(acc_ids, contracts, progress, callback, _totalToplines) {
 function loadCampaigns(account_ids, state, progress, callback) {
 
   progress.setStep('campaigns');
-  var totalCampaigns = [];
 
   Campaign.loadFromAccountIds(
     account_ids,
     function(campaigns) {
-
       progress.completeStep('campaigns');
-      totalCampaigns = totalCampaigns.concat(campaigns);
-
-      Campaign.prepare(function(campaigns) {
-        totalCampaigns.prefetch && totalcampaigns.prefetch();
-        callback(totalCampaigns);
-      }, true);
+      Campaign.prepare(callback, true);
     }
   );
 }
+
+
+// ---
+// Ads from here on
+// Sigh, they are complicated
 
 /**
 * Download ads by campaigns
@@ -379,67 +438,82 @@ function loadCampaigns(account_ids, state, progress, callback) {
 function loadAds(account_ids, state, progress, callback) {
 
   progress.setStep('ads');
-  var totalAds = [];
 
-  Ad.loadFromAccountIds(account_ids,
-    function(ads, isDone) {
+  var paths = Ad.pathsFromAccountIds(account_ids);
 
+  graphlink.serialFetchEdges(paths, { 'include_demolink_hashes': true },
+    function(fetched) {
+      // sometimes, we will receive current ads in deleted campaigns.
+      // remove those here.
+      for (var i = fetched.length - 1; i >= 0; i--) {
+        var campaign_id = fetched[i].campaign_id;
+        if (!Campaign.byId(campaign_id)) {
+          fetched.splice(i, 1);
+        }
+      }
+      var createdAds = Ad.createMultipleFromRemote(fetched);
       progress.completeStep('ads');
-      totalAds.push.apply(totalAds, ads);
-
-      totalAds.prefetch && totalAds.prefetch();
-      callback(totalAds);
-    }
-  );
+      fetchAdCreatives(account_ids, createdAds, progress, function(adimages) {
+        // store all ads now, after adcreatives and adimages are done
+        createdAds.forEach(function(ad) {
+          ad.initChangeable();
+          ad.validateAll();
+        });
+        Ad.checkAllForConflicts(createdAds, function() {
+          Ad.deleteBy('account_id', account_ids, function() {
+            Ad.storeMulti(createdAds, callback);
+          });
+        }, this);
+      });
+    });
 }
 
 
 /**
- * load ad creatives
+ * fetch ad creatives
  */
-function loadAdCreatives(account_ids, ads, progress, callback) {
+function fetchAdCreatives(account_ids, ads, progress, callback) {
 
   progress.setStep('adcreatives');
   if (!ads.length) {
-    callback([]);
+    progress.completeStep('adcreatives');
+    updateAdImages(account_ids, ads, progress, callback);
     return;
   }
 
-  var adMapByCreative = {};
-  var creative_ids = [];
-  libUtils.wrapArray(ads).map(function(ad) {
-    var creativeId = (ad.creative_ids() || [])[0];
-    if (creativeId) {
-      adMapByCreative[creativeId] = adMapByCreative[creativeId] || [];
-      adMapByCreative[creativeId].push(ad);
-      creative_ids.push(creativeId);
-    }
+  var creative_ids = utils.pluck(ads, 'creative_ids');
+  creative_ids = creative_ids.map(function(creative_id) {
+    return utils.isArray(creative_id) ? creative_id[0] : creative_id;
   });
-
-  creative_ids = utils.unique(creative_ids);
+  // apparently ads don't have creatives
+  creative_ids = utils.unique(creative_ids).filter(Boolean);
 
   // load creatives all together
-  AdCreative.loadFromIds(creative_ids,
-    function(data) {
-      libUtils.wrapArray(data).map(function(creative) {
-        var creativeId = String(creative.creative_id);
-        if (adMapByCreative[creativeId]) {
+
+  graphlink.fetchObjectsById(creative_ids, {},
+    function(adcreatives) {
+      var fetchedIdMap = {};
+      adcreatives.forEach(function(creative) {
+        // do not use creative_id for indexing
+        fetchedIdMap[creative.id * 1] = creative;
+      });
+
+      ads.forEach(function(ad) {
+        var creative_id = ad.creative_ids();
+        utils.isArray(creative_id) ? creative_id[0] : creative_id;
+        var creative = fetchedIdMap[creative_id];
+        if (creative) {
           delete creative.name;
-          libUtils.wrapArray(adMapByCreative[creativeId]).map(function(ad) {
-            ad
-              .muteChanges(true)
-              .fromRemoteObject(creative)
-              .muteChanges(false);
-          });
+          ad
+            .muteChanges(true)
+            .fromRemoteObject(creative)
+            .muteChanges(false);
         }
       });
 
       progress.completeStep('adcreatives');
-
-      // commit the ad changes back to db
-      storage.Storage.storeMulti.call(Ad, ads, function(data) {
-          callback(data);
-      });
+      // finish with Ad Images before storing ads
+      updateAdImages(account_ids, ads, progress, callback);
     }
   );
   // end load creatives
@@ -449,21 +523,19 @@ function loadAdCreatives(account_ids, ads, progress, callback) {
  * Ultimately load adimages distinctly
  * for now, update images / hashes in ads from the creatives
  */
-function loadAdImages(account_ids, ads, progress, callback) {
+function updateAdImages(account_ids, ads, progress, callback) {
   progress.setStep('adimages');
   // when you're done loading ads
   // populate image lookup table with newly downloaded ads
   if (!ads.length) {
-    callback(null);
+    callback();
     return;
   }
-  Img.updateImagesInAllAccounts(account_ids, ads, function() {
-    // commit the ad changes back to db
-    storage.Storage.storeMulti.call(Ad, ads, function(data) {
-      progress.statusUpdate(ads.length);
-      progress.completeStep('adimages');
-      callback(null);
-    });
+  Img.updateImagesInAllAccounts(account_ids, ads, function(adimages) {
+    // finally, save the ads to db
+    progress.statusUpdate(ads.length);
+    progress.completeStep('adimages');
+    callback(adimages);
   });
 }
 

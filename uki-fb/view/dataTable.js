@@ -210,34 +210,32 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     this._list._updateColumnSize(e.column.index);
   },
 
+  /**
+   * Sorts a column within the DataTable and modifies the header accordingly
+   *
+   * @param column index to sort
+   * @param direction to sort (true for ascending, false for descending)
+   * @return none
+   */
   sortColumn: function(index, direction) {
-    var i = index;
-    if (index == -1) {
-      return;
-    }
-    if (!this.data().length) {
+    var DEFAULT_KEY = 'id';
+
+    // if we're sorting on an invalid column or if there's nothing, quit
+    if (index < 0 || !this.data().length) {
       return;
     }
 
+    // key that corresponds to that column
     var dataKey = this.columns()[index].key;
 
     // the sort function depends on whether the column data is numerical or not
     var compFn = this.columns()[index].compareFn;
-    var sortFn;
-    if (direction) {
-      sortFn = function(a, b) {
-        var obj1 = a[dataKey]();
-        var obj2 = b[dataKey]();
-        return compFn(obj1, obj2);
-      };
-    } else {
-      sortFn = function(a, b) {
-        var obj1 = a[dataKey]();
-        var obj2 = b[dataKey]();
-        return compFn(obj2, obj1);
-      };
-    }
-    this.data().sort(sortFn);
+
+    this.data().sort(function(a, b) {
+      var comp = compFn(a[dataKey](), b[dataKey]()) ||  // use provided comp fn
+        (a[DEFAULT_KEY]() - b[DEFAULT_KEY]());
+      return direction ? comp : -comp;
+    });
     this.list().reset();
 
     this._header._setSortedColumn(index, direction);
@@ -285,7 +283,8 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     this.on('draggestureend', this._ondrag);
     this.on('click', this._onClick);
 
-    this._prevCell = this._sortedCell = null;
+    this._prevCell = null;   // header cell for column header previously sorted
+    this._sortedCell = null; // header cell for column header currently sorted
     this._sortInfo = { sortIndex: -1, asc: true };
   },
 
@@ -316,7 +315,13 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     });
   },
 
-  // traces back element to the header cell element (if it exists)
+ /**
+  * Traces back to the header cell element (if it exists)
+  *
+  * @param element to trace back to header cell
+  * @return header cell of given element
+  *         null if no header cell exists
+  */
   _getHeaderCell: function(elem) {
     while (elem) {
       if (dom.hasClass(elem, 'ufb-dataTable-header-cell')) {
@@ -327,6 +332,14 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     return null;
   },
 
+  /**
+   * Handles clicks on the data table header. Clicking on a previously unsorted
+   * column will sort that column in ascending order. Clicking on an already
+   * sorted column will sort that column in the opposite direction.
+   *
+   * @param click event
+   * @return none
+   */
   _onClick: function(e) {
     // This if statement prevents clicks at column boundaries, which indicate
     // adjusting column width, from also triggering a sort
@@ -342,34 +355,57 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
 
     var direction = (index == this._sortInfo.sortIndex) ?
                           !(this._sortInfo.asc) : true;
-    this._prevCell = this._sortedCell;
-    this._sortedCell = headerCell;
 
     if (this._parent) {
       this._parent.sortColumn(index, direction);
+
+      // the event trigger 'tableSorted' only fires on a user-specified sort
       this.trigger({ type: 'tableSorted',
                      index: index,
                      direction: direction,
                      visibleIndex: this.columns()[index].visibleIndex,
                      simulatePropagation: true });
     } else {
+        // if no data table exists, just change the header anyway
         this._setSortedColumn(index, direction);
     }
   },
 
+  _setSortedCell: function(index) {
+    var columns = this.dom().getElementsByTagName('td');
+    if (columns && index >= 0 && index < columns.length) {
+      this._prevCell   = this._sortedCell;
+      this._sortedCell = columns[index];
+    }
+  },
+
+  /**
+   * Sets the _sortedInfo variable and changes the layout of the header to
+   * reflect the specified change (i.e. moving the sort arrow).
+   *
+   * @param absolute column index (does not have to be visible)
+   * @param sort direction: true, ascending
+   *                       false, descending
+   * @return none
+   */
   _setSortedColumn: function(index, direction) {
     var prevAsc = this._sortInfo.asc;
     this._sortInfo.asc = direction;
     this._sortInfo.sortIndex = index;
+    this._setSortedCell(index);
 
     if (this._prevCell) {
       dom.toggleClass(this._prevCell,
         'ufb-dataTable-header-sort-' +
         (prevAsc ? 'asc' : 'desc'), false);
     }
-    dom.toggleClass(this._sortedCell,
-      'ufb-dataTable-header-sort-' + (this._sortInfo.asc ? 'asc' : 'desc'),
-      true);
+    if (this._sortedCell) {
+      // the if check defends against when sometimes (don't know why yet),
+      // this._sortedCell is null
+      dom.toggleClass(this._sortedCell,
+        'ufb-dataTable-header-sort-' + (this._sortInfo.asc ? 'asc' : 'desc'),
+        true);
+    }
   },
 
   _resizeColumn: function(index, width) {
@@ -385,10 +421,14 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     table.totalWidth(this.columns()) + 'px';
   },
 
+  _formatLabel: function(col) {
+    return dom.escapeHTML(col.label || '');
+  },
+
   _formatColumn: function(col) {
     return {
       index: col.index,
-      label: col.label,
+      label: this._formatLabel(col),
       style: 'width:' + col.width + 'px',
       className: col.className +
         (col.width != col.maxWidth || col.width != col.minWidth ?
@@ -414,6 +454,7 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
       });
 
     if (this._sortedCell) {
+      // re-sort the newly rendered table
       this._sortedCell = this._getHeaderRow().children
         [this.columns()[this._sortInfo.sortIndex].visibleIndex];
       this._prevCell = null;
@@ -423,6 +464,12 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     this.trigger({ type: 'render' });
   },
 
+  /**
+   * Get the header row element of the DataTableHeader object.
+   *
+   * @param none
+   * @return the header row element
+   */
   _getHeaderRow: function() {
     var hdrRow = this._dom;
 

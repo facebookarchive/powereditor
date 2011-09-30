@@ -27,6 +27,7 @@ var utils = require("../../uki-core/utils");
 utils.extend(exports,
     require("./control/age"),
     require("./control/bct"),
+    require("./control/pit"),
     require("./control/comment"),
     require("./control/dateRange"),
     require("./control/graduationYears"),

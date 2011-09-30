@@ -27,6 +27,7 @@ requireCss("../spacing.css");
 
 
 
+require("../lib/monkeyPatches");
 var dom   = require("../../uki-core/dom"),
     env   = require("../../uki-core/env"),
     fun   = require("../../uki-core/function"),
@@ -102,6 +103,8 @@ function checkInstalled() {
 * @namespace
 */
 function init(uid) {
+  var flow_name = 'app_init';
+  require("../lib/loggingState").startFlow(flow_name);
   builder.namespaces.unshift(require("../views"));
 
   env.doc.body.style.cssText += 'overflow: hidden';
@@ -110,13 +113,9 @@ function init(uid) {
   
   layout();
   if (checkInstalled()) {
-    db.init(uid, dbInitCallback);
+    db.init(uid, initList);
   }
-}
-
-function dbInitCallback() {
-  require("./downloadBCT")
-    .DownloadBCT.download(initList);
+  require("../lib/loggingState").endFlow(flow_name);
 }
 
 /**
@@ -256,7 +255,7 @@ function _buildContractToplineMap(contracts, toplines, campaigns) {
 
     campaigns.forEach(function(c) {
       if (c.isFromTopline()) {
-        toplines_map[c.line_id()].children().push(c);
+        toplines_map[c.idx_line_id()].children().push(c);
       }
     });
   }
@@ -300,7 +299,8 @@ function _initHandler() {
         if (this.selectedIndexes().length > 1) {
             // is several ads are selected proxy props
             // through ad.Group
-            var group = new models.AdGroup(this.selectedRows());
+            var AdGroup = require("../model/ad/group").Group;
+            var group = new AdGroup(this.selectedRows());
             view.byId('adEditor').model(group);
         } else {
             view.byId('adEditor').model(this.selectedRow() || null);
@@ -311,7 +311,8 @@ function _initHandler() {
         if (this.selectedIndexes().length > 1) {
             // is several camps are selected proxy props
             // through campaign.Group
-            var group = new models.CampGroup(this.selectedRows());
+            var CampGroup = require("../model/campaign/group").Group;
+            var group = new CampGroup(this.selectedRows());
             view.byId('campEditor').model(group);
         } else {
             view.byId('campEditor').model(this.selectedRow() || null);

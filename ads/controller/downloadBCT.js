@@ -22,48 +22,22 @@
 *
 */
 
-var fun = require("../../uki-core/function");
-var build = require("../../uki-core/builder").build;
+
 var Job = require("../job/downloadBCT").DownloadBCT;
-var Mustache = require("../../uki-core/mustache").Mustache;
 
 var DownloadBCT = {
-  download: function(callback) {
+
+  download: function(dialog, callback) {
+    dialog.bct = tx('ads:pe:bct-needs-update');
+    dialog.statusUpdate();
     var job = new Job();
-    var dialog = DownloadBCT.dialog();
     job
-      .onprogress(function(e) {
-        var status = e.status;
-        dialog.visible(true);
-      })
       .oncomplete(function() {
-        dialog.visible(false);
         callback();
       })
       .start();
-  },
-
-  clearLastSync: function() {
-    new Job().clearLastSync();
-  },
-
-  dialog: function() {
-    if (!this._dialog) {
-      var col = build({ view: 'Dialog', modal: true, childViews: [
-        { view: 'DialogHeader', text: "Downloading BCT" },
-        { view: 'DialogContent', childViews: [
-          { view: 'DialogBody', childViews: [
-            { view: 'Text', text: tx('ads:pe:bct-needs-update') },
-            { view: 'Text', as: 'progress' }
-          ] }
-        ] }
-      ]});
-      this._dialog = col[0];
-      this._dialog.progress = col.view('progress');
-    }
-    return this._dialog;
   }
-};
 
+};
 
 exports.DownloadBCT = DownloadBCT;

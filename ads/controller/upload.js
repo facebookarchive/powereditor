@@ -28,7 +28,8 @@ var view  = require("../../uki-core/view"),
     build = require("../../uki-core/builder").build,
 
     asyncUtils = require("../../lib/async"),
-    FB = require("../../lib/connect").FBWithErrors,
+    adsConnect = require("../../lib/connect"),
+    FB = adsConnect.FB,
     graphlink = require("../../lib/graphlink").gl,
     pathUtils = require("../../lib/pathUtils"),
 
@@ -114,8 +115,8 @@ function start() {
 
   for (var i = 0; i < changedCamps.length; i++) {
     var c = changedCamps[i];
-    if (c.isCorporate() && !c.isFromTopline()) {
-      // corp account's campaign needs to be attached to a topline
+    if (c.hasContract() && !c.isFromTopline()) {
+      // IO-backed account's campaign needs to be attached to a topline
       var message = 'Campaigns of ' + c.account().name() +
         ' must belong to a line. Please try to ' +
         'select a line for the campaign.';
@@ -187,10 +188,10 @@ function uploadCampsResponse(camp, camps, callback, result) {
   Upload.uploaded++;
   updateProgress();
   // find errors
-  if (result.error) {
+  if (adsConnect.isError(result)) {
     var data = {
       name: camp.name(),
-      message: result.error.message || ''
+      message: adsConnect.getErrorMessage(result).msg || ''
     };
 
     var message = camp.isNew() ?
@@ -201,7 +202,7 @@ function uploadCampsResponse(camp, camps, callback, result) {
     next();
   } else {
     // remove old camp before creating/updating new one
-    camp.remove(function() {
+    camp.removeSelf(function() {
       graphlink.fetchObject(
         '/' + (result.id || camp.id()),
         {},
@@ -274,12 +275,13 @@ function uploadImages(ads, callback) {
           'POST', {
             bytes: image.url().split(',')[1]
           }, function(result) {
-            if (result.error || !result.images || !result.images.bytes) {
+            if (adsConnect.isError(result) ||
+              !result.images || !result.images.bytes) {
               // if image uploading failed, fail the whole upload
               dialog.logError(tx(
                 'ads:pe:upload-fail-image', {
                   name: ads[0].name(),
-                  message: result.error ? result.error.message : ''
+                  message: adsConnect.getErrorMessage(result).msg || ''
               }));
               complete();
               return;
@@ -316,7 +318,10 @@ function uploadImages(ads, callback) {
 function startAds(camps) {
   models.Ad.findAllBy('campaign_id', utils.pluck(camps, 'id'), function(ads) {
     ads = ads.filter(function(a) {
-      return a.isChanged() && !a.hasErrors();
+      // only upload new ads without errors in real campaigns. if campaign
+      // creation failed, don't upload the associated ads.
+      return a.campaign_id() > 0 && a.isChanged() &&
+        (!a.hasErrors() || a.isDeleted());
     });
 
     Upload.ads = ads.length;
@@ -372,10 +377,10 @@ function uploadAdsResponse(ad, ads, originalAds, result) {
   Upload.uploaded++;
   updateProgress();
 
-  if (result.error) {
+  if (adsConnect.isError(result)) {
     var data = {
       name: ad.name(),
-      message: result.error.message || ''
+      message: adsConnect.getErrorMessage(result).msg || ''
     };
 
     var message = ad.isNew() ?

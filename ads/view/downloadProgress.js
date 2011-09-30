@@ -26,7 +26,6 @@ requireCss("./downloadProgress/downloadProgress.css");
 var fun = require("../../uki-core/function"),
     view = require("../../uki-core/view"),
     build = require("../../uki-core/builder").build,
-    find = require("../../uki-core/selector").find,
 
     Mustache = require("../../uki-core/mustache").Mustache,
 
@@ -44,21 +43,35 @@ var DownloadProgress = view.newClass('ads.DownloadProgress', Dialog, {
 
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);
-    build([
+    this._collection = build([
       { view: 'DialogHeader', text: "Downloading" },
       { view: 'DialogContent', childViews: [
-      { view: 'DialogBody' }
+        { view: 'DialogBody', as: 'dbody' },
+        { view: 'DialogFooter', childViews: [
+          { view: 'Button', label: 'Dismiss', large: true,
+            disabled: true, as: 'dismiss', use: 'confirm',
+            on: { click: fun.bindOnce(this._ondismiss, this) } }
+        ] }
       ] }
       ]).appendTo(this);
-    this._body = find('DialogBody', this)[0];
-    this.modal(true);
+    this.modal(true); // makes the background translucent
+    this._body = this._collection.view('dbody');
+    this._dismiss = this._collection.view('dismiss');
   },
+
+  body: fun.newDelegateProp('_body', 'html'),
+
+  disableDismiss: fun.newDelegateProp('_dismiss', 'disabled'),
+
+  triggerDismiss: fun.newDelegateProp('_dismiss', 'trigger'),
 
   _template: requireText('downloadProgress/downloadProgress.html'),
 
   init: function() {
     Dialog.prototype.init.call(this, arguments);
     this.progress = [];
+    this.bct = false;
+    this.conflicts = 0;
     var hasCorpAct = App.hasCorpAct();
     DownloadProgress.steps.forEach(fun.bind(function(step) {
       this.progress.push({
@@ -86,6 +99,14 @@ var DownloadProgress = view.newClass('ads.DownloadProgress', Dialog, {
     this.updateDialog();
   },
 
+  conflictsUpdate: function(conflicts) {
+    // number of conflicts found
+    if (typeof conflicts === 'number') {
+      this.conflicts += conflicts;
+    }
+    this.updateDialog();
+  },
+
   completeStep: function(stepname) {
     if (stepname) {
       this.progress.forEach(function(step) {
@@ -102,13 +123,22 @@ var DownloadProgress = view.newClass('ads.DownloadProgress', Dialog, {
   updateDialog: function() {
     var tcontext = {};
     tcontext.progress = this.progress;
-    this._body.html(Mustache.to_html(this._template, tcontext));
+    tcontext.bct = this.bct;
+    tcontext.conflicts = this.conflicts;
+    this.body(Mustache.to_html(this._template, tcontext));
+  },
+
+  _ondismiss: function(e) {
+    this.visible(false);
+    // from wrapped uki event
+    e.stopPropagation();
   }
 
 });
 
 DownloadProgress.steps = [
   { name: 'accounts', label: 'Accounts' },
+  { name: 'timezones', label: 'Timezone Offsets' },
   { name: 'objects', label: 'Connection Objects' },
   
   { name: 'campaigns', label: 'Campaigns' },

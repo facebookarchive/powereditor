@@ -148,7 +148,7 @@ ConnectedObject.cachedObjects = function() {
 };
 
 ConnectedObject.byId = function(id) {
-  return this._cacheMap[id];
+  return this._cacheMap && this._cacheMap[id];
 };
 
 ConnectedObject.prepare = function(callback, force) {

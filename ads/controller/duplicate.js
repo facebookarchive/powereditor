@@ -63,10 +63,12 @@ Duplicate.duplicateAdsHandler = function() {
 };
 
 Duplicate.duplicateCampsHandler = function() {
+  require("../lib/loggingState").startFlow('duplicate_campaigns');
   var camps = view.byId('campPane-data').selectedRows();
   if (!camps.length) {
     require("../../uki-fb/view/dialog").Dialog
       .alert(tx('ads:pe:no-camps-to-duplicate'));
+    require("../lib/loggingState").endFlow('duplicate_campaigns');
     return;
   }
 
@@ -83,6 +85,7 @@ Duplicate.duplicateCampsHandler = function() {
     .useNameMatching(false)
     .oncomplete(function() {
       require("./app").App.reload();
+      require("../lib/loggingState").endFlow('duplicate_campaigns');
     })
     .start();
 };

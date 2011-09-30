@@ -87,8 +87,8 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               } }
           ] },
 
-        { view: 'SearchInput', placeholder: "search ads",
-          pos: 'r:10px t:5px', buttonless: true,
+        { view: 'SearchInput', placeholder: "Search",
+          pos: 'r:10px t:0px', buttonless: true,
           visible: true, as: 'search',
           on: { keyup: fun.bindOnce(this._searchHandler, this) }
         }
@@ -112,156 +112,175 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
             changeOnKeys: ['errors'],
             sortable: true,
             compareFn: compare.booleans,
-            formatter: paneFormatters.errors },
+            formatter: paneFormatters.errors }
+          ].concat([
+            { label: 'Campaign Name', key: 'campaign_name',
+              width: 80, minWidth: 60,
+              sortable: true },
 
-          { label: 'Campaign Name', key: 'campaign_name',
-            width: 80, minWidth: 60,
-            sortable: true },
+            { label: 'Ad Name', key: 'name', width: 200, minWidth: 60,
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
+              } },
 
-          { label: 'Ad Name', key: 'name', width: 200, minWidth: 60,
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
-            } },
+            { desc: 'Status',
+              sortable: true,
+              label: '', key: 'real_adgroup_status',
+              width: 20, maxWidth: 20, minWidth: 20,
+              changeOnKeys: ['real_adgroup_status'],
+              className: 'adPane-cell_status',
+              formatter: paneFormatters.status,
+              editor: { view: StatusEditor } },
 
-          { desc: 'Status',
-            sortable: true,
-            label: '', key: 'real_adgroup_status',
-            width: 20, maxWidth: 20, minWidth: 20,
-            changeOnKeys: ['real_adgroup_status'],
-            className: 'adPane-cell_status',
-            formatter: paneFormatters.status,
-            editor: { view: StatusEditor } },
+            { label: 'Bid', key: 'bid_100',
+              width: 70, maxWidth: 150, minWidth: 50,
+              changeOnKeys: ['max_bid'],
+              sortable: true,
+              compareFn: compare.numbers,
+              className: 'ufb-dataTable-cell_number',
+              formatter: paneFormatters.money,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
+              } },
 
-          { label: 'Bid', key: 'bid_100',
-            width: 70, maxWidth: 150, minWidth: 50,
-            changeOnKeys: ['max_bid'],
-            sortable: true,
-            compareFn: compare.numbers,
-            className: 'ufb-dataTable-cell_number',
-            formatter: paneFormatters.money,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
-            } },
-
-          { label: 'Type', key: 'bid_type_name',
-            width: 50, maxWidth: 50, minWidth: 50,
-            changeOnKeys: ['bid_type'],
-            sortable: true,
-            editor: {
-              view: TypeEditor,
-              bindingOptions: { modelProp: 'bid_type' }
+            { label: 'Type', key: 'bid_type_name',
+              width: 50, maxWidth: 50, minWidth: 50,
+              changeOnKeys: ['bid_type'],
+              sortable: true,
+              editor: {
+                view: TypeEditor,
+                bindingOptions: { modelProp: 'bid_type' }
+              },
+              visible: false
             },
-            visible: false
-          },
 
-          { desc: 'Destination', label: 'Destination',
-            key: 'destination',
-            width: 80, maxWidth: 150, minWidth: 50,
-            sortable: true,
-            formatter: paneFormatters.destination },
+            { desc: 'Destination', label: 'Destination',
+              key: 'destination',
+              width: 80, maxWidth: 150, minWidth: 50,
+              sortable: true,
+              formatter: paneFormatters.destination },
 
-          { label: 'Title', key: 'title',
-            width: 80, minWidth: 50,
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
+            { label: 'Title', key: 'title',
+              width: 80, minWidth: 50,
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
+              } },
+
+            { label: 'Body', key: 'body',
+              width: 80, minWidth: 50,
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
             } },
 
-          { label: 'Body', key: 'body',
-            width: 80, minWidth: 50,
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
-          } },
+            { label: 'Link', key: 'link_url',
+              width: 70, minWidth: 50,
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
+              },
+              visible: false },
 
-          { label: 'Link', key: 'link_url',
-            width: 70, minWidth: 50,
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
-            },
-            visible: false },
+            { label: 'Related Page', key: 'related_fan_page',
+              width: 20, minWidth: 20,
+              sortable: true },
 
-          { label: 'Location', key: 'countries',
-            changeOnKeys: ['cities', 'regions'],
-            sortable: true,
-            formatter: paneFormatters.location,
-            width: 70, minWidth: 50 },
+            { label: 'Location', key: 'countries',
+              changeOnKeys: ['cities', 'regions'],
+              sortable: true,
+              formatter: paneFormatters.location,
+              width: 70, minWidth: 50 },
 
-          { label: 'Age', key: 'age_min',
-            changeOnKeys: ['age_max'],
-            sortable: true,
-            formatter: paneFormatters.age,
-            width: 60, minWidth: 60, maxWidth: 60 },
+            { label: 'Age', key: 'age_min',
+              changeOnKeys: ['age_max'],
+              sortable: true,
+              formatter: paneFormatters.age,
+              width: 60, minWidth: 60, maxWidth: 60 },
 
-          { label: 'Sex', key: 'genders',
-            formatter: paneFormatters.sex,
-            sortable: true,
-            width: 40, minWidth: 40, maxWidth: 70 },
+            { label: 'Sex', key: 'genders',
+              formatter: paneFormatters.sex,
+              sortable: true,
+              width: 40, minWidth: 40, maxWidth: 70 },
 
-          { label: 'Impressions', key: 'impressions',
-            width: 80, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            compareFn: compare.numbers,
-            sortable: true,
-            formatter: formatters.createNumberFormatter(),
-            visible: false },
+            { label: 'Impressions', key: 'impressions',
+              width: 80, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              compareFn: compare.numbers,
+              sortable: true,
+              formatter: formatters.createNumberFormatter(),
+              visible: false },
 
-          { label: 'Social %', key: 'social_percent',
-            width: 60, maxWidth: 60, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: formatters.createPercentFormatter(1),
-            visible: false },
+            { label: 'Social %', key: 'social_percent',
+              width: 60, maxWidth: 60, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: formatters.createPercentFormatter(1),
+              visible: false },
 
-          { label: 'Clicks', key: 'clicks',
-            width: 60, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: formatters.createNumberFormatter() },
+            { label: 'Reach', key: 'unique_impressions',
+              width: 60, maxWidth: 150, minWidth: 40,
+              className: 'ufb-dataTable-cell_number',
+              formatter: formatters.createNumberFormatter(),
+              sortable: true,
+              compareFn: compare.numbers,
+              visible: false },
 
-          { label: 'CTR %', key: 'ctr',
-            width: 60, maxWidth: 60, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: formatters.createPercentFormatter(3) },
+            { label: 'Connections', key: 'social_connections',
+              width: 80, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              formatter: formatters.createNumberFormatter(),
+              sortable: true,
+              compareFn: compare.numbers,
+              visible: false },
 
-          { label: 'Avg. CPC', key: 'avg_cpc',
-            width: 70, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: paneFormatters.money },
+            { label: 'Clicks', key: 'clicks',
+              width: 60, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: formatters.createNumberFormatter() },
 
-          { label: 'Avg. CPM', key: 'avg_cpm',
-            width: 70, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: paneFormatters.money },
+            { label: 'CTR %', key: 'ctr',
+              width: 60, maxWidth: 60, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: formatters.createPercentFormatter(3) },
 
-          { label: 'Demo links', key: 'demolinks',
-            width: 70, maxWidth: 150, minWidth: 60,
-            formatter: paneFormatters.demolinks },
+            { label: 'Avg. CPC', key: 'avg_cpc',
+              width: 70, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: paneFormatters.money },
 
-          { label: 'Spent', key: 'spent_100',
-            width: 70, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            sortable: true,
-            compareFn: compare.numbers,
-            formatter: paneFormatters.money,
-            visible: false }
+            { label: 'Avg. CPM', key: 'avg_cpm',
+              width: 70, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: paneFormatters.money },
 
-      ],
+            { label: 'Demo links', key: 'demolinks',
+              width: 70, maxWidth: 150, minWidth: 60,
+              formatter: paneFormatters.demolinks },
+
+            { label: 'Spent', key: 'spent_100',
+              width: 70, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              sortable: true,
+              compareFn: compare.numbers,
+              formatter: paneFormatters.money,
+              visible: false }
+          ]),
       canHideColumns: true,
       persistent: {
         storage: require("../controller/app").App.userStorage(),
@@ -317,6 +336,9 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
    */
   _completeAdCreation: function(campIndex) {
     var ad = new Ad();
+    // we need a different initial value for new ad
+    // set it in the hacky way so that it doesn't trigger more changes
+    ad._related_fan_page_wanted = 1;
     require("../controller/mutator").Mutator
       .initAdInCampaign(this.campaigns()[campIndex], ad);
 

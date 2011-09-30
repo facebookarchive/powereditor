@@ -10,8 +10,16 @@
     <div class="inline">
         {{#like}}
         <div class="action">
-            <div class="fbEmuContext"><a class="fbEmuLink">Your User</a> likes this.</div>
+            <div class="fbEmuContext">
+              <span><a class="fbEmuLink">Your User</a> likes </span>
+              {{^related_object}}<span>this.</span>{{/related_object}}
+              {{#related_object}}
+              <a class="fbEmuLink" href="{{link}}">{{name}}.</a>
+              {{/related_object}}
+            </div>
+            {{^related_object}}
             <a class="uiIconText fbEmuLink"><img src="{{like_img}}" />Like</a>
+            {{/related_object}}
         </div>
         {{/like}}
     </div>

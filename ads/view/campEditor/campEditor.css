@@ -35,14 +35,9 @@
 }
 
 .campEditor-timezone {
-    width: 150px;
+    width: 400px;
     display: inline-block;
     vertical-align: inherit;
-}
-
-.campEditor-sum {
-    margin: 0;
-    width: 68px;
 }
 
 .campEditor-name {
@@ -61,15 +56,27 @@
     display: none;
 }
 
+.campEditor-num {
+    margin: 0;
+    width: 68px;
+}
+
 .campEditor-price {
-    margin-left: 50px;
+    margin: -5px 0 0 15px;
     width: 100px;
     display: inline-block;
     vertical-align: middle;
 }
-.campEditor-imps {
+
+.campEditor-impslabel {
     margin-left: 10px;
-    width: 200px;
+    width: 30px;
+    display: inline-block;
+}
+
+.campEditor-imps {
+    margin: -5px 0 0 2px;
+    width: 100px;
     display: inline-block;
     vertical-align: middle;
 }

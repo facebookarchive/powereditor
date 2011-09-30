@@ -31,8 +31,7 @@ var fun   = require("../../uki-core/function"),
     asyncUtils = require("../../lib/async"),
 
     Ad = require("./ad").Ad,
-    DeferredList  = require("../../lib/deferredList").DeferredList,
-    FB            = require("../../lib/connect").FB;
+    DeferredList  = require("../../lib/deferredList").DeferredList;
 
 
 /**
@@ -165,21 +164,19 @@ Img.newImagesForAccount = function(id, callback) {
 };
 
 Img.updateImagesInAllAccounts = function(account_ids, totalAds, callback) {
+  var allImages = [];
   asyncUtils.forEach(account_ids,
     function(account_id, i, iterCallback) {
       var ads = totalAds.filter(function(ad) {
         return ad.account_id() == account_id;
       });
-      Img.updateImagesInAccount(account_id, ads, function() {
-        ads.forEach(function(a) {
-          a.initChangeable();
-          a.validateAll();
-        });
+      Img.updateImagesInAccount(account_id, ads, function(images) {
+        Array.prototype.push.apply(allImages, images);
         iterCallback();
       });
     },
     function() {
-      callback();
+      callback(allImages);
     }
   );
 };
@@ -193,10 +190,8 @@ Img.updateImagesInAccount = function(accountId, ads, callback) {
     accountId + '',
     function() {
 
-      var usedHashes = {},
-      list = new DeferredList();
-
-      ads.forEach(function(ad) {
+      var usedHashes = {};
+      var images = ads.map(function(ad) {
         if (ad.image_hash() && !usedHashes[ad.image_hash()]) {
           usedHashes[ad.image_hash()] = true;
           var image = new Img();
@@ -205,11 +200,12 @@ Img.updateImagesInAccount = function(accountId, ads, callback) {
             .url(ad.image_url())
             .account_id(ad.account_id());
 
-          image.store(list.newWaitHandler());
+          return image;
         }
       });
 
-      list.complete(callback);
+      images = images.filter(Boolean);
+      Img.storeMulti(images, callback);
     });
 
 };

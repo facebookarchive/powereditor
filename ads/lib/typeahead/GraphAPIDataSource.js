@@ -25,31 +25,80 @@
 var fun = require("../../../uki-core/function"),
     utils = require("../../../uki-core/utils"),
 
-    APIDataSource = require("./APIDataSource").APIDataSource;
+    DataSource = require("../../../uki-fb/view/typeahead/dataSource").DataSource,
+
+    adsConnect = require("../../../lib/connect"),
+    FB = adsConnect.FB;
+
+var GraphAPIDataSource = fun.newClass(DataSource, {
+
+  init: function(initArgs) {
+    DataSource.prototype.init.call(this, initArgs);
+    this.queryEndpoint('search');
+  },
+
+  dirty: function() {
+    this._dirty();
+  },
+
+  _callFBAPI: function(endpoint, data, callback) {
+    FB.api(
+      endpoint,
+      utils.extend(
+        {
+          limit: this.maxResults(),
+          q: data.query_string
+        },
+        data),
+        callback);
+  },
+
+  _makeRequest: function(endpoint, data, handlers) {
+    // timeout request in 50 sec
+    var complete = false;
+    setTimeout(function() {
+      if (complete) {
+        return;
+      }
+      complete = true;
+      handlers.complete();
+    }, 50000);
 
 
-var GraphAPIDataSource = fun.newClass(APIDataSource, {
+    this._callFBAPI(endpoint, data, fun.bind(
+      function(response) {
+        if (complete) {
+          return;
+        }
+        complete = true;
 
-    _callFBAPI: function(endpoint, data, callback) {
-      FB.api(
-        endpoint,
-        utils.extend(
-          { limit: this.maxResults(),
-            q: data.query_string },
-          data),
-          callback);
-    },
+        if (adsConnect.isError(response)) {
+          handlers.error();
+        } else {
+          handlers.success(this._preprocessResponse(response));
+        }
 
-    _preprocessResponse: function(response) {
-      return (response.data || []).map(function(entry) {
-        return {
-          id: entry.id || entry.key || entry.name,
-          text: entry.name,
-          subtext: entry.subtext
-        };
-      });
-    }
+        handlers.complete();
+      },
+    this));
+  },
 
+  _getQueryData: function(value, existing) {
+    var data = utils.extend({query_string: value}, this._queryData || {});
+    return data;
+  },
+
+  // default pre-processing
+  // can be overridden if data needs its own kind of preprocessing
+  _preprocessResponse: function(response) {
+    return (response.data || []).map(function(entry) {
+      return {
+        id: entry.id || entry.key || entry.name,
+        text: entry.name,
+        subtext: entry.subtext
+      };
+    });
+  }
 });
 
 

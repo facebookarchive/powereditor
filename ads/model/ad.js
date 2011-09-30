@@ -29,20 +29,17 @@ var fun   = require("../../uki-core/function"),
     rs = require("../lib/runStatus"),
     pathUtils = require("../../lib/pathUtils"),
 
-    FB            = require("../../lib/connect").FB,
     libUtils       = require("../../lib/utils"),
+    BaseModel     = require("./baseModel").BaseModel,
     Changeable    = require("../lib/model/changeable").Changeable,
     Validatable   = require("../lib/model/validatable").Validatable,
-    TabSeparated  = require("../lib/model/tabSeparated").TabSeparated,
-
-    AdCreative = require("./adCreative").AdCreative,
-    AdTargeting = require("./adCreative").AdTargeting;
+    TabSeparated  = require("../lib/model/tabSeparated").TabSeparated;
 
 /**
 * Property mapping, conversions and validations for AdGroup
 * @class
 */
-var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
+var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
 
   _tabSeparatedGetHeaders: function(options) {
     var ad_headers = TabSeparated._tabSeparatedGetHeaders.call(this, options);
@@ -153,7 +150,7 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
   updateCampaign: function(name) {
     if (!name || name === 'errors' || this.isChangeable(name)) {
       require("./campaign").Campaign.prepare(fun.bind(function(camps) {
-        var camp = camps.byId(this.campaign_id());
+        var camp = camps.byId && camps.byId(this.campaign_id());
         if (!camp) {
           return;
         }
@@ -163,6 +160,7 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
         camp.toggleChildChanged(this.id(), this.isChanged());
       }, this));
     }
+    return this;
   },
 
   fromTabSeparatedMap: function(raw, map, callback, imageLookup) {
@@ -214,6 +212,17 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
 
   dataForRemoteUpdate: function() {
     var store = { creative: {}, targeting: {} };
+
+    if (this.keywords().length === 0) {
+      this.interests_toggle(true);
+    }
+
+    if (this.interests_toggle()) {
+      this.keywords([]);
+    } else {
+      this.user_adclusters([]);
+    }
+
     this.storage().props().forEach(function(f) {
       if (f.remote) {
         var value = f.getRemoteValue(this);
@@ -226,6 +235,15 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
         }
       }
     }, this);
+
+    if (this.isDeleted()) {
+      var new_store = {adgroup_status: rs.DELETED};
+      if (store.name) {
+        new_store.name = store.name;
+      }
+      store = new_store;
+    }
+
     if (this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI) {
       store.bid_info = {};
       utils.forEach(BID_INFO_MAP, function(prop, key) {
@@ -269,15 +287,15 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
     return ad_status;
   },
 
-  adlink: fun.newProp('adlink'),
-
   searchFields: function() {
     return [
-    'name',
-    'campaign_name',
-    'title',
-    'body',
-    'loc_targeting'
+      'name',
+      'campaign_name',
+      'title',
+      'body',
+      'loc_targeting',
+      'io_name',
+      'description'
     ];
   },
 
@@ -287,13 +305,24 @@ var Ad = storage.newStorage(TabSeparated, Changeable, Validatable, {
     return getSearchIndex.call(this).indexOf(query) > -1;
   },
 
+  isMulti: function() {
+    // TODO: Add BID_TYPE_MULTI_SS when we support it
+    return this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI;
+  },
+
   graphCreatePath: function() {
     return '/act_' + this.account_id() + '/adgroups/';
   },
 
   graphUpdatePath: function() {
     return '/' + this.id() + '/';
+  },
+
+  isDeleted: function() {
+    // status 3 indicates delete
+    return this.real_adgroup_status() == rs.DELETED;
   }
+
 });
 
 var BID_INFO_MAP = {
@@ -313,7 +342,8 @@ fun.delegateProp(proto, [
     'uom', 'func_price',
     'func_line_amount', 'func_cap_amount',
     'description', 'targets',
-    'is_premium_line'
+    'is_premium_line',
+    'is_bonus_line'
 ], 'topline');
 
 fun.delegateProp(proto, 'line_impressions',
@@ -361,6 +391,14 @@ function fixCreative(store) {
       fields_to_delete.forEach(function(field) {
         delete creative[field];
       });
+
+      // for selfserve inline fan/rsvp/app ads. No title is allowed
+      var disallow_title_ss_types =
+        require("../lib/adCreativeType").AD_NO_TITLE_SS_ARR;
+      if (!this.isCorporate() &&
+        disallow_title_ss_types.indexOf(creative.type) != -1) {
+        creative.title = '';
+      }
     }
   }
 
@@ -388,17 +426,16 @@ function getSearchIndex() {
 
 // --- Syncing with Graph API stuff ---
 
-Ad.loadFromAccountIds = function(account_ids, callback) {
+Ad.pathsFromAccountIds = function(account_ids) {
   if (!account_ids.length) {
-    callback([], true);
-    return;
+    return [];
   }
   var paths = libUtils.wrapArray(account_ids).map(
     function(account_id) {
       return pathUtils.join('act_' + account_id, '/adgroups');
     }
   );
-  Ad.fetchAndStoreEdges(paths, { 'include_demolink_hashes': true }, callback);
+  return paths;
 };
 
 // --- END Syncing with Graph API stuff ---

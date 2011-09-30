@@ -73,7 +73,7 @@ var TabSeparated = {
 var Base = fun.newClass(StorageBase, TabSeparated, {});
 
 function nameHash(name) {
-  return (name + '').toLowerCase().replace(/[^a-z]/g, '');
+  return (name + '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 

@@ -27,7 +27,8 @@ var view  = require("../../uki-core/view"),
     fun   = require("../../uki-core/function"),
     Dialog = require("../../uki-fb/view/dialog").Dialog;
 
-var SelectDialog = view.newClass('ads.SelectDialog', Dialog, {
+var SelectDialog = view.newClass('ads.SelectDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('select_dialog'), {
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);
 

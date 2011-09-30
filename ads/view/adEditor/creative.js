@@ -31,6 +31,8 @@ var fun   = require("../../../uki-core/function"),
     creativeMap = require("../../lib/creativeMap"),
     connectObj = require("../../model/connectedObject"),
     creativeType = require("../../lib/adCreativeType"),
+    urlToObjectIDSearcher = require("../../lib/fetcher").urlToObjectIDSearcher,
+    objectFetcher = require("../../lib/fetcher").objectFetcher,
     controls = require("../controls"),
     ConnectedObjectDialog =
       require("../connectedObjectDialog").ConnectedObjectDialog,
@@ -40,6 +42,14 @@ var MAX_TITLE_LENGTH = require("../../model/ad/constants").MAX_TITLE_LENGTH;
 var MAX_BODY_LENGTH = require("../../model/ad/constants").MAX_BODY_LENGTH;
 
 var ANCHOR_TYPE_OTHERS = 'Others';
+
+var LAYOUT = {
+  WEBSITE: 0,
+  FBADS: 1,
+  FBADS_NO_OBJECT: 2,
+  BASS: 3,
+  BASS_NO_OBJECT: 4
+};
 
 var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
@@ -66,6 +76,12 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
       model: m,
       modelProp: 'body',
       viewEvent: 'keyup change blur paste'
+    });
+    this.child('related_fan_page_wanted').binding({
+      model: m,
+      modelProp: 'related_fan_page_wanted',
+      modelEvent: 'change.related_fan_page_wanted',
+      viewEvent: 'change'
     });
     this.child('image').binding({ model: m });
     this.child('story_type').binding({
@@ -111,6 +127,10 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
         }] });
       }
 
+      var category =
+        creativeType.getCategoryByCreativeType(this.model().type());
+      this.category(category);
+
       this.child('facebook').options(options);
       if (this.model().object()) {
         // build the creative selector
@@ -124,6 +144,7 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
       }
 
       
+
       callback();
     }, this));
   },
@@ -171,7 +192,7 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
                     text: 'Sponsored Stories',
                     value:
                       creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES,
-                    disabled: true }
+                    disabled: false }
               ],
               childName: 'category'
           }
@@ -255,6 +276,26 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
             childName: 'image'
           },
           data__view: { id: 'creative-image' }
+        },
+        {
+          label: 'Related Page',
+          data: {
+            view: 'Container',
+            id: 'creative-related_fan_page',
+            childViews: [
+              { view: 'Checkbox',
+                text: 'Show stories about people interacting with this Page ' +
+                  'with my ad: ',
+                value: '1',
+                tabIndex: '1',
+                childName: 'related_fan_page_wanted' },
+              { view: 'Base',
+                init: { tagName: 'a' },
+                text: '',
+                childName: 'related_fan_page_info' }
+            ],
+            childName: 'related_fan_page'
+          }
         }
       ]
     });
@@ -285,9 +326,11 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
         var obj_id = this.child('facebook').value();
         if (obj_id === 'Others') {
           // reset object_id to first valid while download happpens
-          this.child('facebook').value(
-              this.child('facebook').options()[0].options[0].value);
+          var download_obj_id =
+            this.child('facebook').options()[0].options[0].value;
+          this.child('facebook').value(download_obj_id);
           var dialog = new ConnectedObjectDialog();
+          dialog.preset(download_obj_id);
           dialog.visible(true);
         } else {
           this._onAnchorTypeChange();
@@ -297,6 +340,9 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
     // change the creative type
     this.child('story_type').addListener('change',
       fun.bindOnce(this._onCreativeTypeChange, this));
+
+    this.child('link_url').addListener('change',
+      fun.bindOnce(this._updateRelatedFanPage, this));
   },
 
   _onCategoryTypeChange: function() {
@@ -307,40 +353,72 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
     var obj = connectObj.ConnectedObject.byId(obj_id);
 
+    // build the creative selector
+    var anchorType = obj && obj.type();
+    this._updateCreativeOption(anchorType);
+
+    this._togglePremiumAndInternFields();
+    this._onCreativeTypeChange();
+
+    this.model().type(this.child('story_type').value());
+    this.model().commitChanges('type');
+  },
+
+  _onAnchorTypeChange: function() {
+    var obj_id = this.child('facebook').value();
+    var obj = connectObj.ConnectedObject.byId(obj_id);
     if (obj) {
       // build the creative selector
-      var anchorType = obj.type() ;
+      var anchorType = obj.type();
       this._updateCreativeOption(anchorType);
     }
   },
 
+  _onCreativeTypeChange: function() {
+    var type = this.child('story_type').value();
+    this._displayByCreativeType(type);
+  },
+
+  _lockedModelChange: function(e) {
+    this._updateOnClickToggle(e);
+    this._validateInput(e);
+  },
+
   _updateCreativeOption: function(anchor) {
+    anchor = anchor || connectObj.OBJECT_TYPE.PAGE;
     var is_premium = this.model().is_from_premium_line();
     var is_corp = this.model().isCorporate();
 
-    // TODO: we need to support bass
     var is_bass =
       this.category() == creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES;
 
-    var types =
+    var types = anchor &&
       creativeMap.getTypesByAnchor(anchor, is_bass, is_premium);
 
     // get the premium/standard default type.
-    var default_type =
+    var default_type = anchor &&
       creativeType.getDefaultCreativeTypeByAnchor(
-        anchor, is_bass, is_premium
-      );
+        anchor, is_bass, is_premium);
 
     var groups = {}, options = [];
+    if (!types && !default_type) {
+      // we do not know anything about this creative type
+      var INVALID_TYPE = creativeType.AD_CREATIVE_TYPE.EXOTIC_OR_INVALID;
+      options.push({
+        value: INVALID_TYPE,
+        text: creativeType.AD_CREATIVE_TYPE_MAP[INVALID_TYPE]
+      });
+
+      this.child('story_type').options(options);
+      return;
+    }
+
     if (!types) {
-      var val = is_premium ?
-        creativeType.AD_CREATIVE_TYPE.PREMIUM_STANDARD :
-        creativeType.AD_CREATIVE_TYPE.STANDARD;
       var txt =
-        creativeType.AD_CREATIVE_TYPE_MAP[val];
+        creativeType.AD_CREATIVE_TYPE_MAP[default_type];
 
       options.push({
-        value: val,
+        value: default_type,
         text: txt
       });
     } else {
@@ -356,29 +434,61 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
     this.child('story_type').value(this.model().type());
   },
 
-  _onAnchorTypeChange: function() {
-    var obj_id = this.child('facebook').value();
-
-    var obj = connectObj.ConnectedObject.byId(obj_id);
-
-    if (obj) {
-      // build the creative selector
-      var anchorType = obj.type() ;
-      this._updateCreativeOption(anchorType);
+  _updateRelatedFanPage: function() {
+    var model = this.model();
+    // sometimes the "model" is not complete because the user
+    // has selected a group of rows.
+    // In this case, isNew isn't defined.
+    if (!model || !model.isNew || !model.type || model.type() != 1) {
+      return;
     }
+    fun.defer(fun.bind(function() {
+      if (!model.isNew() && !model.isChanged('link_url') &&
+          !model.isChanged('related_fan_page') &&
+          model.related_fan_page()) {
+        // skip search, update display
+        this._updateRelatedFanPageInfo();
+      } else {
+        urlToObjectIDSearcher.fetch(
+          this.model().link_url(),
+          fun.bind(this._relatedFanPageCallback, this)
+        );
+      }
+    }, this));
   },
 
-  _onCreativeTypeChange: function() {
-    var type = this.child('story_type').value();
-    this._displayByCreativeType(type);
+  _relatedFanPageCallback: function(data) {
+    // not use passed-in data but get result by fromCache, in case model changed
+    var result = urlToObjectIDSearcher.fromCache(this.model().link_url());
+    var object_id = (result && result.id) || 0;
+    this.model().related_fan_page_id(object_id);
+    this._updateRelatedFanPageInfo();
+  },
+
+  _updateRelatedFanPageInfo: function(data) {
+    var object_id = this.model().related_fan_page_id();
+    if (!object_id) {
+      this.child('related_fan_page_info').text('(No Page)');
+      this.child('related_fan_page_info').dom().href = '#';
+      return;
+    }
+    var object = objectFetcher.fromCache(object_id);
+    var name = object_id;
+    var link = 'http://www.facebook.com/profile.php?id=' + object_id;
+    if (object) {
+      name = object.name || name;
+      link = object.link || link;
+    }
+    this.child('related_fan_page_info').text(name);
+    this.child('related_fan_page_info').dom().href = link;
+    if (!object) {
+      objectFetcher.fetch(
+        object_id, this._updateRelatedFanPageInfo.bind(this));
+    }
   },
 
   _displayByCreativeType: function(type) {
     var displayMap = null;
-
-    // set up the category based on the creative_type
-    var category = creativeType.getCategoryByCreativeType(type);
-    this.category(category);
 
     if (!type) {
       displayMap =
@@ -396,7 +506,164 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
     for (var key in displayMap) {
       this._toggleRow(key, !displayMap[key]);
     };
+
+    // SPECIAL-case hide title deliberately when
+    // we are dealing with objects.
+    this._toggleRow('title', this.model().object_id());
   },
+
+  _updateLayout: function(type) {
+    var OBJECT_TYPE = connectObj.OBJECT_TYPE;
+    // default to website creative layout
+    var obj = this.model().object();
+    var object_type = obj && obj.type();
+
+    type = type || LAYOUT.WEBSITE;
+
+    // build the creative (premium/bass) selector
+    if (type != LAYOUT.WEBSITE) {
+      this._updateCreativeOption(object_type);
+    } else if (!object_type) {
+      var options = [];
+      options.push({
+        value: creativeType.AD_CREATIVE_TYPE.STANDARD,
+        text: ''
+      });
+
+      this.child('story_type').options(options);
+      this.child('story_type').value(this.model().type());
+    }
+
+    this._onCreativeTypeChange();
+
+    // build the creative fields map
+    if (type != LAYOUT.BASS_NO_OBJECT && type != LAYOUT.BASS) {
+      this._togglePremiumAndInternFields(false);
+    } else {
+      this._togglePremiumAndInternFields(true);
+    }
+
+    // toggle destination selector
+    this._toggleRow('facebook',
+      type == LAYOUT.WEBSITE);
+
+    this._toggleRow('story_type',
+      (type == LAYOUT.BASS_NO_OBJECT ||
+       type == LAYOUT.FBADS_NO_OBJECT ||
+       type == LAYOUT.WEBSITE)
+    );
+
+    this._toggleRow('category',
+      type == LAYOUT.WEBSITE);
+
+    this._updateRelatedFanPage();
+
+    if (type != LAYOUT.WEBSITE) {
+      this.child('category').value(this.category());
+    }
+
+    this.child('toggle').text(
+      (type != LAYOUT.WEBSITE) ?
+      'I want to advertise a web page.' :
+      'I want to advertise something I have on Facebook.'
+    );
+
+    var enableTitle = false;
+    var enableURL = false;
+    var enableTab = false;
+
+    var is_pinned_post = (this.model().type() ==
+      creativeType.AD_CREATIVE_TYPE.PAGE_POSTS_V2);
+
+    enableTitle = (type == LAYOUT.WEBSITE);
+    // Apps and Pinnedpost are special on PE: Advertisers can supply custom URL
+    enableURL = !is_pinned_post &&
+                (type == LAYOUT.FBADS_NO_OBJECT ||
+                 type == LAYOUT.WEBSITE ||
+                 object_type == OBJECT_TYPE.APP);
+
+    enableTab = !is_pinned_post &&
+                (type != LAYOUT.BASS_NO_OBJECT &&
+                 type != LAYOUT.BASS &&
+                 obj && (utils.keys(obj.tabs()).length > 0));
+
+    this._toggleRow('title', !enableTitle);
+    this._toggleRow('link_url', !enableURL);
+    this._toggleRow('tab', !enableTab);
+
+    // prefill tab select with given tabs
+    if (enableTab) {
+      var value = this.model().link_url();
+      this.child('tab').options(obj.tabList()).value(value);
+    }
+
+    return {
+      'enableTitle' : enableTitle,
+      'enableURL'   : enableURL,
+      'enableTab'   : enableTab
+    };
+  },
+
+  _updateOnClickToggle: function(e) {
+    // update ui depending on object_id
+    if (!e || e.name === 'object_id') {
+      var model = this.model();
+      var object_id = model.object_id();
+      var obj = model.object();
+
+      var flags =
+        this._updateLayout(this._getLayoutType(obj, object_id));
+
+      // Deduce object type and url based on selected options.
+      // TODO: voloko Changing type and title from here seems wrong.
+      // It was here historicaly. However it's definetely causing troubles
+      // with group operations
+      if (e) { // skip init, change only on events
+        var ori_type = model.original().type;
+        var ori_obj_id = model.original().object_id;
+
+        if (obj) {
+          if (ori_type != 1 &&
+            ori_obj_id == model.object_id()) {
+
+            // reset type to where it was
+            model.revertProp('title');
+            model.revertProp('type');
+            model.revertProp('link_url');
+            model.related_fan_page_wanted(0);
+            return;
+          }
+
+          var is_premium = model.is_from_premium_line();
+          var is_bass = (this.category() ==
+            creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES);
+
+          model.type(obj.defaultCreativeType(is_bass, is_premium));
+          model.title(obj.name() || '');
+
+          // Set default URL if the prefix is invalid (object URL not substring
+          // of the model URL) or if we're not exposing the field
+          if (!flags.enableURL || model.link_url().indexOf(obj.url()) !== 0) {
+            model.link_url(obj.url());
+          }
+
+          model.related_fan_page_wanted(0);
+        } else {
+          if (!model.object_id()) {
+            model.type(creativeType.AD_CREATIVE_TYPE.STANDARD);
+          }
+          // reset type to where it was
+          model.revertProp('title');
+          model.revertProp('link_url');
+          model.revertProp('related_fan_page');
+          this._updateRelatedFanPage();
+        }
+      }
+    }
+  },
+
+
+/******     UTILITY Functions    *******/
 
   _toggleRow: function(name, state) {
     var child = this.child(name);
@@ -408,99 +675,29 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
     }
   },
 
-  _lockedModelChange: function(e) {
-    this._updateUIByCreativeType(e);
-    this._validateInput(e);
-  },
+  _getLayoutType: function(obj, object_id) {
+    // in essence, the creative fields are decided by the
+    // creative type and category (intern & premium)
+    // 1. stanard web page ads
+    // 2. Facebook ads
+    // 3. Bass ads
 
-  _updateUIByCreativeType: function(e) {
-    var OBJECT_TYPE = connectObj.OBJECT_TYPE;
     var AD_CREATIVE_TYPE = creativeType.AD_CREATIVE_TYPE;
-    var model = this.model();
+    // default layout type
+    var layout_type = LAYOUT.WEBSITE;
 
-    var is_premium = model.is_from_premium_line();
-    // TODO: before we support bass, hardcode the value here
-    var is_bass =
-      this.category() == creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES;
+    if (object_id) {
+      var is_bass = (this.category() ==
+        creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES);
 
-    // update ui depending on object_id
-    if (!e || e.name === 'object_id') {
-      var object_id = model.object_id();
-      var obj = model.object();
-      var object_type = obj && obj.type();
-
-      // toggle destination selector
-      this._toggleRow('facebook', !object_id);
-      this._toggleRow('story_type', !obj);
-
-      this.child('toggle').text(
-        object_id ?
-        'I want to advertise a web page.' :
-        'I want to advertise something I have on Facebook.'
-      );
-
-      dom.toggleClass(
-        this._row(this.child('category').dom()),
-        'hidden_elem',
-        !model.object_id());
-
-      if (model.object_id()) {
-        this.child('category').value(this.category());
-      }
-      // toggle additional controls
-      var enableTitle  = false;
-      var enableTab    = false;
-      var enableURL    = false;
-
-      if (!object_id) {
-        enableTitle = true;
-        enableURL   = true;
-      } else if (object_id && !obj) {
-        enableURL = true;
-      } else if (object_type == OBJECT_TYPE.PAGE) {
-        enableTab = true;
-      } else if (object_type == OBJECT_TYPE.APP) {
-        enableURL = true;
-      }
-
-      this._toggleRow('title', !enableTitle);
-      this._toggleRow('link_url', !enableURL);
-      this._toggleRow('tab', !enableTab);
-
-      // prefil tab select width given tabs
-      if (enableTab) {
-        var value = model.link_url();
-        this.child('tab').options(obj.tabList()).value(value);
-      }
-
-      // Deduce object type and url based on selected options.
-      // TODO: voloko Changing type and title from here seems wrong.
-      // It was here historicaly. However it's definetely causing troubles
-      // with group operations
-      if (e) { // skip init, change only on events
-        if (obj) {
-          model.type(obj.defaultCreativeType(is_bass, is_premium));
-
-          if (!enableTitle) {
-            model.title('');
-          }
-          if (!enableURL) {
-            model.link_url(obj.url());
-          }
-        } else if (object_id) {
-          model.revertProp('type');
-          model.revertProp('link_url');
-          var ori_type = model.original().type;
-          // reset type to where it was
-          model.type(ori_type);
-        } else {
-          var type = is_premium ?
-            AD_CREATIVE_TYPE.PREMIUM_STANDARD :
-            AD_CREATIVE_TYPE.STANDARD;
-          model.type(type);
-        }
+      if (obj) {
+        layout_type = is_bass ? LAYOUT.BASS : LAYOUT.FBADS;
+      } else {
+        layout_type = is_bass ? LAYOUT.BASS_NO_OBJECT : LAYOUT.FBADS_NO_OBJECT;
       }
     }
+
+    return layout_type;
   },
 
   _validateInput: function(e) {
@@ -522,6 +719,4 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
   }
 });
 
-
 exports.Creative = Creative;
-

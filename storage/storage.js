@@ -32,13 +32,12 @@
 var fun   = require("../uki-core/function"),
     utils = require("../uki-core/utils"),
 
-    FB = require("../lib/connect").FB,
-    libUtils = require("../lib/utils"),
-    urllib = require("../lib/urllib"),
-    async = require("../lib/async"),
+    adsConnect = require("../lib/connect"),
+    FB = adsConnect.FB,
+    libutils = require("../lib/utils"),
     graphlink = require("../lib/graphlink").gl,
+    conflicter = require("../lib/conflicter").cc,
 
-    pathUtils = require("../lib/pathUtils"),
     Storable = require("./storable").Storable,
     ResultSet = require("./resultSet").ResultSet,
     WebSqlImpl = require("./impl/webSql").WebSql,
@@ -198,14 +197,11 @@ var Storage = {
   },
 
   remoteRESTCallback: function(data, callback) {
-    var Self = this;
-    // Error handling callback directly in FB.api
-    // look at ads-connect
-    if (!data) {
+    if (adsConnect.isError(data)) {
       callback([]);
       return;
     }
-    var items = libUtils.wrapArray(data).map(this.createFromRemote, this);
+    var items = libutils.wrapArray(data).map(this.createFromRemote, this);
     callback(items);
   },
 
@@ -222,52 +218,28 @@ var Storage = {
 
   // ---- ++++ Graph API ++++ -----
 
-  fetchAndStoreObjects: function(paths, options, callback, pc) {
+  fetchAndStoreObjects: function(paths, options, callback) {
     callback = callback || options;
     options = utils.isFunction(options) ? {} : options;
-    var objects = [];
-    async.forEach(
-      libUtils.wrapArray(paths),
-      function(path, i, iterCallback) {
-        graphlink.fetchObject(path, options,
-          function(fetched) {
-            var created = this.createFromRemote(fetched);
-            objects.push(created);
-            iterCallback();
-          },
-          this // graphlink callback context
-        );
-      },
-      // called after async iterator is finished
-      function() {
-        this.storeMulti(objects, callback);
-      },
-      this // async callback context
-    );
+    graphlink.serialFetchObjects(paths, options, function(fetched) {
+      var created = this.createMultipleFromRemote(fetched);
+      // this.checkAllForConflicts(created, function() {
+      //   this.storeMulti(created, callback);
+      // }, this);
+      this.storeMulti(created, callback);
+    }, this);
   },
 
-  fetchAndStoreEdges: function(paths, options, callback, pc) {
+  fetchAndStoreEdges: function(paths, options, callback) {
     callback = callback || options;
     options = utils.isFunction(options) ? {} : options;
-    var objects = [];
-      async.forEach(
-        libUtils.wrapArray(paths),
-        function(path, i, iterCallback) {
-          graphlink.fetchEdge(path, options,
-            function(fetched) {
-              var created = this.createMultipleFromRemote(fetched);
-              Array.prototype.push.apply(objects, created);
-              iterCallback();
-            },
-            this // graphlink callback context
-          );
-        },
-        // called after async iterator is finished
-        function() {
-          this.storeMulti(objects, callback);
-        },
-        this // async callback context
-      );
+    graphlink.serialFetchEdges(paths, options, function(fetched) {
+      var created = this.createMultipleFromRemote(fetched);
+      // this.checkAllForConflicts(created, function() {
+      //   this.storeMulti(created, callback);
+      // }, this);
+      this.storeMulti(created, callback);
+    }, this);
   },
 
   createFromRemote: function(data) {
@@ -285,23 +257,43 @@ var Storage = {
    */
   createMultipleFromRemote: function(data) {
     data = data || [];
-    var items = libUtils.wrapArray(data).map(this.createFromRemote, this);
+    var items = libutils.wrapArray(data).map(this.createFromRemote, this);
     return items;
   },
 
   // ---- ++++ End Graph API ++++ -----
 
+  // --- conflicts
+
+  checkAllForConflicts: function(remoteObjs, callback, context) {
+    context = context || this;
+    // executed in context of Storage model class, NOT instance
+    if (libutils.contains(utils.pluck(this.props(), 'name'), 'conflicts')) {
+      this.findAll(function(localObjs) {
+        localObjs.prefetch && localObjs.prefetch();
+        conflicter.checkAll(localObjs, remoteObjs);
+        callback.call(context);
+      });
+    } else {
+      callback.call(context);
+    }
+  },
+
   // db
   db: fun.newProp('db'),
 
-  objectStoreName: fun.newProp('objectStoreName')
+  objectStoreName: fun.newProp('objectStoreName'),
+
+  // 'shift + opt + drop' to remove this model data if false
+  softDrop: fun.newProp('softDrop')
 };
 
 Storage.tableName = Storage.objectStoreName;
 
 Storage
   .defaultPropType(require("./prop/base").Base)
-  .resultSetType(ResultSet);
+  .resultSetType(ResultSet)
+  .softDrop(true);
 
 
 // prefer WebSql since Chrome's IndexedDB is terribly slow

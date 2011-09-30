@@ -84,6 +84,7 @@ utils.extend(exports,
     require("./view/imageSelector"),
     require("./view/uploadDialog"),
     require("./view/logDialog"),
+    require("./view/refreshDialog"),
 
     require("./view/contractEditor"),
     require("./view/contractPane"),

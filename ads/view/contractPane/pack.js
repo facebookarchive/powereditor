@@ -46,6 +46,11 @@ var Pack = fun.newClass(Base, {
         }
       }
 
+      var line_status = '';
+      if (col.label == '#' && row.is_bonus_line()) {
+        line_status = ' ufb-dataTable-col-is_bonus';
+      }
+
       var overdelivered;
       var delivery_status = '';
 
@@ -68,6 +73,7 @@ var Pack = fun.newClass(Base, {
           className: 'ufb-dataTable-col-' + i +
               (col.className ? ' ' + col.className : '') +
               allocation_status +
+              line_status +
               delivery_status,
           style: pos ? '' : 'width:' + col.width + 'px'
       };

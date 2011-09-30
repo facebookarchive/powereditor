@@ -35,10 +35,16 @@ function numbers(a, b) {
 }
 
 function booleans(a, b) {
+  if (a == b) {
+    return 0;
+  }
   return a ? -1 : 1;
 }
 
 function dates(a, b) {
+  if (a == b) {
+    return 0;
+  }
   return (a < b) ? -1 : 1;
 }
 

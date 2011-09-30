@@ -22,19 +22,26 @@
 *
 */
 
+var fun = require("../../../../uki-core/function"),
+    utils = require("../../../../uki-core/utils"),
 
-var pathUtils = require("../../lib/pathUtils"),
-    graphlink = require("../../lib/graphlink").gl,
-    libUtils = require("../../lib/utils"),
-    asyncUtils = require("../../lib/async");
+    GraphAPIDataSource =
+      require("../GraphAPIDataSource").GraphAPIDataSource;
 
-var AdCreative = {};
 
-/**
- * @param creative_ids = array of creative_ids
- */
-AdCreative.loadFromIds = function(creative_ids, callback) {
-  graphlink.fetchObjectsById(creative_ids, {}, callback, this);
-};
+var AccountGraphAPIDataSource = fun.newClass(GraphAPIDataSource, {
 
-exports.AdCreative = AdCreative;
+    _preprocessResponse: function(response) {
+      return (response.data || []).map(function(entry) {
+        return {
+          id: entry.account_id,
+          text: entry.name,
+          subtext: entry.account_id || entry.id
+        };
+      });
+    }
+
+});
+
+
+exports.AccountGraphAPIDataSource = AccountGraphAPIDataSource;

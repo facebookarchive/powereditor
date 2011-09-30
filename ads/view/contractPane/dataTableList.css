@@ -49,3 +49,8 @@
   font-weight: bold;
   background-color: #8B0000;
 }
+
+.ufb-dataTable-col-is_bonus {
+  font-weight: bold;
+  background-color: #00CC00;
+}

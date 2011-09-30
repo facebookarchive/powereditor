@@ -22,6 +22,7 @@
 *
 */
 
+var Graphlink = require("../../lib/graphlink").Graphlink;
 
 /**
 * Search in countires and locales
@@ -81,7 +82,7 @@ var BEST_MATCH_LIMIT = 7;
 
 exports.findBest = function(type, query, callback) {
   var key = type + ':' + query;
-  var options = { type: 'ad' + type, q: query, limit: BEST_MATCH_LIMIT };
+  var options = { q: query, limit: BEST_MATCH_LIMIT };
   if (type == 'country') {
     callback(
       bestMatch(query, this.searchCountries(query, BEST_MATCH_LIMIT)));
@@ -104,9 +105,8 @@ exports.findBest = function(type, query, callback) {
       var log = exports.dialog.visible(true).append(
         { view: 'Text', text: 'Looking for ' + type + ' "' + options.q + '"' });
     }
-    require("../../lib/connect").FB.api(
-      '/search',
-      options,
+    var graphlink = new Graphlink();
+    graphlink.querysearch('ad' + type, options,
       function(r) {
         cache[key] = bestMatch(options.q, r.data || []);
         if (log) {

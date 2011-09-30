@@ -20,7 +20,8 @@
 * DEALINGS IN THE SOFTWARE.
 *
 *
-* Model facade
+* Models together
+* All models correspond to a db table
 *
 */
 
@@ -29,13 +30,9 @@ exports.Account         = require("./model/account").Account;
 exports.Contract        = require("./model/contract").Contract;
 exports.Topline         = require("./model/topline").Topline;
 exports.Ad              = require("./model/ad").Ad;
-exports.AdGroup         = require("./model/ad/group").Group;
 exports.Image           = require("./model/image").Image;
 exports.AdStat          = require("./model/adStat").AdStat;
 exports.Campaign        = require("./model/campaign").Campaign;
-exports.CampGroup       = require("./model/campaign/group").Group;
 exports.CampStat        = require("./model/campStat").CampStat;
 exports.ConnectedObject = require("./model/connectedObject").ConnectedObject;
-exports.Group           = require("./model/group").Group;
 exports.BCT             = require("./model/bct").BCT;
-exports.AdCreative      = require("./model/adCreative").AdCreative;

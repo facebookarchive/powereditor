@@ -34,7 +34,8 @@ var AdError = require("../lib/error").Error;
 var AdImporter = require("./adImporter").Importer;
 
 
-var Importer = fun.newClass(Job, {
+var Importer = fun.newClass(Job,
+  require("../lib/loggingState").getMixinForJob('campaign_importer'), {
 
   // in params
   account: fun.newProp('account'),
@@ -233,7 +234,21 @@ var Importer = fun.newClass(Job, {
     if (newCamp.line_number()) {
       var line_id =
         Topline.getIdbyLineNumber(newCamp.account_id(), newCamp.line_number());
-      newCamp.line_id(line_id);
+
+      if (line_id) {
+        newCamp.line_id(line_id);
+        // adjusted the camp end_time to the end of last minute
+        // of topline flight end date when the new camp end_time
+        // is later than the topline flight end date.
+        var shifted_flight_end_time =
+          Topline.byId(line_id).shifted_flight_end_date();
+        if (newCamp.adjusted_end_time() > shifted_flight_end_time) {
+          newCamp.adjusted_end_time(shifted_flight_end_time);
+        }
+      } else {
+        // reset the line_number to be empty since the line_id is not found
+        newCamp.line_number('');
+      }
     }
     if (!this.useNameMatching()) {
       newCamp.name(uniqName(newCamp.name(), this.mapByName()));

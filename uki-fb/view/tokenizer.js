@@ -40,6 +40,7 @@ var fun   = require("../../uki-core/function"),
     Container = require("../../uki-core/view/container").Container,
 
     Binding   = require("../binding").Binding,
+    Dialog    = require("./dialog").Dialog,
     Typeahead = require("./typeahead").Typeahead,
     Token     = require("./tokenizer/token").Token;
 
@@ -50,7 +51,8 @@ var fun   = require("../../uki-core/function"),
 var Tokenizer = view.newClass('fb.Tokenizer', Container, {}),
     proto = Tokenizer.prototype;
 
-fun.addProps(proto, ['freeform', 'maxTokens', 'value2info', 'info2value']);
+fun.addProps(proto, ['freeform', 'canPaste', 'maxTokens',
+  'value2info', 'info2value', 'validateTokens']);
 
 fun.delegateProp(proto, [
   'data', 'disabled', 'selectedText',
@@ -113,6 +115,7 @@ proto.domForEvent = function(name) {
 proto._inline = false;
 proto._maxTokens = false;
 proto._freeform = false;
+proto._canPaste = false;
 
 proto._value2info = function(v) {
   return { id: v, text: v };
@@ -120,6 +123,21 @@ proto._value2info = function(v) {
 
 proto._info2value = function(i) {
   return i.id;
+};
+
+/**
+ * Triggers an event with type 'tokensValidated' and field tokens that holds
+ * two arrays: 'validated' (defaults to all tokens) and 'invalidated'
+ * (defaults to empty).
+ *
+ * @param tokens to validate
+ * @return true to show a validation dialog
+ *        false to not show a validation dialog
+ */
+proto._validateTokens = function(tokensToValidate) {
+  var tokens = { validated: tokensToValidate, invalidated: [] };
+  this.trigger({ type: 'tokensValidated', tokens: tokens });
+  return false;
 };
 
 proto._createDom = function() {
@@ -135,6 +153,23 @@ proto._createDom = function() {
     { className: 'clearfix ufb-tokenizer ufb-tokenizer_empty' },
   [this._typeahead.dom(), this._tokenArea]);
 
+  // validation dialog for inputting multiple tokens via paste
+  this._validateDialog = build({ view: 'Dialog', childViews: [
+    { view: 'DialogHeader', html: tx('ads:pe:validate-tokenizer-header') },
+    { view: 'DialogContent', childViews: [
+      { view: 'DialogBody', childViews: [
+        { view: 'Text', text: tx('ads:pe:validate-tokenizer') }
+      ]},
+      { view: 'DialogFooter', childViews: [
+        { view: 'Button', label: tx('ads:pe:validate-dismiss'),
+          use: 'confirm', disabled: true, as: 'dismiss',
+          on: { click: fun.bindOnce(function() {
+            this._validateDialog.visible(false);
+          }, this) } }
+      ]}
+    ]}
+  ]});
+
   this._initEvents();
 };
 
@@ -146,6 +181,7 @@ proto._initEvents = function() {
   this.on('keydown', this._keydown, this);
   this.on('paste', this._paste, this);
   this.on('click', this.focus);
+  this.on('tokensValidated', this._commitTokens, this);
 };
 
 proto._blur = function(e) {
@@ -201,7 +237,7 @@ proto._keydown = function(e) {
 };
 
 proto._paste = function(e) {
-  if (this.freeform()) {
+  if (this.freeform() || this.canPaste()) {
     fun.deferOnce(this._commitFreeform, this);
   }
   this._updateInput();
@@ -214,14 +250,27 @@ proto._commitFreeform = function() {
     var regexp = this.freeform().split;
     if (!regexp) { regexp = /\s*[,;]\s*/; }
     var tokens = val.split(regexp);
-    tokens.forEach(function(token) {
-      if (!token) { return; }
-      build({ view: Token, info: {id: token, text: token} }).appendTo(this);
-    }, this);
-    this._typeahead.reset();
-    this.trigger({ type: 'change' });
+    if (this._validateTokens(tokens)) { // triggers commitTokens
+      var VALIDATE_TIME = 5000; // time to wait before allowing dismiss
+      this._validateDialog.view('dismiss').disabled(true);
+      this._validateDialog.visible(true);
+      setTimeout(fun.bind(function() {
+        this._validateDialog.view('dismiss').disabled(false);
+      }, this), VALIDATE_TIME);
+    }
     return true;
   }
+};
+
+proto._commitTokens = function(e) {
+  this._validateDialog.visible(false);
+  tokens = e.tokens.validated;
+  tokens.forEach(function(token) {
+    if (!token) { return; }
+    build({ view: Token, info: {id: token, text: token} }).appendTo(this);
+  }, this);
+  this._typeahead.reset();
+  this.trigger({ type: 'change' });
 };
 
 proto._checkFreeform = function() {

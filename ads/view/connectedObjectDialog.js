@@ -35,8 +35,8 @@ var App = require("../controller/app").App,
 
 var MESSAGE_OBJS = 'Downloading {objs} Objects ...';
 
-var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog',
-  Dialog, {
+var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('Connected Object Dialog'), {
 
   init: function(initArgs) {
     Dialog.prototype.init.call(this, initArgs);
@@ -70,6 +70,10 @@ var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog',
         ] }
       ] }
     ]).appendTo(this);
+  },
+
+  preset: function(id) {
+    this._collection.view('object-id').value(id);
   },
 
   _onok: function() {

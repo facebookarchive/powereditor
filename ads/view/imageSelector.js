@@ -43,8 +43,8 @@ var fun   = require("../../uki-core/function"),
     Img = require("../model/image").Image;
 
 
-
-var ImageSelector = view.newClass('ads.ImageSelector', List, {
+var ImageSelector = view.newClass('ads.ImageSelector', List,
+  require("../lib/loggingState").getMixinForDialog('image_selector_dialog'), {
 
   binding: fun.newProp('binding', function(val) {
     if (this._binding) { this._binding.destruct(); }

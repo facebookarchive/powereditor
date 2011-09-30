@@ -21,13 +21,10 @@
 *
 */
 
-var dom = require("../../uki-core/dom");
-var fun = require("../../uki-core/function");
-var utils = require("../../uki-core/utils");
-var env = require("../../uki-core/env");
-var Observable = require("../../uki-core/observable").Observable;
-var FB = require("../../lib/connect").FBWithErrors;
-var Img = require("../model/image").Image;
+
+var utils = require("../../uki-core/utils"),
+    FB = require("../../lib/connect").FB,
+    Img = require("../model/image").Image;
 
 function unzip(account_id, file, callback) {
   var reader = new global.FileReader();
@@ -36,7 +33,7 @@ function unzip(account_id, file, callback) {
     FB.api(
       '/act_' + account_id + '/adimages',
       'post',
-      { zipbytes: bytes},
+      { zipbytes: bytes },
       function(result) {
         if (result.images) {
           var newImages = [];

@@ -79,8 +79,9 @@ proto.childViews = function() {
 };
 proto._childViews = [];
 
-proto._createDom = function() {
-    this._dom = dom.createElement('div', { className: 'HTMLLayout' });
+proto._createDom = function(initArgs) {
+  this._dom = dom.createElement(initArgs.tagName || 'div',
+    { className: 'HTMLLayout' });
 };
 
 proto._buildViews = function(views) {

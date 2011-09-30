@@ -44,21 +44,32 @@ proto._createDom = function(initArgs) {
   this._content = dom.createElement('span', { className: 'ufb-text-content' });
   this._dom = dom.createElement(
     initArgs.tagName || 'div',
-    { className: 'ufb-text ufb-text_size-normal' },
+    { className: 'ufb-text ufb-text_size-medium' },
     [this._content]);
 };
 
 fun.delegateProp(proto, 'html', '_content', 'innerHTML');
 
 proto.size = view.newClassMapProp({
-  'normal': 'ufb-text_size-normal',
-  'huge': 'ufb-text_size-large',
-  'large': 'ufb-text_size-medium'
+  'small': 'ufb-text_size-small',
+  'medium': 'ufb-text_size-medium',
+  'large': 'ufb-text_size-large',
+  'huge': 'ufb-text_size-huge',
+  'giant': 'ufb-text_size-giant'
+});
+
+proto.color = view.newClassMapProp({
+  'black': 'ufb-text_color-black',
+  'gray': 'ufb-text_color-gray'
+});
+
+proto.weight = view.newClassMapProp({
+  'normal': 'ufb-text_weight-normal',
+  'bold': 'ufb-text_weight-bold'
 });
 
 proto.text = function(v) {
   return this.html(v && dom.escapeHTML(v));
 };
-
 
 exports.Text = Text;

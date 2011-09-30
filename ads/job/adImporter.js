@@ -32,7 +32,8 @@ var Campaign = require("../model/campaign").Campaign;
 var Ad = require("../model/ad").Ad;
 var AdError = require("../lib/error").Error;
 
-var Importer = fun.newClass(Job, {
+var Importer = fun.newClass(Job,
+  require("../lib/loggingState").getMixinForJob('campaign_importer'), {
 
   // in params
   account: fun.newProp('account'),
@@ -299,7 +300,7 @@ var Importer = fun.newClass(Job, {
 
       if (updated) {
         existingAd
-          .resetCampaign()
+          .updateCampaign()
           .validateAll()
           .store(callback);
       } else {

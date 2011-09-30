@@ -30,13 +30,19 @@ var fun   = require("../../uki-core/function"),
   props = require("../lib/props"),
   ResultSet  = require("../../storage/resultSet").ResultSet,
   Util = require("../../uki-fb/view/typeahead/util").Util,
-  FB = require("../../lib/connect").FB;
+  adsConnect = require("../../lib/connect"),
+  FB = adsConnect.FB;
 
 /**
  * BCT
  * @class
  */
-var BCT = storage.newStorage({});
+var BCT = storage.newStorage({
+  dbDrop: function() {
+    require("../job/downloadBCT").DownloadBCT.clearLastSync();
+    storage.Storage.dbDrop(arguments);
+  }
+});
 
 BCT.newInstance = function(id) {
   var bct = new BCT();
@@ -47,7 +53,8 @@ BCT.newInstance = function(id) {
 BCT
   .defaultPropType(props.Base)
   .tableName('bct')
-  .remoteMethodName('ads.getBroadCategories');
+  .remoteMethodName('ads.getBroadCategories')
+  .softDrop(false);
 
 BCT.addProp({
   name: 'id',
@@ -71,6 +78,10 @@ BCT.loadFromRESTAPI = function(options, callback) {
   FB.api(
     utils.extend({ method: this.remoteMethodName() }, options),
     fun.bind(function(data) {
+      if (adsConnect.isError(data)) {
+        callback();
+        return;
+      }
       var items = [];
       utils.forEach(data, function(raw, key) {
         var item = BCT.newInstance(raw.id);

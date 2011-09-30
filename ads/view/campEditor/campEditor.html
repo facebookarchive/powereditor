@@ -21,7 +21,7 @@
               <label for="{{#budget_sum__view}}{{id}}{{/budget_sum__view}}">
                 {{{budget_label}}}</label></th>
             <td class="data">
-                {{{budget_sum}}} {{{budget_type}}} {{{campaign_type}}} {{{cpm_price}}} {{{as_imps}}}
+                {{{budget_sum}}} {{{budget_type}}} {{{campaign_type}}}  {{{imps_label}}} {{{budget_ui_imps}}} {{{cpm_price}}}
             </td>
         </tr>
 
@@ -61,6 +61,12 @@
             <label for="{{#line_number}}{{id}}{{/line_number}}">
             {{{line_number_label}}}</label></th>
           <td class="data">{{{line_number}}}</td>
+        </tr>
+        <tr class="dataRow campEditor-io">
+          <th class="label">
+            <label for="{{#inflation}}{{id}}{{/inflation}}">
+            {{{inflation_label}}}</label></th>
+          <td class="data">{{{inflation}}}</td>
         </tr>
         {{/INTERN}}
     </tbody>

@@ -29,8 +29,11 @@ var fun   = require("../../uki-core/function"),
     build = require("../../uki-core/builder").build,
     find  = require("../../uki-core/selector").find,
     view = require("../../uki-core/view"),
-    formatters     = require("../../lib/formatters"),
+
+    formatters = require("../../lib/formatters"),
+    compare = require("../../uki-fb/view/dataTable/compare"),
     contractFormatters = require("./contractPane/formatters"),
+
     CampStat = require("../model/campStat").CampStat,
     Account = require("../model/account").Account,
     Topline = require("../model/topline").Topline,
@@ -53,9 +56,9 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
 
     toplines: fun.newProp('toplines', function(toplines, callback) {
       this._toplines = toplines;
-      this._dataTable.data(this._toplines);
 
       this._dataTable
+          .data(this._toplines || [])
           .layoutIfVisible()
           .selectedIndex(0)
           .lastClickIndex(0)
@@ -144,75 +147,95 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
               addClass: 'contractPane-data', id: 'topline-table',
               pos: 'l:0 t:250px b:0 r:0', debounce: 42,
               multiselect: false, columns: [
-                { label: '#', key: 'line_number', width: 28, maxWidth:
-                  28, minWidth: 28},
-                { label: 'Line ID', key: 'line_id', width: 60, maxWidth: 100,
-                  minWidth: 40},
+                { label: '#', key: 'line_number', width: 28,
+                  maxWidth: 28, minWidth: 28,
+                  compareFn: compare.numbers,
+                  sortable: true },
+                { label: 'Line ID', key: 'line_id', width: 60,
+                  maxWidth: 100, minWidth: 40,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Flight Start Date', key: 'flight_start_date',
                   width: 100, maxWidth: 120, minWidth: 80,
-                  formatter: contractFormatters.date},
+                  compareFn: compare.dates,
+                  sortable: true,
+                  formatter: contractFormatters.date },
                 { label: 'Flight End Date', key: 'flight_end_date',
                   width: 100, maxWidth: 120, minWidth: 80,
-                  formatter: contractFormatters.date},
+                  compareFn: compare.dates,
+                  sortable: true,
+                  formatter: contractFormatters.date },
                 { label: 'Description', key: 'description',
                   width: 150, maxWidth: 200, minWidth: 60},
                 { label: 'UOM', key: 'uom',
                   width: 40, maxWidth: 60, minWidth: 30},
-                { label: 'Impressions', key: 'impressions',
+
+                { label: 'Line Impressions', key: 'impressions',
                   width: 80, maxWidth: 150, minWidth: 60,
-                  formatter: contractFormatters.number},
+                  formatter: contractFormatters.number,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Price', key: 'func_price',
                   width: 60, maxWidth: 100, minWidth: 40,
-                  formatter: contractFormatters.money},
+                  formatter: contractFormatters.money,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Line Amount', key: 'func_line_amount',
                   width: 100, maxWidth: 150, minWidth: 60,
-                  formatter: contractFormatters.money},
-
+                  formatter: contractFormatters.money,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Impressions', key: 'stat_impressions',
                   width: 80, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: contractFormatters.number },
-
+                  formatter: contractFormatters.number,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Clicks', key: 'stat_clicks',
                   width: 60, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: contractFormatters.number },
-
+                  formatter: contractFormatters.number,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Spent', key: 'stat_spent_100',
                   width: 70, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: contractFormatters.money },
-
+                  formatter: contractFormatters.money,
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Last Update', key: 'stat_last_update_time',
                   width: 70, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
                   formatter: contractFormatters.date },
-
                 { label: 'OverDelivery %', key: 'overdelivery_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: formatters.createPercentFormatter(2) },
-
+                  formatter: formatters.createPercentFormatter(2),
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Spent %', key: 'spent_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: formatters.createPercentFormatter(2) },
-
+                  formatter: formatters.createPercentFormatter(2),
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Complete %', key: 'complete_perc',
                   width: 60, maxWidth: 150, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: formatters.createPercentFormatter(2) },
-
+                  formatter: formatters.createPercentFormatter(2),
+                  compareFn: compare.numbers,
+                  sortable: true },
                 { label: 'Allocation', key: 'unallocatedImps',
                   width: 80, maxWidth: 120, minWidth: 60,
                   className: 'ufb-dataTable-cell_number',
-                  formatter: contractFormatters.allocation },
+                  formatter: contractFormatters.allocation,
+                  compareFn: compare.numbers,
+                  sortable: true },
 
                 { label: 'Product Type', key: 'product_type', width: 80,
-                  maxWidth: 120, minWidth: 60},
+                  maxWidth: 120, minWidth: 60 },
                 { label: 'Targets', key: 'targets',
-                  width: 220, minWidth: 150, maxWidth: 300},
-
+                  width: 220, minWidth: 150, maxWidth: 300 },
                 { label: 'ID', key: 'ID', width: 20, maxWidth: 20, minWidth: 20,
                   visible: false}
             ]}
@@ -232,7 +255,7 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
         Account.findAllBy('id', this.contract().id(),
           fun.bind(function(accounts) {
             accounts && accounts.prefetch && accounts.prefetch();
-            CampStat.loadFromAccountsAndRange(accounts, 0, 0,
+            CampStat.loadFromAccountsAndRange(accounts[0], 0, 0,
               fun.bind(function() {
                 // recalculate the stats and refresh the table
                 Topline.findAllBy(
@@ -252,7 +275,8 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
           }, this)
         );
       } else {
-        alert('no contract to sync');
+        require("../../uki-fb/view/dialog").Dialog
+          .alert(tx('ads:pe:dragon:contract-na'));
       }
     }
 

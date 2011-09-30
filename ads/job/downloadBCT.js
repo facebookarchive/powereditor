@@ -28,10 +28,12 @@ var Account = require("../model/account").Account;
 var BCT = require("../model/bct").BCT;
 var Job = require("./base").Job;
 
-var REFRESH_TIMEOUT = 86400 * 7; // once per week
+var REFRESH_TIMEOUT = 0; // always download
 var CACHE_KEY = 'model:bct:1';
 
-var DownloadBCT = fun.newClass(Job, {
+var DownloadBCT = fun.newClass(Job,
+  require("../lib/loggingState").getMixinForJob('campaign_importer'), {
+
   userStorage: fun.newProp('userStorage'),
   init: function() {
     Job.prototype.init.call(this);

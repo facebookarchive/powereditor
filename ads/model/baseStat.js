@@ -33,7 +33,6 @@ var fun       = require("../../uki-core/function"),
     libUtils   = require("../../lib/utils"),
     pathUtils = require("../../lib/pathUtils"),
 
-    FB        = require("../../lib/connect").FB,
     formatters = require("../../lib/formatters"),
     TabSeparated  = require("../lib/model/tabSeparated").TabSeparated;
 
@@ -188,7 +187,7 @@ BaseStat.loadFromAccountsAndRange = function(accounts, from, to, callback) {
                     start_time,
                     end_time);
     }, this));
-    BaseStat.fetchAndStoreEdges.call(this, paths, { limit: 200 }, callback);
+    BaseStat.fetchAndStoreEdges.call(this, paths, callback);
   }, this));
 };
 

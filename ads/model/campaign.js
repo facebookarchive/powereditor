@@ -29,8 +29,8 @@ var fun   = require("../../uki-core/function"),
     pathUtils = require("../../lib/pathUtils"),
 
     props   = require("../lib/props"),
-    FB = require("../../lib/connect").FB,
     libUtils = require("../../lib/utils"),
+    DateUtil = require("../lib/dateUtil").DateUtil,
 
     CampStat      = require("./campStat").CampStat,
     Changeable    = require("../lib/model/changeable").Changeable,
@@ -160,7 +160,9 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
   },
 
   isFromTopline: function() {
-    return this.line_number() > 0 && this.line_id() > 0 && this.topline();
+    return this.line_number() > 0 &&
+      (this.idx_line_id() > 0) &&
+      this.topline();
   },
 
   isImpressionBased: function() {
@@ -227,7 +229,8 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
         ((now - c_start) / (c_stop - c_start));
     }
 
-    var camp_budget = this.original_total_budget();
+    // uninflated campaign budget
+    var camp_budget = this.uninflate(this.original_total_budget());
     var camp_spent = this.stat() ? this.stat().spent() : 0;
     var camp_ideal_spent = camp_budget * perc_complete;
 
@@ -252,7 +255,7 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
 
   searchFields: function() {
     return [
-     'name',
+      'name',
       'description',
       'io_name'
     ];
@@ -270,6 +273,27 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
 
   graphUpdatePath: function() {
     return '/' + this.id() + '/';
+  },
+
+  uninflate: function(inflated_budget) {
+    return inflationConverter.uninflateBudget(
+      inflated_budget, this.inflation());
+  },
+
+  inflate: function(uninflated_budget) {
+    return inflationConverter.inflateBudget(
+      uninflated_budget, this.inflation());
+  },
+
+  removeSelf: function(callback) {
+    storage.Storable.remove.call(this, callback);
+  },
+
+  remove: function(callback) {
+    var item = this;
+    require("./ad").Ad.deleteBy('campaign_id', this.id(), function() {
+      item.removeSelf(callback);
+    });
   }
 });
 
@@ -424,16 +448,38 @@ Campaign.addProp({
 });
 
 // dates
+
+/**
+ * To clarify when to use what kinds of times:
+ * (more about topline-inherited properties commented in topline.js)
+ *
+ * - start_time/end_time are properties linked remotely to the account, and
+ *   thus the Unix timestamps must be correct. However, when rendered in the
+ *   browser, the time shows in local time, not in the account timezone. These
+ *   properties should only be compared against absolute timestamps.
+ *
+ * - adjusted_start/end times are properties the Power Editor application uses
+ *   to help render the start_times/end_times in the account timezone. These
+ *   properties do not have the correct Unix timestamp when saved; however,
+ *   when rendered in the browser, these properties correctly display the time
+ *   in the account timezone. This property should be compared against other
+ *   times expressed in the account timezone (such as the flight_date
+ *   properties from the Topline model).
+ */
 Campaign.addProp({
   type: props.Timestamp,
   name: 'start_time',
   db: true,
   remote: true,
-  trackChanges: true,
-  tabSeparated: ['Campaign Time Start', 'Date Start'],
+  trackChanges: true
+});
+
+Campaign.addProp({
+  type: props.AdjustedTimestamp,
+  name: 'adjusted_start_time',
   validate: function(obj) {
     if (obj.isFromTopline()) {
-      var start_time = obj.start_time().getTime();
+      var start_time = obj.adjusted_start_time().getTime();
       var error = start_time < obj.flight_start_date().getTime();
       obj.toggleError(
         error,
@@ -441,7 +487,10 @@ Campaign.addProp({
         tx('ads:pe:start-time-before-flight-time')
       );
     }
-  }
+  },
+  isEndTime: false,
+  tabSeparated: ['Campaign Time Start', 'Date Start'],
+  originalName: 'start_time'
 });
 
 Campaign.addProp({
@@ -458,14 +507,19 @@ Campaign.addProp({
   name: 'end_time',
   db: true,
   remote: true,
-  trackChanges: true,
-  tabSeparated: ['Campaign Time Stop', 'Date Stop'],
+  trackChanges: true
+});
+
+Campaign.addProp({
+  type: props.AdjustedTimestamp,
+  name: 'adjusted_end_time',
   validate: function(obj) {
-    if (obj.adjusted_flight_end_date()) {
-      var end_time = obj.end_time().getTime();
-      var is_past = end_time < (new Date()).getTime();
+    if (obj.isFromTopline() && obj.shifted_flight_end_date()) {
+      var end_time = obj.adjusted_end_time().getTime();
+      var now = DateUtil.fromNowToAccountOffset(obj.account()).getTime();
+      var is_past = end_time < now;
       var error = is_past ||
-        (end_time > obj.adjusted_flight_end_date().getTime());
+        (end_time > obj.shifted_flight_end_date().getTime());
       obj.toggleError(
         error,
         'end_time',
@@ -473,7 +527,10 @@ Campaign.addProp({
           tx('ads:pe:stop-time-after-flight-time')
       );
     }
-  }
+  },
+  isEndTime: true,
+  tabSeparated: ['Campaign Time Stop', 'Date Stop'],
+  originalName: 'end_time'
 });
 
 Campaign.addProp({
@@ -511,13 +568,10 @@ Campaign.addProp({
 Campaign.addProp({
   name: 'uninflated_ui_budget_100',
   getValue: function(obj) {
-    return inflationConverter.uninflateBudget(
-      obj.budget_100(), obj.inflation());
+    return obj.uninflate(obj.budget_100());
   },
   setValue: function(obj, value) {
-    var inflated_value = inflationConverter.
-      inflateBudget(value, obj.inflation());
-    obj.budget_100(inflated_value);
+    obj.budget_100(obj.inflate(value));
   }
 });
 
@@ -525,13 +579,13 @@ Campaign.addProp({
   name: 'budget_100',
   getValue: function(obj) {
     return obj.budget_type() === 'd' ?
-    obj.daily_budget() / 100 : obj.lifetime_budget() / 100;
+    obj.daily_budget_100() : obj.lifetime_budget_100();
   },
   setValue: function(obj, value) {
     if (obj.budget_type() === 'd') {
-      obj.daily_budget(value * 100);
+      obj.daily_budget_100(value);
     } else {
-      obj.lifetime_budget(value * 100);
+      obj.lifetime_budget_100(value);
     }
     // validate the budget status;
     if (obj.topline()) {
@@ -623,9 +677,23 @@ Campaign.addProp({
   name: 'inflation',
   def: '0',
   db: true, remote: true,
-  tabSeparated: 'Inflation',
-  corpExportedOnly: true,
   trackChanges: true
+});
+
+// the same except updating this will update the inflated budget
+Campaign.addProp({
+  name: 'ui_inflation',
+  getValue: function(obj) {
+    return obj.inflation();
+  },
+  setValue: function(obj, value) {
+    // Update inflation but keep the uninflated budget the same
+    var uninflated = obj.uninflated_ui_budget_100();
+    // update the inflation but also the inflated budget
+    obj.inflation(value);
+    // update real budget
+    obj.uninflated_ui_budget_100(uninflated);
+  }
 });
 
 Campaign.addProp({
@@ -637,7 +705,22 @@ Campaign.addProp({
 });
 
 Campaign.addProp({
+  name: 'idx_line_id',
+  db: true,
+  getValue: function(obj) {
+    return obj.topline_id() || obj.line_id();
+  }
+});
+
+// from Omegalight
+Campaign.addProp({
   name: 'line_id',
+  db: true, remote: true
+});
+
+// from admanager
+Campaign.addProp({
+  name: 'topline_id',
   db: true, remote: true
 });
 
@@ -677,6 +760,7 @@ Campaign.addProp({
   }
 });
 
+// inflated value in base units (cents)
 Campaign.addProp({
   name: 'original_total_budget',
   getValue: function(obj) {
@@ -719,7 +803,7 @@ Campaign.addProp({
   name: 'topline',
   def: new Topline(),
   getValue: function(obj) {
-    return Topline.byId(obj.line_id());
+    return Topline.byId(obj.idx_line_id());
   }
 });
 
@@ -745,14 +829,16 @@ Campaign.addProp({
 fun.delegateProp(Campaign.prototype, [
     'product_type', 'ad_type',
     'flight_start_date', 'flight_end_date',
-    'adjusted_flight_end_date',
+    'shifted_flight_end_date',
     'uom', 'func_price',
     'func_line_amount', 'func_cap_amount',
-    'description', 'targets'
+    'description', 'targets',
+    'is_bonus_line',
+    'unallocatedImps'
 ], 'topline');
 
 fun.delegateCall(Campaign.prototype,
-    ['line_numbers', 'isCorporate'], 'account');
+    ['line_numbers', 'isCorporate', 'hasContract'], 'account');
 
 fun.delegateProp(Campaign.prototype, 'line_impressions',
   'topline', 'impressions');
@@ -816,13 +902,6 @@ function getSearchIndex() {
   return indexes;
 }
 
-Campaign.remove = function(callback) {
-  var item = this;
-  require("./ad").Ad.deleteBy('campaign_id', this.id(), function() {
-    storage.Storable.remove.call(item, callback);
-  });
-};
-
 Campaign.cache = null;
 
 Campaign.byId = function(id) {
@@ -858,7 +937,7 @@ Campaign.prepare = function(callback, force) {
     return;
   }
   this.findAll(function(camps) {
-    camps.prefetch();
+    camps.prefetch && camps.prefetch();
     Campaign.cache = camps;
     callback(camps);
   });
@@ -870,6 +949,7 @@ Campaign.create = function(parent, lineNumber) {
 
   var line_id = null;
   var topline = null;
+
   if (parent instanceof Account) {
     // attach to the first topline if
     // we do not provide a lineNumber
@@ -886,14 +966,15 @@ Campaign.create = function(parent, lineNumber) {
   } else if (parent instanceof Campaign) {
     if (parent.isFromTopline()) {
       // attach to the current topline of this selected campaign
-      line_id = parent.line_id();
+      line_id = parent.idx_line_id();
     }
   }
 
   if (line_id) {
     topline = Topline.byId(line_id);
+    var now = DateUtil.fromNowToAccountOffset(topline.account());
 
-    if (topline.adjusted_flight_end_date() < new Date()) {
+    if (topline.shifted_flight_end_date() < now) {
       require("../../uki-fb/view/dialog").Dialog
         .alert(tx('ads:pe:creating-camp-for-ended-topline'));
       return '';
@@ -909,9 +990,13 @@ Campaign.create = function(parent, lineNumber) {
    ds = topline.flight_start_date() > ds ?
      topline.flight_start_date() : ds;
 
-   de = topline.adjusted_flight_end_date();
+   de = topline.shifted_flight_end_date();
    // dso contract/topline specific field
-   camp.line_id(line_id);
+   camp.line_id(topline.line_id() || '');
+   if (topline.line_id() != topline.id()) {
+     camp.topline_id(topline.id());
+   }
+
    camp.line_number(topline.line_number());
    camp.io_number(topline.contract().io_number());
   }
@@ -924,8 +1009,8 @@ Campaign.create = function(parent, lineNumber) {
     .account_id(account_id)
     // active
     .campaign_status(1)
-    .start_time(ds)
-    .end_time(de);
+    .adjusted_start_time(ds)
+    .adjusted_end_time(de);
 
   return camp;
 };

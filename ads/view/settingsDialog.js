@@ -38,7 +38,8 @@ var PaneMap = {
   'contractPane': 2
  };
 
-var SettingsDialog = view.newClass('ads.SettingsDialog', Dialog, {
+var SettingsDialog = view.newClass('ads.SettingsDialog', Dialog,
+  require("../lib/loggingState").getMixinForDialog('Settings Dialog'), {
 
   _createDom: function(initArgs) {
     Dialog.prototype._createDom.call(this, initArgs);

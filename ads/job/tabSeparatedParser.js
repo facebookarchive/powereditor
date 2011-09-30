@@ -98,7 +98,8 @@ function mapProps(props, header) {
   return { found: found, missed: missed };
 }
 
-var Parser = fun.newClass(Job, {
+var Parser = fun.newClass(Job,
+  require("../lib/loggingState").getMixinForJob('campaign_importer'), {
 
   // in params
   imageLookup: fun.newProp('imageLookup'),

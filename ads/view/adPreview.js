@@ -28,7 +28,9 @@ var fun = require("../../uki-core/function"),
     view = require("../../uki-core/view"),
 
     Mustache = require("../../uki-core/mustache").Mustache,
-    Base     = require("../../uki-core/view/base").Base;
+    Base     = require("../../uki-core/view/base").Base,
+
+    objectFetcher = require("../lib/fetcher").objectFetcher;
 
 
 var AdPreview = view.newClass('ads.AdPreview', Base, {
@@ -58,6 +60,23 @@ var AdPreview = view.newClass('ads.AdPreview', Base, {
       var likeUrl = toDataUri('./adPreview/like_on.gif');
       var object_id = ad.object_id();
       var object = ad.object();
+      var relatedObject = null;
+      if (ad.type() == 1) {
+        object_id = ad.related_fan_page();
+        if (object_id) {
+          relatedObject = objectFetcher.fromCache(object_id);
+          if (!relatedObject) {
+            // not in cache, because cached result is guaranteed to be nonempty.
+            // delay loading. refresh preview again once data loading completes.
+            objectFetcher.fetch(object_id,
+                                fun.bindOnce(this._modelChange, this));
+          }
+        }
+        if (!relatedObject || !relatedObject.name) {
+          relatedObject = {name: 'a Related Fan Page', link: '' };
+        }
+        relatedObject.link = relatedObject.link || '';
+      }
 
       require("../model/image").Image.imageUrl(
           ad,
@@ -66,9 +85,10 @@ var AdPreview = view.newClass('ads.AdPreview', Base, {
           ad.image_url(url);
           this._dom.innerHTML = Mustache.to_html(this._template, {
               ad: ad,
-              like: !!object_id &&
-                (!object || object.type() != 2),
-              like_img: likeUrl
+              like: (!!object_id && (!object || object.type() != 2)) ||
+                     (ad.type() == 1 && ad.related_fan_page()),
+              like_img: likeUrl,
+              related_object: relatedObject
           });
       }, this));
     }

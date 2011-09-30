@@ -58,7 +58,9 @@ Mutator.initAdInCampaign = function(camp, ad) {
   ad.muteChanges(false);
 };
 
+var FLOW_CREATE_CAMPAIGN = 'create_campaign';
 Mutator.createCampaignHandler = function() {
+  require("../lib/loggingState").startFlow(FLOW_CREATE_CAMPAIGN);
   Mutator.createCampaign(function(campCreated) {
     if (campCreated) {
       campCreated.validateAll().store(function() {
@@ -66,6 +68,7 @@ Mutator.createCampaignHandler = function() {
       App.reload();
       });
     }
+    require("../lib/loggingState").endFlow(FLOW_CREATE_CAMPAIGN);
   });
 };
 
@@ -129,7 +132,7 @@ Mutator.selectToplineDialog = function() {
           { view: 'DialogFooter', childViews: [
             { view: 'Button', label: tx('sh:ok-button'), large: true, as: 'ok',
               use: 'confirm' },
-            { view: 'Button', label: tx('sh:confirm-button'), large: true,
+            { view: 'Button', label: tx('sh:cancel-button'), large: true,
               on: { click: function() {
                 Mutator.selectToplineDialog().visible(false);
             } } }

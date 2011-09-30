@@ -248,7 +248,7 @@ var bct = view.newClass('ads.control.bct', Container, {
 
       // render checkbox click listener
       checkbox_el.on('click', fun.bind(function(e) {
-        if (e.target.value == 'on') {
+        if (e.target.checked) {
           this._selected_cluster_ids_set[cluster_id] = true;
         } else {
           this._selected_cluster_ids_set[cluster_id] = false;

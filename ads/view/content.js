@@ -48,28 +48,27 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
     },
 
     toplines: function(value) {
+      this._toplines = value;
       if (value === undefined) {
         return this.contractPane().toplines();
       }
 
-      this._toplines = value;
       if (this.curSelectedPane() === 'contractPane') {
         this.contractPane().toplines(value);
       }
-
       return this;
     },
 
     contract: function(value) {
+      this._contract = value;
+
       if (value === undefined) {
         return this.contractPane().contract();
       }
 
-      this._contract = value;
       if (this.curSelectedPane() === 'contractPane') {
         this.contractPane().contract(value);
       }
-
       return this;
     },
 

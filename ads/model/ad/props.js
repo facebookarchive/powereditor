@@ -24,10 +24,13 @@
 
 var fun   = require("../../../uki-core/function"),
     utils = require("../../../uki-core/utils"),
+    dom   = require("../../../uki-core/dom"),
 
     props   = require("../../lib/props"),
 
+    urlToObjectIDSearcher = require("../../lib/fetcher").urlToObjectIDSearcher,
     AdStat          = require("../adStat").AdStat,
+    Graphlink       = require("../../../lib/graphlink").Graphlink,
     formatters      = require("../../../lib/formatters");
 
 function addProps(Ad) {
@@ -143,7 +146,9 @@ function addProps(Ad) {
     type: props.LongNumber,
     name: 'account_id',
     db: true,
-    remote: true
+    remote: true,
+    indexed: 'TEXT NOT NULL',
+    prefix: 'ac:'
   });
 
   Ad.addProp({
@@ -180,10 +185,14 @@ function addProps(Ad) {
   Ad.addProp({
     name: 'bid_100',
     getValue: function(obj) {
-      return obj.max_bid() / 100;
+      // MOO ads have no explicit bids
+      return obj.isMulti() ? 'N/A' : obj.max_bid() / 100;
     },
     setValue: function(obj, value) {
-      return obj.max_bid(Math.round(value * 100));
+      // MOO ads have no explicit bids
+      if (!obj.isMulti()) {
+        obj.max_bid(Math.round(value * 100));
+      }
     },
     humanName: 'Max Bid',
     tabSeparated: ['Max Bid', 'Bid'],
@@ -316,8 +325,14 @@ function addProps(Ad) {
     validate: function(obj) {
       var value = this.getValue(obj);
       var limit = require("./constants").MAX_BODY_LENGTH;
+
+      var is_premium = obj.is_from_premium_line();
+      var fields_by_type =
+        require("../../lib/creativeMap")
+          .getFieldsByType(obj.type(), is_premium);
+
       obj.toggleError(
-        !value.length,
+        !value.length && (fields_by_type.indexOf('body') > -1),
         'body',
         'Body required'
       );
@@ -351,6 +366,22 @@ function addProps(Ad) {
       }
       this.setValue(obj, value);
       callback();
+    },
+    creative: true
+  });
+
+  Ad.addProp({
+    type: props.LongNumber,
+    name: 'related_fan_page',
+    prefix: '',
+    db: true,
+    remote: true,
+    def: '',
+    trackChanges: true,
+    tabSeparated: 'Related Page',
+    setValue: function(obj, value) {
+      obj[this.propName] = value;
+      obj.related_fan_page_wanted(value ? 1 : 0);
     },
     creative: true
   });
@@ -402,7 +433,7 @@ function addProps(Ad) {
     trackChanges: true,
     validate: function(obj) {
       obj.toggleError(
-        !this.getValue(obj) && !obj.object_id(),
+        !this.getValue(obj) && !obj.object_id() && !obj.is_bass(),
         'image',
         tx('ads:pe:image-required')
       );
@@ -483,6 +514,12 @@ function addProps(Ad) {
     def: 1,
     creative: true,
     tabSeparated: ['Creative Type', 'creative_type'],
+    validate: function(obj) {
+      obj.storage().prop('title').validate(obj);
+      obj.storage().prop('link_url').validate(obj);
+      obj.storage().prop('body').validate(obj);
+      obj.storage().prop('image_hash').validate(obj);
+    },
     setTabSeparated: function(obj, value, callback) {
       // if we have id instead of link simply skip it
       if (value.match(/^\d+$/)) {
@@ -541,6 +578,46 @@ function addProps(Ad) {
   });
 
   Ad.addProp({
+    name: 'story_id',
+    db: true,
+    remote: true,
+    def: '',
+    trackChanges: true,
+    creative: true,
+    tabSeparated: ['Story ID', 'Story']
+  });
+
+  Ad.addProp({
+    name: 'url_tags',
+    db: true,
+    remote: true,
+    def: '',
+    trackChanges: true,
+    creative: true,
+    tabSeparated: 'URL Tags'
+  });
+
+  Ad.addProp({
+    name: 'thread_id',
+    db: true,
+    remote: true,
+    def: '',
+    trackChanges: true,
+    creative: true,
+    tabSeparated: ['Thread ID', 'Thread']
+  });
+
+  Ad.addProp({
+    name: 'prompt',
+    db: true,
+    remote: true,
+    def: '',
+    trackChanges: true,
+    creative: true,
+    tabSeparated: 'Prompt'
+  });
+
+  Ad.addProp({
     name: 'is_from_premium_line',
     getValue: function(obj) {
       if (obj.topline()) {
@@ -552,6 +629,16 @@ function addProps(Ad) {
     }
   });
 
+  Ad.addProp({
+    name: 'is_bass',
+    getValue: function(obj) {
+      if (obj.type()) {
+        return require("../../lib/adCreativeType").is_bass_type(obj.type());
+      } else {
+        return false;
+      }
+    }
+  });
   //
   //                                                     *
   //
@@ -959,15 +1046,45 @@ function addProps(Ad) {
   });
 
   Ad.addProp({
+    type: props.Boolean,
+    name: 'interests_toggle',
+    remote: false,
+    db: true
+  });
+
+  Ad.addProp({
     type: props.FlatArray,
     name: 'keywords',
     remote: true,
     db: true,
     trackChanges: true,
     tabSeparated: ['Likes and Interests', 'Keywords'],
-    tsFindByName: function(string, obj, callback) {
-      callback(string.trim());
+    setTabSeparated: function(obj, value, callback) {
+      // validate keywords on bulk import
+      var keywords = value.split(this.delimiter);
+      for (var i = 0; i < keywords.length; i++) {
+        keywords[i] = dom.escapeHTML(keywords[i].trim());
+      }
+      var graphlink = new Graphlink();
+      graphlink.querysearch('adkeywordvalid', { keyword_list: keywords },
+        fun.bind(function(r) {
+          var tokensObj = { validated: [], invalidated: [] };
+          r.data.forEach(function(word) {
+            word.valid ? tokensObj.validated.push(word.name) :
+                       tokensObj.invalidated.push(word.name);
+          });
+          this.setValue(obj, tokensObj.validated);
+          callback();
+        }, this)
+      );
     },
+    /*
+    validate: function(obj) {
+      // Keyword validation requires using the graph API call
+      // graphlink.querysearch('adkeywordvalid', ...). This is not called during
+      // model validation because graphlink is async, will not be compatible
+      // with current validation process
+    },*/
     targeting: true
   });
 
@@ -1054,6 +1171,63 @@ function addProps(Ad) {
     name: 'demolink_hash',
     remote: true,
     db: true
+  });
+
+  Ad.addProp({
+    type: props.Number,
+    name: 'related_fan_page_wanted',
+    def: 0,
+    setValue: function(obj, value) {
+      if (obj.set_related_fan_page_through_check_box) {
+        // avoid loop between related_fan_page_wanted and related_fan_page
+        return;
+      }
+      // store the value to debounce
+      var current_related_fan_page = obj.related_fan_page();
+      obj[this.propName] = value ? 1 : 0;
+      if (value && !current_related_fan_page) {
+        // wanted, and not already set
+        obj.set_related_fan_page_through_check_box = 1;
+        obj.related_fan_page(obj.related_fan_page_id());
+        obj.set_related_fan_page_through_check_box = 0;
+        // need commitChanges b/c related_fan_page_wanted doesn't.
+        // it will save change to db.
+        obj.commitChanges('related_fan_page');
+      } else if (!value && current_related_fan_page) {
+        // not wanted, but set
+        obj.set_related_fan_page_through_check_box = 1;
+        obj.related_fan_page(0);
+        obj.set_related_fan_page_through_check_box = 0;
+        obj.commitChanges('related_fan_page');
+      }
+    },
+    creative: true
+  });
+
+  Ad.addProp({
+    type: props.Number,
+    name: 'related_fan_page_id',
+    setValue: function(obj, value) {
+      if (obj.related_fan_page_wanted() && obj.type() == 1) {
+        var old_value = obj.related_fan_page();
+        if (old_value != value) {
+          obj.related_fan_page(value);
+          obj.commitChanges('related_fan_page');
+        }
+      }
+    },
+    getValue: function(obj) {
+      var origin_id = !obj.isNew() && !obj.isChanged('link_url') &&
+        !obj.isChanged('related_fan_page') && obj.related_fan_page();
+      if (origin_id) {
+        // use the original value, if nothing has changed
+        return origin_id;
+      }
+      // otherwise, get object_id from link_url
+      var result = urlToObjectIDSearcher.fromCache(obj.link_url());
+      return (result && result.id) || 0;
+    },
+    creative: true
   });
 
   

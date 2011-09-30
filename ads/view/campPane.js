@@ -90,8 +90,8 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
               } }
         ] },
 
-        { view: 'SearchInput', placeholder: "search campaigns",
-          pos: 'r:10px t:5px', buttonless: true,
+        { view: 'SearchInput', placeholder: "Search",
+          pos: 'r:10px t:0px', buttonless: true,
           visible: true, as: 'search',
           on: { keyup: fun.bindOnce(this._searchHandler, this) }
         }
@@ -101,7 +101,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
         init: { listView: DataTableList },
         editOnEnter: true, redrawOnModelChange: true,
         addClass: 'campPane-data', id: 'campPane-data',
-        pos: 'l:0 r:0 t:32px b:246px',
+        pos: 'l:0 r:0 t:32px b:261px',
         multiselect: true, debounce: 42, columns: [
           { desc: 'Changed',
             key: 'isChanged', width: 20, maxWidth: 20, minWidth: 20,
@@ -135,13 +135,13 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
             editor: { view: StatusEditor }
           },
 
-          { label: 'Start Date', key: 'start_time',
+          { label: 'Start Date', key: 'adjusted_start_time',
             minWidth: 40, width: 80,
             compareFn: compare.dates,
             sortable: true,
             formatter: campFormatters.startDate },
 
-          { label: 'End Date', key: 'end_time',
+          { label: 'End Date', key: 'adjusted_end_time',
             width: 80, minWidth: 40,
             compareFn: compare.dates,
             sortable: true,
@@ -183,7 +183,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
          }
       },
 
-      { view: 'CampEditor', pos: 'h:245px l:0 r:0 b:0',
+      { view: 'CampEditor', pos: 'h:260px l:0 r:0 b:0',
         id: 'campEditor',
         persistent: {
           storage: require("../controller/app").App.userStorage(),

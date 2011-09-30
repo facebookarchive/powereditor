@@ -28,74 +28,74 @@ var dom = require("../../../uki-core/dom");
 var DemoLinkBuilder = require("../../lib/demoLinkBuilder");
 
 function changes(c, row) {
-    if (row.isNew()) { return '<i class="adPane-col-new"></i>'; }
-    if (c) { return '<i class="adPane-col-changes"></i>'; }
-    return '';
+  if (row.isNew()) { return '<i class="adPane-col-new"></i>'; }
+  if (c) { return '<i class="adPane-col-changes"></i>'; }
+  return '';
 }
 
 function status(s) {
-    return '<i class="adPane-status adPane-status_' +
-        (s || 1) + '"></i>';
+  return '<i class="adPane-status adPane-status_' +
+    (s || 1) + '"></i>';
 }
 
 function money(m, row) {
-    if (row.account()) {
-      var curcode = row.account().currency();
-      return formatters.createMoneyFormatter(2, curcode)(m);
-    }
+  if (row.account()) {
+    var curcode = row.account().currency();
+    return formatters.createMoneyFormatter(2, curcode)(m);
+  }
 }
 
 function errors(e) {
-    return '<i class="adPane-errors adPane-errors_' +
-        (e ? 'yes' : 'no') + '"></i>';
+  return '<i class="adPane-errors adPane-errors_' +
+    (e ? 'yes' : 'no') + '"></i>';
 }
 
 function destination(c, row) {
-    if (row.object_id()) {
-        var obj = row.object();
-        if (obj) {
-            return dom.escapeHTML(obj.name());
-        }
-        return row.object_id();
+  if (row.object_id()) {
+    var obj = row.object();
+    if (obj) {
+      return dom.escapeHTML(obj.name());
     }
-    return '';
+    return row.object_id();
+  }
+  return '';
 }
 
 function location(countries, row) {
-    if (countries.length == 1) {
-        var regions = row.regions();
-        if (regions.length) {
-            return countries[0] + ': ' +
-                utils.pluck(regions, 'name').join(', ');
-        }
-        var cities = row.cities();
-        if (cities.length) {
-            return countries[0] + ': ' +
-                utils.pluck(cities, 'name').join('; ');
-        }
+  if (countries.length == 1) {
+    var regions = row.regions();
+    if (regions.length) {
+      return countries[0] + ': ' +
+        utils.pluck(regions, 'name').join(', ');
     }
-    return countries.join(', ');
+    var cities = row.cities();
+    if (cities.length) {
+      return countries[0] + ': ' +
+        utils.pluck(cities, 'name').join('; ');
+    }
+  }
+  return countries.join(', ');
 }
 
 function age(_, row) {
-    var age_min = row.age_min(),
-        age_max = row.age_max();
-    if (age_min || age_max) {
-        age_min = age_min || 'Any';
-        age_max = age_max || 'Any';
-        return age_min + '&ndash;' + age_max;
-    }
-    return 'Any';
+  var age_min = row.age_min(),
+    age_max = row.age_max();
+  if (age_min || age_max) {
+    age_min = age_min || 'Any';
+    age_max = age_max || 'Any';
+    return age_min + '&ndash;' + age_max;
+  }
+  return 'Any';
 }
 
 function sex(_, row) {
-    var v = row.sex() + '';
-    if (v === '0') {
-        return 'All';
-    } else if (v === '1') {
-        return 'Men';
-    }
-    return 'Women';
+  var v = row.sex() + '';
+  if (v === '0') {
+    return 'All';
+  } else if (v === '1') {
+    return 'Men';
+  }
+  return 'Women';
 }
 
 function adlink(ad) {
@@ -103,16 +103,17 @@ function adlink(ad) {
   // current admanger format
   // adgroups.php#adgroup_id.6003130630363
   // adgroups.php?campaign_id={num}&act={num}#adgroup_id.{num}
-  if (!ad.isNew() && (!ad.adlink() || ad.isChanged())) {
+  if (ad.isNew && !ad.isNew()) {
     var ad_link =
       '/ads/manage/adgroups.php?campaign_id=' + ad.campaign_id() +
       '&act=' + ad.account_id() + '#adgroup_id.' + ad.id();
     ad_link = 'http://www.facebook.com/' + ad_link;
-    var name = '<a target="_blank" href=' +
-      ad_link + '>' + dom.escapeHTML(ad.id()) + '</a>';
-    ad.adlink(name);
+    
+    return '<a target="_blank" href=' +
+      ad_link + '>' + ad.id() + '</a>';
+  } else {
+    return '';
   }
-  return ad.adlink() || ad.id();
 }
 
 function demolinks(_, ad) {
@@ -131,13 +132,22 @@ function demolinks(_, ad) {
   return null;
 }
 
-exports.adlink = adlink;
-exports.changes  = changes;
-exports.demolinks = demolinks;
-exports.status   = status;
-exports.money   = money;
-exports.errors   = errors;
+function lineNumber(c, row) {
+  if (row.is_bonus_line && row.is_bonus_line()) {
+    c = '<span class="adPane-bonus">' +
+        ' B ' + '</span>' + c;
+  }
+  return c;
+}
+
+exports.adlink      = adlink;
+exports.changes     = changes;
+exports.demolinks   = demolinks;
+exports.status      = status;
+exports.money       = money;
+exports.errors      = errors;
 exports.destination = destination;
-exports.location = location;
-exports.age      = age;
-exports.sex      = sex;
+exports.location    = location;
+exports.age         = age;
+exports.sex         = sex;
+exports.lineNumber  = lineNumber;

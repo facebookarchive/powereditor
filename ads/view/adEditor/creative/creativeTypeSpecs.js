@@ -9,6 +9,7 @@ var CREATIVE_VIEW_FIELDS = [
   "link_url",
   "title",
   "body",
+  "related_fan_page",
   "video_id",
   "video_hd",
   "poll_id",
@@ -18,7 +19,11 @@ var CREATIVE_VIEW_FIELDS = [
   "poll_answer_2",
   "poll_publish_to_page",
   "question_id",
-  "show_creative"
+  "show_creative",
+  "story_id",
+  "url_tags",
+  "thread_id",
+  "prompt"
 ];
 
 
@@ -37,13 +42,16 @@ function getDefaultCreativeDisplayMap(is_premium) {
   }
 
   if (is_premium) {
-    map['video_id'] = true;
-    map['video_hd'] = true;
+    map.video_id = true;
+    map.video_hd = true;
   }
 
-  map['link_url'] = true;
-  map['title'] = true;
-  map['body'] = true;
+  map.link_url = true;
+  map.title = true;
+  map.body = true;
+  if (!is_premium) {
+    map.related_fan_page = true;
+  }
   return map;
 }
 
@@ -51,7 +59,7 @@ function getCreativeDisplayMapByType(type, is_premium) {
   var map = _initCreativeDisplayMap();
   var fields = creativeUtil.getFieldsByType(type, is_premium);
 
-  for (var i = 0; i < fields.length; i++) {
+  for (var i = 0; fields && i < fields.length; i++) {
     map[fields[i]] = true;
   }
 

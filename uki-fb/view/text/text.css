@@ -28,26 +28,44 @@
 *
 */
 
-.ufb-text {
-  line-height: 16px;
+
+/* Size */
+.ufb-text_size-small > .ufb-text-content {
+  font-size: 9px;
 }
 
-.ufb-text_size-normal > .ufb-text-content {
+.ufb-text_size-medium > .ufb-text-content {
   font-size: 11px;
 }
 
 .ufb-text_size-large > .ufb-text-content {
-  line-height: 20px;
-  min-height: 20px;
-  padding-bottom: 2px;
-  vertical-align: bottom;
-  color: #1C2A47;
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 13px;
 }
 
-.ufb-text_size-medium > .ufb-text-content {
+.ufb-text_size-huge > .ufb-text-content {
+  font-size: 16px;
+}
+
+.ufb-text_size-giant > .ufb-text-content {
+  font-size: 18px;
+}
+
+
+/* Color */
+.ufb-text_color-black > .ufb-text-content {
   color: #333;
-  font-size: 13px;
+}
+
+.ufb-text_color-gray > .ufb-text-content {
+  color: #808080;
+}
+
+
+/* Weight */
+.ufb-text_weight-normal > .ufb-text-content {
+  font-weight: normal;
+}
+
+.ufb-text_weight-bold > .ufb-text-content {
   font-weight: bold;
 }

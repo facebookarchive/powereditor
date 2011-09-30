@@ -34,6 +34,7 @@ var Export = {};
 
 
 Export.handleCampaigns = function() {
+  require("../lib/loggingState").startFlow('export_campaigns');
   var campaigns = view.byId('campPane-data').selectedRows();
   var text = [Export.exportHeader(isCorpActSelected())];
   function processChunk() {
@@ -59,13 +60,17 @@ Export.handleCampaigns = function() {
         processChunk();
       });
     } else {
+      require("../lib/loggingState").startFlow('export_send_file_campaigns');
       Export.sendFile(text);
+      require("../lib/loggingState").endFlow('export_send_file_campaigns');
+      require("../lib/loggingState").endFlow('export_campaigns');
     }
   }
   processChunk();
 };
 
 Export.handleAds = function() {
+  require("../lib/loggingState").startFlow('export_ads');
   var ads = view.byId('adPane-data').selectedRows();
   var adIds = utils.pluck(ads, 'id');
   var text = [Export.exportHeader(isCorpActSelected())];
@@ -93,7 +98,10 @@ Export.handleAds = function() {
         });
       });
     } else {
+      require("../lib/loggingState").startFlow('export_send_file_ads');
       Export.sendFile(text);
+      require("../lib/loggingState").endFlow('export_send_file_ads');
+      require("../lib/loggingState").endFlow('export_ads');
     }
   }
   processChunk();

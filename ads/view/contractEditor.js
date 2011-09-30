@@ -95,9 +95,6 @@ var ContractEditor = view.newClass('ads.contractEditor', List, {
             io_number_label: 'IO Number:',
             io_number: { view: 'Text', size: 'large',  contract_link_io:
             'io_number'},
-            io_header_id_label: 'IO Header ID:',
-            io_header_id: { view: 'Text', size: 'large',
-              contract_key: 'io_header_id' },
             status_label: 'Status:',
             status: { view: 'Text', size: 'large', contract_key: 'status' },
             advertiser_label: 'Advertiser:',

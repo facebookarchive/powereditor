@@ -87,6 +87,7 @@ var Head = view.newClass('ads.Head', Container, {
   _ondownload: function(e) {
     if (e && e.baseEvent.altKey) {
       db.drop(!e.shiftKey, fun.bind(function() {
+        require("../controller/app").App.userStorage().cleanup();
         location.reload();
       }, this));
       return;

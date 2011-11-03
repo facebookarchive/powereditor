@@ -116,22 +116,6 @@ function adlink(ad) {
   }
 }
 
-function demolinks(_, ad) {
-  if (!ad.isNew()) {
-    // profile, home
-    var demo_links = DemoLinkBuilder.getDemoLinks(ad);
-    var rendered_links = [];
-    rendered_links.push('<a class="adPane-link" target="_blank" href=' +
-      demo_links.PROFILE + '>Profile</a>');
-    if (ad.isCorporate()) {
-      rendered_links.push('<a class="adPane-link" target="_blank" href=' +
-        demo_links.HOME + '>Home</a>');
-    }
-    return rendered_links.join(', ');
-  }
-  return null;
-}
-
 function lineNumber(c, row) {
   if (row.is_bonus_line && row.is_bonus_line()) {
     c = '<span class="adPane-bonus">' +
@@ -140,14 +124,21 @@ function lineNumber(c, row) {
   return c;
 }
 
+function targets(c, row) {
+  if (row.targets && row.targets()) {
+    return '<span title="' + c + '">' + c + '</span>';
+  }
+  return c;
+}
+
 exports.adlink      = adlink;
 exports.changes     = changes;
-exports.demolinks   = demolinks;
 exports.status      = status;
 exports.money       = money;
 exports.errors      = errors;
 exports.destination = destination;
 exports.location    = location;
+exports.targets      = targets;
 exports.age         = age;
 exports.sex         = sex;
 exports.lineNumber  = lineNumber;

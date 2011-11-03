@@ -22,18 +22,39 @@
 *
 */
 
-.DSPricing-impression .ufb-text {
-    display: inline;
-}
+var view  = require("../../../uki-core/view");
 
-.DSPricing-input {
-    width: 80px;
-}
+var CampaignUtils = {
+  getChangedDirectly: function() {
+    var camps = view.byId('content').campaigns();
 
-.DSPricing-long-input {
-    width: 300px;
-}
+    // filter changed camps that need to be uploaded
+    var changed = camps.filter(function(c) {
+      return c.isChangedSelf();
+    });
 
-.DSPricing-textarea {
-    width: 300px;
-}
+    return changed;
+  },
+
+  getChanged: function() {
+    var camps = view.byId('content').campaigns();
+
+    // filter changed camps that need to be uploaded
+    var changed = camps.filter(function(c) {
+      return c.isChanged();
+    });
+
+    return changed;
+  },
+
+  haveErrors: function(camps) {
+    var errors = 0;
+
+    camps.forEach(function(c) {
+      if (c.hasErrors()) { errors++; }
+    });
+    return (errors > 0);
+  }
+
+};
+exports.CampaignUtils = CampaignUtils;

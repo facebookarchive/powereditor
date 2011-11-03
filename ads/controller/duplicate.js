@@ -22,13 +22,17 @@
 *
 */
 
-var view = require("../../uki-core/view");
-
-var Ad = require("../model/ad").Ad;
-var Campaign = require("../model/campaign").Campaign;
-var CampImporterJob = require("../job/campImporter").Importer;
-var AdImporterJob = require("../job/adImporter").Importer;
-
+var view = require("../../uki-core/view"),
+  env = require("../../uki-core/env"),
+  utils = require("../../uki-core/utils"),
+  models = require("../models"),
+  Ad = require("../model/ad").Ad,
+  Campaign = require("../model/campaign").Campaign,
+  CampImporterJob = require("../job/campImporter").Importer,
+  AdImporterJob = require("../job/adImporter").Importer,
+  Paste = require("./paste").Paste,
+  DuplicateUtils =
+    require("./duplicate/DuplicateUtils").DuplicateUtils;
 
 /**
 * Duplicate all selected ads
@@ -47,19 +51,24 @@ Duplicate.duplicateAdsHandler = function() {
     return;
   }
 
-  var newAds = ads.map(function(ad) {
-    return new Ad()
-      .muteChanges(true)
-      .fromDBObject(ad.toDBObject())
-      .id('')
-      .muteChanges(false);
+  var account = ads[0].account();
+  Paste.selectCampaign(account, function(campaign) {
+    var newAds = ads.map(function(ad) {
+      return new Ad()
+        .muteChanges(true)
+        .fromDBObject(ad.toDBObject())
+        .id('')
+        .campaign_id(campaign.id())
+        .muteChanges(false);
+    });
+
+    var importer = new AdImporterJob(account, newAds, []);
+    importer
+      .useNameMatching(false)
+      .oncomplete(function() { view.byId('adPane').refreshAndSelect(newAds); })
+      .start();
   });
 
-  var importer = new AdImporterJob(ads[0].account(), newAds, []);
-  importer
-    .useNameMatching(false)
-    .oncomplete(function() { view.byId('adPane').refreshAndSelect(newAds); })
-    .start();
 };
 
 Duplicate.duplicateCampsHandler = function() {
@@ -72,20 +81,46 @@ Duplicate.duplicateCampsHandler = function() {
     return;
   }
 
-  var newCamps = camps.map(function(camp) {
-    return new Campaign()
-      .muteChanges(true)
-      .fromDBObject(camp.toDBObject())
-      .id('')
-      .muteChanges(false);
-  });
+  var account = camps[0].account();
 
-  var importer = new CampImporterJob(camps[0].account(), newCamps, []);
+  DuplicateUtils.cloneCampaignsWithAds(camps, function(new_campaigns, new_ads) {
+    // if the account has a contract, allow the user to select the topline
+    // to duplicate into (if the user wants to duplicate the campaign
+    // into a different account, they need to use "paste" and pre-select
+    // the topline)
+    if (account.hasContract()) {
+      require("./paste").Paste.selectTopline(account,
+          function(line_number) {
+        Duplicate._importCampaigns(
+          account, new_campaigns, new_ads, line_number);
+        });
+    } else {
+      Duplicate._importCampaigns(account, new_campaigns, new_ads, null);
+    }
+  });
+};
+
+/**
+ * just a helper function
+ */
+Duplicate._importCampaigns = function(
+  account, new_campaigns, new_ads, line_number) {
+
+  var importer = new CampImporterJob(
+    account, line_number, new_campaigns, []);
   importer
     .useNameMatching(false)
+    .ads(new_ads)
     .oncomplete(function() {
-      require("./app").App.reload();
-      require("../lib/loggingState").endFlow('duplicate_campaigns');
+      Campaign.prepare(function() {
+        var adimporter = new AdImporterJob(account, new_ads, []);
+          adimporter.useNameMatching(false);
+          adimporter.oncomplete(function() {
+            require("./app").App.reload();
+            require("../lib/loggingState").endFlow('duplicate_campaigns');
+            });
+          adimporter.start();
+      });
     })
     .start();
 };

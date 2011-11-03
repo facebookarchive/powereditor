@@ -195,7 +195,8 @@ var ImageSelectorDialog = fun.newClass(Dialog, {
   _fileChange: function(e) {
     var file = this._fileInput.files()[0];
     if (!file || file.type.indexOf('image/') !== 0) {
-      alert('Please select an image');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:no-image-selected'));
       this._fileInput.value('');
       return;
     }

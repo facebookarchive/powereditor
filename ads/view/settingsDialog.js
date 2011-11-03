@@ -35,13 +35,22 @@ var controls = require("./controls");
 var PaneMap = {
   'adPane': 0,
   'campPane': 1,
-  'contractPane': 2
+  'contractPane': 2,
+  // default to adPane.
+  'accountPane' : 0
  };
 
+var PREFIX_KEY = 'settingIndexes:';
 var SettingsDialog = view.newClass('ads.SettingsDialog', Dialog,
   require("../lib/loggingState").getMixinForDialog('Settings Dialog'), {
 
+  userStorage: fun.newProp('userStorage'),
   _createDom: function(initArgs) {
+    if (!this.userStorage()) {
+      var userStorage = require("../controller/app").App.userStorage();
+      this.userStorage(userStorage);
+    }
+
     Dialog.prototype._createDom.call(this, initArgs);
     this.closeOnEsc(true);
     this.addClass('settingsDialog');
@@ -94,10 +103,12 @@ var SettingsDialog = view.newClass('ads.SettingsDialog', Dialog,
       case 'adPane':
       case 'campPane':
       case 'contractPane':
+      case 'accountPane' :
         paneType = PaneMap[paneName];
         break;
       default:
-        alert('not supported pane type');
+        require("../../uki-fb/view/dialog").Dialog
+          .alert(tx('ads:pe:generic-invalid-type'));
         break;
     }
     this._collection.view('pill-list').selected(paneType);
@@ -114,22 +125,26 @@ var SettingsDialog = view.newClass('ads.SettingsDialog', Dialog,
 
   _onshow: function() {
     this._collection.view('ad-columns')
-      .values(view.byId('adPane-data').visibleColumnIndexes());
+      .values(view.byId('adPane-data').visibleColumnKeys());
     this._collection.view('camp-columns')
-      .values(view.byId('campPane-data').visibleColumnIndexes());
+      .values(view.byId('campPane-data').visibleColumnKeys());
     this._collection.view('topline-columns')
-      .values(view.byId('topline-table').visibleColumnIndexes());
+      .values(view.byId('topline-table').visibleColumnKeys());
   },
 
   _dialogOk: function() {
     this.visible(false);
 
-    view.byId('adPane-data').visibleColumnIndexes(
-      this._collection.view('ad-columns').values());
-    view.byId('campPane-data').visibleColumnIndexes(
-      this._collection.view('camp-columns').values());
-    view.byId('topline-table').visibleColumnIndexes(
-      this._collection.view('topline-columns').values());
+    var ad_columns = this._collection.view('ad-columns').values();
+    view.byId('adPane-data').visibleColumnKeys(ad_columns);
+    var camp_columns = this._collection.view('camp-columns').values();
+    view.byId('campPane-data').visibleColumnKeys(camp_columns);
+    var topline_columns = this._collection.view('topline-columns').values();
+    view.byId('topline-table').visibleColumnKeys(topline_columns);
+
+    this.userStorage().setItem(PREFIX_KEY + 'adPane', ad_columns);
+    this.userStorage().setItem(PREFIX_KEY + 'campPane', camp_columns);
+    this.userStorage().setItem(PREFIX_KEY + 'contractPane', topline_columns);
   }
 
 });

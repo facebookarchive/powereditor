@@ -23,28 +23,14 @@
 */
 
 
-// directly copied from the ads_run_status class
-// (note delivery status should not be used in the api environment)
-var ACTIVE = 1;
-var PAUSED = 2;
-var DELETED = 3;
-var PENDING_REVIEW = 4;
-var DISAPPROVED = 5;
-var PREAPPROVED = 6;
-var PENDING_BILLING_INFO = 7;
-var CAMPAIGN_PAUSED = 8;
-var ADGROUP_PAUSED = 9;
-var DRAFT = 10;
-
-var INVALID = 0;
-
-exports.INVALID = INVALID;
-exports.ACTIVE = ACTIVE;
-exports.PAUSED = PAUSED;
-exports.DELETED = DELETED;
-exports.PENDING_REVIEW = PENDING_REVIEW;
-exports.PREAPPROVED = PREAPPROVED;
-exports.PENDING_REVIEW = PENDING_REVIEW;
-exports.CAMPAIGN_PAUSED = CAMPAIGN_PAUSED;
-exports.ADGROUP_PAUSED = ADGROUP_PAUSED;
-exports.DRAFT = DRAFT;
+exports.INVALID = 0;
+exports.ACTIVE = 1;
+exports.PAUSED = 2;
+exports.DELETED = 3;
+exports.PENDING_REVIEW = 4;
+exports.DISAPPROVED = 5;
+exports.PREAPPROVED = 6;
+exports.PENDING_BILLING_INFO = 7;
+exports.CAMPAIGN_PAUSED = 8;
+exports.ADGROUP_PAUSED = 9;
+exports.DRAFT = 10;

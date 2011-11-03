@@ -27,70 +27,88 @@ var fun = require("../../uki-core/function"),
     dom = require("../../uki-core/dom"),
     view = require("../../uki-core/view"),
 
-    Mustache = require("../../uki-core/mustache").Mustache,
     Base     = require("../../uki-core/view/base").Base,
+    creativespec = require("./adEditor/creative/creativeTypeSpecs"),
 
-    objectFetcher = require("../lib/fetcher").objectFetcher;
+    // timeout period to request adpreview api
+    DEBOUNCE_TIME = 200;
 
+/**
+ * update ad preview given ad and calling context.
+ * if at time of invocation current ad differs from
+ * original ad, then abort.
+ */
+function updateAdPreview(origAd, context) {
+  var ad = context.model();
+  // do not make submit request if it's not the current ad
+  if (origAd != ad) {
+    return;
+  }
+  var adpreview_api_path = '/act_' + ad.account_id() + '/adpreviews/';
+  context.getAdPreviewRequestParam(ad, function(params) {
+    FB.api(
+      adpreview_api_path,
+      params,
+      fun.bind(function(response) {
+        // if viewer moved on to another ad, do not
+        // load preview because it will be the wrong one
+        if (context.model() != ad) {
+          return;
+        }
+        // innerHTML is safe here because markup comes from our API
+        var ad_markup = response[0];
+        context._dom.innerHTML = ad_markup;
+        // indicate no longer loading
+        context.loading(false);
+      }, context)
+    );
+  });
+}
 
 var AdPreview = view.newClass('ads.AdPreview', Base, {
-
-    _template: requireText('adPreview/adPreview.html'),
-
 
     _createDom: function() {
         this._dom = dom.createElement('div', { className: 'fbEmu' });
     },
 
+    // toggle whether adpreview is loading
+    loading: view.newToggleClassProp('adPreview-loading'),
+
     model: fun.newProp('model', function(v) {
         if (this._model) {
             this._model.removeListener('change',
-                fun.bindOnce(this._modelChange, this));
+                fun.bindOnce(this._onModelChange, this));
         }
         this._model = v;
         if (v) {
             this._model.addListener('change',
-                fun.bindOnce(this._modelChange, this));
+                fun.bindOnce(this._onModelChange, this));
         }
-        this._modelChange();
+        this._onModelChange();
     }),
 
-    _modelChange: function() {
-      var ad = this.model();
-      var likeUrl = toDataUri('./adPreview/like_on.gif');
-      var object_id = ad.object_id();
-      var object = ad.object();
-      var relatedObject = null;
-      if (ad.type() == 1) {
-        object_id = ad.related_fan_page();
-        if (object_id) {
-          relatedObject = objectFetcher.fromCache(object_id);
-          if (!relatedObject) {
-            // not in cache, because cached result is guaranteed to be nonempty.
-            // delay loading. refresh preview again once data loading completes.
-            objectFetcher.fetch(object_id,
-                                fun.bindOnce(this._modelChange, this));
-          }
-        }
-        if (!relatedObject || !relatedObject.name) {
-          relatedObject = {name: 'a Related Fan Page', link: '' };
-        }
-        relatedObject.link = relatedObject.link || '';
+    // returns adpreview api request parameters
+    getAdPreviewRequestParam: function(ad, callback) {
+      creativespec.getAdPreviewCreativeSpec(ad, function(spec) {
+        callback({creative: spec});
+      });
+    },
+
+    // model changed, trigger ad preview
+    _onModelChange: function() {
+      // begin loading if single ad is selected
+      // in that case .id() should give a valid non-empty
+      // numeric string
+      var oriAd = this.model();
+      this._dom.innerHTML = '';
+      if (oriAd.id() === '') {
+        return;
       }
-
-      require("../model/image").Image.imageUrl(
-          ad,
-          fun.bindOnce(function(url) {
-
-          ad.image_url(url);
-          this._dom.innerHTML = Mustache.to_html(this._template, {
-              ad: ad,
-              like: (!!object_id && (!object || object.type() != 2)) ||
-                     (ad.type() == 1 && ad.related_fan_page()),
-              like_img: likeUrl,
-              related_object: relatedObject
-          });
-      }, this));
+      this.loading(true);
+      // coalesce subsequent calls within DEBOUNCE_TIME
+      // beforce invoke callback function
+      var deb = fun.throttle(updateAdPreview, DEBOUNCE_TIME);
+      deb(oriAd, this);
     }
 });
 

@@ -107,17 +107,30 @@ module.exports = {
     // client rect adjusted to window scroll
     clientRect: function(elem, ignoreScroll) {
         var rect = elem.getBoundingClientRect();
+        rect = {
+            // FF doesn't round the top/bottom coordinates.
+            top:    Math.round(rect.top),
+            bottom: Math.round(rect.bottom),
+            left: rect.left,
+            right: rect.right
+        };
+        // IE 8 doesn't give you width nor height
+        rect.width = rect.right - rect.left;
+        rect.height = rect.bottom - rect.top;
+
         if (ignoreScroll) { return rect; }
 
         var body = env.doc.body,
-            scrollTop  = env.root.pageYOffset || body.scrollTop,
-            scrollLeft = env.root.pageXOffset || body.scrollLeft;
-        return {
-            top: rect.top  + scrollTop,
-            left: rect.left + scrollLeft,
-            width: rect.width,
-            height: rect.height
-        };
+            docElem = env.docElem,
+            scrollTop  =
+              env.root.pageYOffset || body.scrollTop ||
+              (docElem && docElem.scrollTop) || 0,
+            scrollLeft =
+              env.root.pageXOffset || body.scrollLeft ||
+              (docElem && docElem.scrollLeft) || 0;
+        rect.top += scrollTop;
+        rect.left += scrollLeft;
+        return rect;
     },
 
     hasClass: function(elem, className) {

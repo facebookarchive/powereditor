@@ -90,13 +90,13 @@ var ContractEditor = view.newClass('ads.contractEditor', List, {
           { view: 'HTMLLayout',
             template: requireText('contractEditor/contractEditorLeft.html'),
             content: {
+            io_name_label: 'Name:',
+            io_name: { view: 'Text',  contract_key: 'campaign_name' },
             act_id_label: 'Ad Account:',
             act_id: { view: 'Text',  size: 'large', contract_link_act: 'id' },
             io_number_label: 'IO Number:',
             io_number: { view: 'Text', size: 'large',  contract_link_io:
             'io_number'},
-            status_label: 'Status:',
-            status: { view: 'Text', size: 'large', contract_key: 'status' },
             advertiser_label: 'Advertiser:',
             advertiser: { view: 'Text', size: 'normal',
               contract_key: 'advertiser_name' },
@@ -125,6 +125,8 @@ var ContractEditor = view.newClass('ads.contractEditor', List, {
             actmgr_name: { view: 'Text',  size: 'normal',
               contract_key: 'account_mgr_name' },
 
+            status_label: 'Status:',
+            status: { view: 'Text', size: 'normal', contract_key: 'status' },
             currency_label: 'Currency:',
             currency: { view: 'Text',  size: 'normal',
               contract_key: 'currency' },

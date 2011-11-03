@@ -130,7 +130,7 @@ var Topline = storage.newStorage(Validatable, {
 
     campsByTopline = Topline.byId(this.id()).children().
       filter(function(c) {
-        return (c.line_id() && c.line_id() == this.id());
+        return (c.idx_line_id() && c.idx_line_id() == this.id());
     }, this);
 
     return campsByTopline;
@@ -201,15 +201,15 @@ var Topline = storage.newStorage(Validatable, {
 
     // calcuate the time pass percentage
     var line_perc_complete = 0;
-    if (now < this.flight_start_date().getTime()) {
+    if (now < this.shifted_flight_start_date().getTime()) {
       line_perc_complete = 0;
     } else if (now > this.shifted_flight_end_date().getTime()) {
       line_perc_complete = 1;
     } else {
       line_perc_complete =
-        (now - this.flight_start_date().getTime()) /
+        (now - this.shifted_flight_start_date().getTime()) /
         (this.shifted_flight_end_date().getTime() -
-          this.flight_start_date().getTime()
+          this.shifted_flight_start_date().getTime()
         );
     }
 
@@ -347,6 +347,14 @@ Topline.addProp({
     name: 'is_bonus_line',
     remote: true, db: true
 });
+
+Topline.addProp({
+    name: 'allow_price_override',
+    getValue: function(obj) {
+      return (obj.func_price() * 1 === 0 &&
+       obj.is_bonus_line());
+    }
+});
 /**
  * To clarify when to use what kinds of times:
  * (more about campaign properties commented in campaign.js)
@@ -356,6 +364,9 @@ Topline.addProp({
  *   properly reflects the time in the account timezone. Therefore, these model
  *   properties should be compared against the "adjusted" time props in
  *   Campaign and other times reflected to be in the account timezone.
+ *
+ * - adjusted_flight_start/adjusted_flight_end are timestamp
+ *   under account's timezone
  *
  * - shifted_flight_end_date is like flight_end_date in that it should be
  *   compared against "adjusted" time props. The only difference between normal
@@ -375,6 +386,41 @@ Topline.addProp({
 });
 
 /**
+ * AdjustedTimestamp converts timestamps between local browser
+ * timezone and an account's specified timezone.
+ */
+Topline.addProp({
+  type: props.AdjustedTimestamp,
+  name: 'adjusted_flight_start_date',
+  isEndTime: false,
+  originalName: 'flight_start_date'
+});
+
+Topline.addProp({
+  type: props.AdjustedTimestamp,
+  name: 'adjusted_flight_end_date',
+  isEndTime: true,
+  originalName: 'flight_end_date'
+});
+
+
+/**
+ * shifted_flight_start_date is simply the timestamp with the same date as
+ * the flight_start_date, except pushed to time of 12:00AM of that day.
+ */
+Topline.addProp({
+    name: 'shifted_flight_start_date',
+    getValue: function(obj) {
+      // OL parity start_date will be the start of that day
+      // flight_start_date always is the start of that day
+      // set to 12:00AM
+      var out = new Date(obj.adjusted_flight_start_date().getTime());
+      out.setHours(00, 00);
+      return out;
+    }
+});
+
+/**
  * shifted_flight_end_date is simply the timestamp with the same date as
  * the flight_end_date, except pushed to time of 11:59PM of that day.
  */
@@ -384,7 +430,7 @@ Topline.addProp({
       // OL parity end_date will be the end of that day
       // flight_end_date always is the start of that day
       // set to 11:59PM
-      var out = new Date(obj.flight_end_date().getTime());
+      var out = new Date(obj.adjusted_flight_end_date().getTime());
       out.setHours(23, 59);
       return out;
     }
@@ -560,7 +606,7 @@ Topline.getIdbyLineNumber = function(act_id, number) {
       t.line_number() == number);
   }, this);
   if (line[0]) {
-    return line[0].line_id();
+    return line[0].id();
   } else {
     return null;
   }
@@ -587,7 +633,7 @@ Topline.campsForTopline = function(id, callback) {
     'account_id', topline.account_id(), function(camps) {
 
       var campsByTopline = camps.filter(function(c) {
-        return (c.line_id() && c.line_id() == topline.id());
+        return (c.idx_line_id() && c.idx_line_id() == topline.id());
       }, this);
 
       callback(campsByTopline);

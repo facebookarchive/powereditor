@@ -255,6 +255,7 @@ var Campaign = storage.newStorage(Changeable, Validatable, TabSeparated, {
 
   searchFields: function() {
     return [
+      'id',
       'name',
       'description',
       'io_name'
@@ -480,7 +481,7 @@ Campaign.addProp({
   validate: function(obj) {
     if (obj.isFromTopline()) {
       var start_time = obj.adjusted_start_time().getTime();
-      var error = start_time < obj.flight_start_date().getTime();
+      var error = start_time < obj.shifted_flight_start_date().getTime();
       obj.toggleError(
         error,
         'start_time',
@@ -829,7 +830,9 @@ Campaign.addProp({
 fun.delegateProp(Campaign.prototype, [
     'product_type', 'ad_type',
     'flight_start_date', 'flight_end_date',
+    'adjusted_flight_start_date', 'adjusted_flight_end_date',
     'shifted_flight_end_date',
+    'shifted_flight_start_date',
     'uom', 'func_price',
     'func_line_amount', 'func_cap_amount',
     'description', 'targets',
@@ -864,13 +867,28 @@ function fix(store) {
     }
   });
 
+  if (!this.isNew()) {
+    // assure that the line_number set to original
+    // line_number for existing campaigns
+    store.line_number = this.original().line_number;
+  }
+
+  if (this.topline() && this.topline().allow_price_override()) {
+    if (store.line_number) {
+      store.io_number = this.io_number();
+    }
+    // keep the impression and budget number untouched.
+    store.external_bid = 0;
+    return;
+  }
+
   // patch the impression number for dso campaigns.
   delete store.lifetime_imps;
   delete store.daily_imps;
   if (store.line_number) {
 
     store.io_number = this.io_number();
-    var func_price = this.func_price();
+    var func_price = this.func_price() * 1;
     if (func_price) {
       if (this.campaign_type() == campConst.CAMP_MOO_TYPE) {
         if (store.daily_budget) {
@@ -889,6 +907,11 @@ function fix(store) {
     // set the external_bid to be the line price.
     store.external_bid = func_price ?
       func_price * 100 : 0;
+  }
+
+  if (!this.isNew()) {
+    // assure that the io_number unset
+    delete store.io_number;
   }
 }
 
@@ -987,8 +1010,8 @@ Campaign.create = function(parent, lineNumber) {
   de.setTime(0);
 
   if (topline) {
-   ds = topline.flight_start_date() > ds ?
-     topline.flight_start_date() : ds;
+   ds = topline.shifted_flight_start_date() > ds ?
+     topline.shifted_flight_start_date() : ds;
 
    de = topline.shifted_flight_end_date();
    // dso contract/topline specific field
@@ -1003,8 +1026,15 @@ Campaign.create = function(parent, lineNumber) {
 
   // negative id => ad is new
   camp.id(- new Date() - (env.guid++))
-    // $10 hardcoded
-    .daily_budget(1000)
+    //
+    // by default $10 for daily and $350 for lifetime
+    // for topline related campaign, make it default to
+    // lifetime_budget and moo_type.
+    //
+    .budget_type(topline ? 'l' : 'd')
+    .campaign_type(topline ?
+      campConst.CAMP_MOO_TYPE : campConst.CAMP_CLASSIC_TYPE)
+
     // we should have account here
     .account_id(account_id)
     // active
@@ -1012,6 +1042,12 @@ Campaign.create = function(parent, lineNumber) {
     .adjusted_start_time(ds)
     .adjusted_end_time(de);
 
+  // for the first campaign of the line, assign all the line
+  // budget to it.
+  if (topline && topline.getCampaigns().length === 0 &&
+    camp.budget_type() == 'l') {
+    camp.lifetime_budget(topline.func_line_amount() * 100);
+  }
   return camp;
 };
 

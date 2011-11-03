@@ -124,14 +124,21 @@ proto._render = function() {
     var data = this._contentToPlaceholders(this.content());
     this.dom().innerHTML = Mustache.to_html(this.template(), data);
     var count = 0;
-    utils.toArray(this.dom().getElementsByClassName(PLACEHOLDER_CLASSNAME))
-        .forEach(function(el) {
+    var els = [];
+    var divs = this.dom().getElementsByTagName('div');
+    for (var i = 0; i < divs.length; i++) {
+      if (divs[i].className.indexOf(PLACEHOLDER_CLASSNAME) != -1) {
+        els.push(divs[i]);
+      }
+    }
+    utils.forEach(els, function(el) {
 
         var key   = el.getAttribute('data-path'),
             child = utils.path2obj(key, this.content());
 
         child._viewIndex = count++;
         child.parent(this);
+
         el.parentNode.replaceChild(child.dom(), el);
         this._childViews.push(child);
     }, this);

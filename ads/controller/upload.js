@@ -22,410 +22,197 @@
 *
 */
 
-var view  = require("../../uki-core/view"),
-    utils = require("../../uki-core/utils"),
+var utils = require("../../uki-core/utils"),
     fun   = require("../../uki-core/function"),
-    build = require("../../uki-core/builder").build,
-
-    asyncUtils = require("../../lib/async"),
-    adsConnect = require("../../lib/connect"),
-    FB = adsConnect.FB,
-    graphlink = require("../../lib/graphlink").gl,
-    pathUtils = require("../../lib/pathUtils"),
 
     App = require("./app").App,
     UploadDialog = require("../view/uploadDialog").UploadDialog,
+    CampaignUtils = require("../model/campaign/CampaignUtils").CampaignUtils,
 
-    models = require("../models");
-
-
-var dialog = null;
-
+    UploadUtils = require("./upload/UploadUtils").UploadUtils,
+    CampaignUploader =
+      require("./upload/CampaignUploader").CampaignUploader,
+    AdUploader =
+      require("./upload/AdUploader").AdUploader,
+    ImageUploader =
+      require("./upload/ImageUploader").ImageUploader,
+    UploaderState =
+      require("./upload/PowerEditorUploaderState").UploaderState;
 
 /**
-* Upload camps and ads back to server
-* Create new ones, update existing
-* Resolve issues with images.
-*
-* TODO: support separate creative update/create
-*/
+ * Upload camps and ads back to server
+ * Create new ones, update existing
+ * Resolve issues with images.
+ */
 var Upload = {
-  stopped: false,
-
-  uploaded: 0,
-  ads: 0,
-  campaigns: 0,
-
+  /**
+   * this function delegates its implementation to an instance of
+   * the "PowerEditorUploader" class.
+   */
   handleUpload: function() {
-    Upload.stopped = false;
-    Upload.uploaded = Upload.ads = Upload.campaigns = 0;
-
-    createDialog();
-    dialog.reset().visible(true);
-
-    var camps = view.byId('content').campaigns();
-    var errors = 0;
-    var changes = 0;
-
-    camps.forEach(function(c) {
-      if (c.hasErrors()) { errors++; }
-      if (c.isChanged()) { changes++; }
-    });
-    if (!changes) {
-      dialog.notifyNoChanges();
-    } else if (errors) {
-      dialog.confirmContinueWithErrors();
-    } else {
-      start();
-    }
+    var power_editor_uploader = new PowerEditorUploader();
+    power_editor_uploader.start();
   }
 };
 
-function updateProgress() {
-  dialog.updateProgress(Upload.uploaded, Upload.ads, Upload.campaigns);
-}
+var PowerEditorUploader = fun.newClass({
+  _nAds: 0,
+  _nCampaigns: 0,
+  _dialog: null,
+  _nUploaded: 0,
 
-function stop() {
-  Upload.stopped = true;
-}
+  init: function() {
+    this._dialog = null;
+    UploaderState.stopped = false;
+    this._nAds = 0;
+    this._nCampaigns = 0;
+    this._nUploaded = 0;
+  },
 
-function createDialog() {
-  if (dialog) { return; }
-  dialog = new UploadDialog();
-  dialog
-    .on('continueWithErrors', start)
-    .on('stop', stop);
-}
+  /**
+   * Displays the upload dialog, and hands off to "uploadAll"
+   */
+  start: function() {
+    // try to see if we created this earlier.
+    this._dialog = UploaderState.dialog;
 
-function complete() {
-  dialog.notifyComplete();
-  App.reload();
-}
+    // if not, create it now. :)
+    if (!this._dialog) {
+      UploaderState.dialog =
+        this._dialog = new UploadDialog();
+    }
 
-/**
- * Upload all ads and withing selected camps + upload selected camps
- */
-function start() {
-  var camps = view.byId('content').campaigns();
+    this._dialog.reset();
+    var changed_campaigns = CampaignUtils.getChanged();
 
-  // filter changed camps that need to be uploaded
-  var changedCamps = camps.filter(function(c) {
-    return c.isChangedSelf();
-  });
+    this._dialog.on('continueWithErrors',
+      fun.bind(this._uploadAll, this, changed_campaigns))
+      .on('stop', UploaderState.signalStopped);
+    this._dialog.visible(true);
 
-  for (var i = 0; i < changedCamps.length; i++) {
-    var c = changedCamps[i];
-    if (c.hasContract() && !c.isFromTopline()) {
-      // IO-backed account's campaign needs to be attached to a topline
-      var message = 'Campaigns of ' + c.account().name() +
-        ' must belong to a line. Please try to ' +
-        'select a line for the campaign.';
-      dialog.logError(message);
+    if (changed_campaigns.length === 0) {
+      this._dialog.notifyNoChanges();
       return;
     }
-  }
 
-  if (changedCamps.length) {
-    Upload.campaigns = changedCamps.length;
-    updateProgress();
-  }
-
-  uploadCamps(changedCamps, function() {
-    if (changedCamps.length) {
-      // if we createded/updated camps refetch them from db
-      models.Campaign.prepare(fun.bind(startAds, this, camps), true);
+    if (CampaignUtils.haveErrors(changed_campaigns)) {
+      this._dialog.confirmContinueWithErrors();
     } else {
-      startAds(camps);
+      this._uploadAll(changed_campaigns);
     }
-  });
-}
+  },
 
+  /**
+   * The heavy lifting happens here.  This is extracted out
+   * so it can be started either after the error dialog or not (see "start")
+   *
+   * (note - "changed_campaigns" is different than "changed_campaigns_directly")
+   */
+  _uploadAll: function(changed_campaigns) {
+    UploadUtils.getChangedAdsFromCampaigns(
+      changed_campaigns, fun.bind(function(ads) {
 
+      // as opposed to "changed_campaigns" which might not have changed
+      // but have changes in their child ads.
+      var changed_campaigns_directly = CampaignUtils.getChangedDirectly();
 
-/**
- * Upload selected camps one by one
- *
- * @param camps array of campaigns to upload
- * @param callback to be called after uploading is complete
- */
-function uploadCamps(camps, callback) {
-  if (Upload.stopped) { return; }
+      this._nAds = ads.length;
+      this._nCampaigns = changed_campaigns_directly.length;
+      this._updateProgress();
 
-  if (camps.length === 0) {
-    callback();
-    return;
+      // the "image_uploader" handles image uploading.
+      var image_uploader = new ImageUploader();
+      image_uploader
+        .setErrorHandler(fun.bindOnce(this._logErrorAndQuit, this))
+        .setProgressMessageHandler(
+          fun.bindOnce(this._setProgressMessage, this));
+
+      // the "campaign_uplader" handles campaign uploading
+      var campaign_uploader = new CampaignUploader();
+      campaign_uploader
+        .setErrorHandler(fun.bindOnce(this._logError, this))
+        .setProgressReportHandler(fun.bindOnce(this._incrCampaigns, this))
+        .setProgressMessageHandler(
+          fun.bindOnce(this._setProgressMessage, this));
+
+      // the "ad_uploader" handles ad uploading.
+      var ad_uploader = new AdUploader();
+      ad_uploader
+        .setErrorHandler(fun.bindOnce(this._logError, this))
+        .setProgressReportHandler(fun.bindOnce(this._incrAds, this))
+        .setProgressMessageHandler(fun.bindOnce(
+          this._setProgressMessage, this));
+
+      // upload all images...
+      image_uploader.uploadAllImages(fun.bind(function() {
+
+        // ... then upload all direct campaign changes.
+        campaign_uploader.uploadAllCampaigns(
+          changed_campaigns_directly,
+
+          // ... then upload all ads
+          fun.bind(ad_uploader.uploadAllAds,
+            ad_uploader, changed_campaigns,
+
+            // ... then, "stop"
+            fun.bindOnce(this._finish, this)));
+      }, this));
+    }, this));
+  },
+
+  /**
+   * called at the very end of the upload process,
+   * whether or not the upload finishes successfully
+   */
+  _finish: function() {
+     this._dialog.notifyComplete();
+     App.reload();
+  },
+
+  /**
+   * Logs an error
+   */
+  _logError: function(msg) {
+    this._dialog.logError(msg);
+  },
+
+  /**
+   * Logs an error, then quits
+   */
+  _logErrorAndQuit: function(msg) {
+    this._logError(msg);
+    this._finish();
+  },
+
+  _setProgressMessage: function(msg) {
+    this._dialog.updateProgressMessage(msg);
+    return this;
+  },
+
+  /**
+   * delegates to the UploadDialog
+   */
+  _updateProgress: function() {
+    this._dialog.updateProgress(
+      this._nUploaded, this._nAds, this._nCampaigns);
+    return this;
+  },
+
+  /**
+   * Increments the number of ads processed by "n"
+   */
+  _incrAds: function(n) {
+    this._nUploaded += n;
+    this._updateProgress();
+  },
+
+  /**
+   * Increments the number of campaigns processed by "n"
+   */
+  _incrCampaigns: function(n) {
+    this._nUploaded += n;
+    this._updateProgress();
   }
-
-  var camp = camps.slice(0, 1)[0];
-  camps = camps.slice(1);
-
-  
-
-  var next = fun.bind(function(data) {
-    
-
-    uploadCampsResponse.call(this, camp, camps, callback, data);
-  }, this);
-
-  if (camp.isNew()) {
-    FB.api(camp.graphCreatePath(), 'post', camp.dataForRemoteCreate(), next);
-  } else {
-    FB.api(camp.graphUpdatePath(), 'post', camp.dataForRemoteUpdate(), next);
-  }
-}
-
-/**
- * Process response from uploadCamps
- *
- * @param camp campaign being uploaded
- * @param camps remaining campaigns
- * @param callback to be callback after uploading is complete
- * @param r result of FB.api call
- */
-function uploadCampsResponse(camp, camps, callback, result) {
-  var next = fun.bind(uploadCamps, this, camps, callback);
-
-  Upload.uploaded++;
-  updateProgress();
-  // find errors
-  if (adsConnect.isError(result)) {
-    var data = {
-      name: camp.name(),
-      message: adsConnect.getErrorMessage(result).msg || ''
-    };
-
-    var message = camp.isNew() ?
-      tx('ads:pe:upload-fail-create-camp', data) :
-      tx('ads:pe:upload-fail-update-camp', data);
-
-    dialog.logError(message);
-    next();
-  } else {
-    // remove old camp before creating/updating new one
-    camp.removeSelf(function() {
-      graphlink.fetchObject(
-        '/' + (result.id || camp.id()),
-        {},
-        function(reloadedCampData) {
-          if (!reloadedCampData) {
-            dialog.logError(tx(
-              'ads:pe:upload-fail-download-updates-camp',
-              { name: camp.name() }));
-            next();
-            return;
-          }
-          var reloadedCamp = models.Campaign.createFromRemote(reloadedCampData);
-          function finish() {
-            reloadedCamp.changes(camp.changes());
-            reloadedCamp.store(next);
-          }
-          if (reloadedCamp.campaign_status() === 3) {
-            next();
-            return;
-          }
-
-          // if camp is new update all child ads
-          if (camp.isNew()) {
-            models.Ad.findAllBy('campaign_id', camp.id(), function(ads) {
-              camp.id(reloadedCamp.id());
-              ads.forEach(function(ad) {
-                ad.campaign_id(reloadedCamp.id());
-              });
-              models.Ad.storeMulti(ads, finish);
-            });
-          } else {
-            finish();
-          }
-        }
-      );
-    });
-  }
-};
-
-function uploadImages(ads, callback) {
-  // find local image hashes and corresponding images
-  var imageHashesMap = {};
-  var imageHashes = [];
-  ads.forEach(function(ad) {
-    var hash = ad.image_hash();
-    var key = ad.account_id() + '|' + hash;
-    if (models.Image.isHashLocal(hash)) {
-      if (!imageHashesMap[key]) {
-        imageHashesMap[key] = [];
-        imageHashes.push(hash);
-      }
-      imageHashesMap[key].push(ad);
-    }
-  });
-
-  // find local images by hashes
-  if (imageHashes.length) {
-    models.Image.findAllBy('id', imageHashes, function(images) {
-      images.prefetch();
-      asyncUtils.forEach(images, function(image, tmp, iteratorCallback) {
-        var ads = imageHashesMap[image.account_id() + '|' + image.id()];
-        // if images are from another account => skip
-        if (!ads[0]) {
-          iteratorCallback();
-          return;
-        }
-        // update remote image on the server
-        FB.api(
-          pathUtils.join('/act_' + image.account_id(), '/adimages'),
-          'POST', {
-            bytes: image.url().split(',')[1]
-          }, function(result) {
-            if (adsConnect.isError(result) ||
-              !result.images || !result.images.bytes) {
-              // if image uploading failed, fail the whole upload
-              dialog.logError(tx(
-                'ads:pe:upload-fail-image', {
-                  name: ads[0].name(),
-                  message: adsConnect.getErrorMessage(result).msg || ''
-              }));
-              complete();
-              return;
-            }
-            var bytes = result.images.bytes;
-
-            // update all local ads for the given image
-            ads.forEach(function(ad) {
-              ad.image_hash(bytes.hash).image_url(bytes.url);
-            });
-            models.Ad.storeMulti(ads, function() {
-              // update local image object
-              models.Image.updateImageHash(
-                image.account_id(),
-                image.id(),
-                bytes.hash,
-                bytes.url,
-                // move to the next image
-                iteratorCallback
-              );
-            });
-          });
-      }, callback);
-    });
-  } else {
-    callback();
-  }
-}
-
-
-/**
-* Setup ads uploading after finishing with camps
-*/
-function startAds(camps) {
-  models.Ad.findAllBy('campaign_id', utils.pluck(camps, 'id'), function(ads) {
-    ads = ads.filter(function(a) {
-      // only upload new ads without errors in real campaigns. if campaign
-      // creation failed, don't upload the associated ads.
-      return a.campaign_id() > 0 && a.isChanged() &&
-        (!a.hasErrors() || a.isDeleted());
-    });
-
-    Upload.ads = ads.length;
-    updateProgress();
-
-    if (!ads.length) {
-      // if no ads to upload finish here
-      complete();
-    } else {
-      uploadImages(ads, function() {
-        uploadAds(ads);
-      });
-    }
-  });
-}
-
-/**
-* Upload ads one by one
-*
-* @param ads array of ads to be uploaded
-*/
-function uploadAds(ads, originalAds) {
-  originalAds = originalAds || ads;
-  if (!Upload.stopped) {
-    var ad = ads.slice(0, 1)[0];
-    ads = ads.slice(1);
-    var next = fun.bind(uploadAdsResponse, this, ad, ads, originalAds);
-
-    if (ad.isNew()) {
-      FB.api(ad.graphCreatePath(), 'post', ad.dataForRemoteCreate(), next);
-    } else {
-      FB.api(ad.graphUpdatePath(), 'post', ad.dataForRemoteUpdate(), next);
-    }
-  }
-}
-
-/**
-* Process response of _uploadAds
-*
-* @param ad current uploaded ad
-* @param ads remaining ads
-* @param r FB.api call response
-*/
-function uploadAdsResponse(ad, ads, originalAds, result) {
-  var next = fun.bind(function() {
-    if (ads.length === 0) {
-      complete();
-    } else {
-      uploadAds(ads);
-    }
-  }, this);
-
-  Upload.uploaded++;
-  updateProgress();
-
-  if (adsConnect.isError(result)) {
-    var data = {
-      name: ad.name(),
-      message: adsConnect.getErrorMessage(result).msg || ''
-    };
-
-    var message = ad.isNew() ?
-      tx('ads:pe:upload-fail-create-ad', data) :
-      tx('ads:pe:upload-fail-update-ad', data);
-
-    dialog.logError(message);
-    next();
-  } else {
-    ad.resetCampaign();
-
-    // reload the ad from server after update/create
-    var path = '/' + (result.id || ad.id());
-    graphlink.fetchObject(path, {}, function(reloadedAdData) {
-
-      if (!reloadedAdData) {
-        dialog.logError(tx(
-          'ads:pe:upload-fail-download-updates-ad',
-          { name: ad.name() }));
-        next();
-        return;
-      }
-
-      var reloadedAd = models.Ad.createFromRemote(reloadedAdData);
-      if (reloadedAd.adgroup_status() === 3) {
-        ad.remove(next);
-        return;
-      }
-
-      var path = '/' + reloadedAd.creative_ids()[0];
-      graphlink.fetchObject(path, {}, function(creative) {
-        delete creative.name;
-        ad.remove(function() {
-          reloadedAd.muteChanges(true);
-          reloadedAd.fromRemoteObject(creative);
-          reloadedAd.initChangeable();
-          reloadedAd.validateAll();
-          reloadedAd.errors({});
-          reloadedAd.muteChanges(false);
-          reloadedAd.store(next);
-        });
-      });
-    });
-  }
-}
-
+});
 
 exports.Upload = Upload;

@@ -87,16 +87,29 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
       var curcode = this.model().account().currency();
       // imp_based or budget based
       this.imps_based = false;
-      if (this.model().isFromTopline()) {
-        this.imps_based = this.model().isImpressionBased();
 
+      if (this.model().isFromTopline()) {
+        var topline = this.model().topline();
+        var num_imps = null;
         var mf = formatters.createMoneyFormatter(2, curcode);
-        var price = this.model().topline().func_price();
-        var num_imps =
-          Math.round(1000 * this.content().budget_sum.value() / price);
+        if (topline.allow_price_override()) {
+           // do not use the func_price to auto-compute the imps and budget
+           // func_price the 1000 imps price defined for the line
+           // for some bonus line, the func_price is set to 0
+           // therefore, we will not use it to calculate the imps from
+           // budget, instead use whatever users input.
+           num_imps = this.model().imps();
+           this.content().cpm_price.text('Price: N/A');
+        } else {
+          this.imps_based = this.model().isImpressionBased();
+          var price = topline.func_price();
+          num_imps =
+            Math.round(1000 * this.content().budget_sum.value() / price);
+          this.content().cpm_price.text('Price: ' + mf(price));
+        }
+
         this.content().budget_ui_imps.value(num_imps);
         this.content().imps_label.visible(true);
-        this.content().cpm_price.text('Price: ' + mf(price));
       } else {
         this.content().budget_ui_imps.value('');
         this.content().cpm_price.text('');
@@ -109,6 +122,8 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
 
       // if none of the selected items are new, disable field
       this.content().campaign_type.disabled(!this.model().isNew());
+      // if none of the selected items are new, disable field
+      this.content().line_number.disabled(!this.model().isNew());
 
       // the selector should only be visible for new topline-attached camp
       this.content().budget_ui_imps.toggleClass
@@ -177,7 +192,7 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
         name_input: { view: 'TextInput', addClass: 'campEditor-name' },
         camp_link: { view: 'Text', addClass: 'campEditor-camplink' },
 
-        budget_label: {view: 'Base',
+        budget_label: { view: 'Base',
           initArgs: { tagName: 'span'}, text: 'Budget (USD):'},
         budget_sum: { view: 'TextInput', addClass: 'campEditor-num',
           on: { keyup: fun.bindOnce(this._budgetEdit, this) } },
@@ -238,19 +253,47 @@ var CampEditor = view.newClass('ads.CampEditor', Base, {
 
     _budgetEdit: function(e) {
       if (this.model().isFromTopline()) {
-        var price = this.model().topline().func_price();
+        var topline = this.model().topline();
+        if (topline.allow_price_override()) {
+          // if the line is a bouns line with no price
+          // we do not need to auto calculate its
+          // impressions based on the new budget number
+          return;
+        }
+
         var num_imps =
-          Math.round(1000 * this.content().budget_sum.value() / price);
+          Math.round(1000 * this.content().budget_sum.value() /
+            topline.func_price());
         this.content().budget_ui_imps.value(num_imps);
+
+        // allocation changes for all the campaigns
+        topline.getCampaigns().forEach(function(c) {
+          c.triggerChanges('unallocatedImps');
+        });
       }
     },
 
     _impsEdit: function(e) {
       if (this.model().isFromTopline()) {
-        var price = this.model().topline().func_price();
-        var budget = this.content().budget_ui_imps.value() / 1000 * price;
+        var topline = this.model().topline();
+        if (topline.allow_price_override()) {
+          // if the line is a bonus line with no price
+          // we do not need to auto calculate its
+          // budget based on the new impressions number
+          this.model().lifetime_imps(this.content().budget_ui_imps.value());
+          return;
+        }
+
+        var budget =
+          this.content().budget_ui_imps.value() /
+            1000 * topline.func_price();
         this.content().budget_sum.value(budget);
         this.model().uninflated_ui_budget_100(budget);
+
+        // allocation changes for all the campaigns
+        topline.getCampaigns().forEach(function(c) {
+          c.triggerChanges('unallocatedImps');
+        });
       }
     },
 

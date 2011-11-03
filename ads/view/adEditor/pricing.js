@@ -32,6 +32,8 @@ var estimateTargetingStats = require("../../lib/estimateTargetingStats");
 var Base = require("./base").Base;
 var bidTypes = require("../../lib/bidTypes");
 
+var impressionLocation = require("../../lib/impressionLocation");
+var controls = require("../controls");
 
 var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
 
@@ -54,9 +56,106 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
         this.child('moo_clicks').binding({ model: m, modelProp: 'moo_clicks' });
         this.child('moo_reach').binding({ model: m, modelProp: 'moo_reach' });
         this.child('moo_social').binding({ model: m, modelProp: 'moo_social' });
+
+        if (m.isCorporate()) {
+          this.child('impression_location').binding({
+              model: m,
+              modelProp: 'impression_location',
+              modelEvent: 'change.impression_control_map',
+              commitChangesViewEvent: 'change'
+          });
+
+          this.child('impression_control_type').binding({
+              model: m,
+              modelProp: 'impression_control_type',
+              modelEvent: 'change.impression_control_map',
+              commitChangesViewEvent: 'change'
+          });
+
+          this.child('reach_block_length').binding({
+              model: m,
+              modelProp: 'reach_block_length',
+              modelEvent: 'change.impression_control_map',
+              commitChangesViewEvent: 'change'
+          });
+
+          this.child('user_impression_limit').binding({
+              model: m,
+              modelProp: 'user_impression_limit',
+              modelEvent: 'change.impression_control_map',
+              commitChangesViewEvent: 'change'
+          });
+
+          this.child('user_impression_limit_period_unit').binding({
+              model: m,
+              modelProp: 'user_impression_limit_period_unit',
+              modelEvent: 'change.impression_control_map',
+              commitChangesViewEvent: 'change'
+          });
+
+          this.child('priority').binding({
+              model: m,
+              modelProp: 'priority'
+          });
+
+          this.child('no_show_percentage').binding({
+              model: m,
+              modelProp: 'no_show_percentage'
+          });
+
+          this.child('no_show_offset').binding({
+              model: m,
+              modelProp: 'no_show_offset'
+          });
+        }
+
+        ['impression_location', 'priority',
+          'impression_control_type',
+          'no_show_percentage', 'no_show_offset']
+          .forEach(function(name) {
+          dom.toggleClass(
+            this._row(this.child(name).dom()),
+            'hidden',
+            !this.model().isCorporate());
+        }, this);
+    },
+
+    _updateImpressionControl: function(type) {
+
+      // road block - hide the impression limit.
+      // reach block - use the reach_block_length field.
+      this.child('user_impression_limit').visible(type == '2');
+      this.child('user_impression_limit_period_unit').visible(type == '2');
+      this.child('user_impression_unit_text').visible(type == '2');
+      this.child('reach_block_length').visible(type == '3');
+      this.child('impression_text').visible(type == '2' || type == '3');
+      if (type == '2' || type == '3') {
+        var msg = type == '2' ? 'impressions' : 'impression reach block';
+        this.child('impression_text').text(msg);
+      }
     },
 
     _lockedModelChange: function(e) {
+      if (!e ||
+        e.name == 'impression_control_map' ||
+        e.name == 'priority' ||
+        e.name == 'impression_control_type' ||
+        e.name == 'reach_block_length') {
+        if (this.model().impression_control_type &&
+            this.model().priority) {
+          var type = this.model().impression_control_type() + '';
+          if (type == '3') {
+            this.model().priority(10000, this);
+          } else if (type == '1') {
+            this.model().priority(10001, this);
+          } else {
+            this.model().priority(this.model().priority() < 10000 ?
+                this.model().priority() : 0, this);
+          }
+          this._updateImpressionControl(type);
+        }
+      }
+
       if (!this.model() || !this.model().targetingSpec) {
         return;
       }
@@ -75,8 +174,8 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
       dom.toggleClass(
         this._row(this.child('bid').dom()),
         'hidden',
-        bid_type == bidTypes.BID_TYPE_MULTI ||
-          bid_type == bidTypes.BID_TYPE_MULTI_SS);
+        bid_type == bidTypes.BID_TYPE_MULTI_PREMIUM ||
+          bid_type == bidTypes.BID_TYPE_MULTI_RELATIVE);
 
       ['moo_title', 'moo_clicks', 'moo_reach', 'moo_social']
         .forEach(function(name) {
@@ -86,7 +185,7 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
           bid_type == bidTypes.BID_TYPE_CPC ||
             bid_type == bidTypes.BID_TYPE_CPM ||
             bid_type == bidTypes.BID_TYPE_FCPM ||
-            bid_type == bidTypes.BID_TYPE_MULTI_SS);
+            bid_type == bidTypes.BID_TYPE_MULTI_RELATIVE);
       }, this);
     },
 
@@ -102,6 +201,7 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
     }, estimateTargetingStats.DEFAULT_DEBOUNCE),
 
     _estimateCallback: function(data) {
+      if (!this.model()) { return; }
       var estimates = data && data.bid_estimations && data.bid_estimations[0];
       var type = this.model().bid_type();
       var prefix = type == bidTypes.BID_TYPE_CPC ? 'cpc' :
@@ -138,6 +238,12 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
     _createDom: function(initArgs) {
       Base.prototype._createDom.call(this, initArgs);
       this.addClass('adEditor-pricing');
+
+      var options = [];
+      for (var i = 0; i <= 100; i++) {
+          options.push({ view: i + '', text: i + '' });
+      }
+
       this.content({ rows: [
         { label: {
             view: 'Base',
@@ -194,9 +300,77 @@ var Pricing = view.newClass('ads.adEditor.Pricing', Base, {
             view: 'TextInput',
             childName: 'moo_social',
             addClass: 'adEditor-pricing-objective'
-          } }
+          } },
+        {
+          label: 'Location', className: 'intern',
+          labelClassName: 'labelText',
+          data: {
+            view: controls.RadioGroup,
+            horizontal: true,
+            childViews: [
+              { view: 'Radio', name: 'DSPricing-PlacementType',
+                text: 'Ad Space',
+                value: impressionLocation.AD_SPACE },
+              { view: 'Radio', name: 'DSPricing-PlacementType',
+                text: 'Home Page',
+                value: impressionLocation.HOME }
+            ],
+            childName: 'impression_location'
+          }
+        },
+        {
+          label: 'Impression Control Type', className: 'intern',
+          labelClassName: 'labelText',
+          data: { view: 'Container', childViews: [
+            { view: controls.RadioGroup, horizontal: true,
+              childViews: [
+                { view: 'Radio', name: 'DSPricing-ImpControlType',
+                  text: 'Per-User Frequency Cap', value: '2' },
+                { view: 'Radio', name: 'DSPricing-ImpControlType',
+                  text: 'Reach Block', value: '3' },
+                { view: 'Radio', name: 'DSPricing-ImpControlType',
+                  text: 'Road Block', value: '1' }
+              ],
+              childName: 'impression_control_type' },
 
-        ]});
+            { view: 'Container',
+              addClass: 'DSPricing-impression mts',
+              childViews: [
+                { view: 'Select', options: options,
+                  childName: 'user_impression_limit' },
+                { view: 'Select', options: options,
+                  childName: 'reach_block_length' },
+                 { view: 'Text', html: ' impressions ',
+                   childName: 'impression_text' },
+                { view: 'Select',
+                  childName: 'user_impression_limit_period_unit',
+                  options: [
+                    { value: 0, text: 'daily' },
+                    { value: 1, text: 'monthly' }
+                ] },
+                { view: 'Text', childName: 'user_impression_unit_text',
+                  html: ' per-user frequency cap ' }
+            ]}
+          ]}
+        },
+        {
+          label: 'Held-Out Set Percentage', className: 'intern',
+          data: { view: 'TextInput', childName: 'no_show_percentage',
+            addClass: 'DSPricing-input' }
+        },
+        {
+          label: 'Held-Out Set Offset', className: 'intern',
+          data: { view: 'TextInput', childName: 'no_show_offset',
+            addClass: 'DSPricing-input' },
+          optional: '(0-100)'
+        },
+        {
+          label: 'Ad Priority', className: 'intern',
+          data: { view: 'TextInput', childName: 'priority',
+            addClass: 'DSPricing-input' },
+          optional: '[0-9999] 0: self-serve, 10000: reach block'
+        }
+      ]});
       this._indexChildViews();
 
       this._formatter = require("../../../lib/formatters").createNumberFormatter(2);

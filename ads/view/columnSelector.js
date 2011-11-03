@@ -56,13 +56,17 @@ var ColumnSelector = view.newClass('ads.ColumnSelector', Container, {
 
   columns: function(columns) {
     var lists = find('List', this);
+    this.column_key_index_map = {};
+
     lists.forEach(function(l) { l.childViews([]); });
     columns.forEach(function(c, i) {
       lists[i * lists.length / columns.length << 0]
         .appendChild(build(
           { view: 'Checkbox', text: c.desc || c.label,
+            key: c.key,
             childcb: true })[0]);
-    });
+      this.column_key_index_map[c.key] = c.index;
+    }, this);
   },
 
   values: function(values) {
@@ -70,14 +74,17 @@ var ColumnSelector = view.newClass('ads.ColumnSelector', Container, {
       var result = [];
       find('[childcb=true]', this).forEach(function(cb, i) {
         if (cb.checked()) {
-          result.push(i);
+          result.push(cb.key || i);
         }
       });
       return result;
     }
     var cbs = find('[childcb=true]', this);
     cbs.prop('checked', false);
-    values.forEach(function(index) { cbs[index].checked(true); });
+    values.forEach(function(key) {
+      var index = this.column_key_index_map[key];
+      cbs[index].checked(true);
+    }, this);
     return this;
   },
 

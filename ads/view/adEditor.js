@@ -40,8 +40,6 @@ var views = utils.extend({},
     require("./adEditor/advDem"),
     require("./adEditor/connections"),
     require("./adEditor/creative"),
-    require("./adEditor/DSPricing"),
-    require("./adEditor/DSTargeting"),
     require("./adEditor/eduWork"),
     require("./adEditor/interests"),
     require("./adEditor/locDem"),
@@ -163,10 +161,10 @@ var AdEditor = view.newClass('ads.AdEditor', Container, PersistentState, {
     _createDom: function() {
         this._dom = dom.createElement('div', { className: 'adEditor' });
         this._refs = build([
-            { view: 'AdErrors', pos: 'h:27px l:0 r:0 b:295px', as: 'errors',
+            { view: 'AdErrors', pos: 'h:27px l:0 r:0 b:315px', as: 'errors',
               on: { resized: fun.bind(this._onerrorsResized, this) } },
 
-            { view: 'SideNav', pos: 'h:285px l:0 w:199px b:0', as: 'side-nav',
+            { view: 'SideNav', pos: 'h:305px l:0 w:199px b:0', as: 'side-nav',
               on: { selected: fun.bind(this._onnavClick, this) },
               addClass: "adEditor-nav ptm", childViews: [
                 { view: 'SideNavItem', label: 'Creative',
@@ -187,24 +185,28 @@ var AdEditor = view.newClass('ads.AdEditor', Container, PersistentState, {
             ]},
 
             { view: 'Container', addClass: 'adEditor-container',
-              pos: 'l:200px r:0 h:295px b:0', as: 'editor-container' },
+              pos: 'l:200px r:0 h:315px b:0', as: 'editor-container' },
 
             { view: 'Text', addClass: 'addClass-message',
-              pos: 'l:200px r:0 h:295px b:0', as: 'multy-accs-message',
+              pos: 'l:200px r:0 h:315px b:0', as: 'multy-accs-message',
               text: 'You cannot edit multiple accounts', visible: false },
 
             { view: 'Text', addClass: 'addClass-message',
-              pos: 'l:200px r:0 h:295px b:0', as: 'require-active-message',
+              pos: 'l:200px r:0 h:315px b:0', as: 'require-active-message',
               text: 'You need to download accounts before editing' },
 
             { view: 'Text', addClass: 'addClass-adlink',
-              pos: 'r:10px h:225px b:60px w:147px',
+              pos: 'r:10px h:225px b:80px w:244px',
               id: 'adlink', as: 'adlink' },
 
-            { view: 'AdPreview', pos: 'r:10px h:205px b:60px w:147px',
+            { view: 'Text', addClass: 'addClass-adPreviewTitle',
+              pos: 'r:10px h:205px b:80px w:244px', as: 'adpreview-title',
+              text: 'Creative Preview: '},
+
+            { view: 'AdPreview', pos: 'r:10px h:205px b:60px w:244px',
               id: 'adPreview', as: 'preview' },
 
-            { view: 'ReachEstimate', pos: 'r:10px b:10px h:40px w:147px',
+            { view: 'ReachEstimate', pos: 'r:10px b:10px h:40px w:244px',
               as: 'reach-estimate' }
 
         ]).appendTo(this);
@@ -213,7 +215,7 @@ var AdEditor = view.newClass('ads.AdEditor', Container, PersistentState, {
     },
 
     _onerrorsResized: function() {
-      var height = this._refs.view('errors').visible() ? 323 : 295;
+      var height = this._refs.view('errors').visible() ? 340 : 315;
       this.trigger({ type: 'resized', height: height });
     },
 

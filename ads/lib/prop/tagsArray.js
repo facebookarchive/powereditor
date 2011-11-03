@@ -27,6 +27,8 @@ var fun = require("../../../uki-core/function"),
 
     Base = require("./base").Base;
 
+var DELIMITER = '|RANDOM_DELIMITER|';
+
 var TagsArray = fun.newClass(Base, {
   def: [],
 
@@ -42,20 +44,37 @@ var TagsArray = fun.newClass(Base, {
     }
   },
 
+  exportFormatter: function(value) {
+    if (utils.isArray(value)) {
+      return JSON.stringify(value);
+    } else {
+      return value;
+    }
+  },
+
+  setTabSeparated: function(storable, value, callback) {
+    if (value.charAt(0) == '[') {
+      this.setValue(storable, JSON.parse(value));
+    } else {
+      this.setValue(storable, value);
+    }
+    callback();
+  },
+
   compare: function(a, b) {
     if (!utils.isArray(a)) {
-      if (value && value.trim()) {
-        a = value.trim().split('\n');
+      if (a && a.trim()) {
+        a = a.trim().split('\n');
       }
     }
 
     if (!utils.isArray(b)) {
-      if (value && value.trim()) {
-        b = value.trim().split('\n');
+      if (b && b.trim()) {
+        b = b.trim().split('\n');
       }
     }
 
-    return (a || []).join(',') === (b || []).join(',');
+    return (a || []).join(DELIMITER) === (b || []).join(DELIMITER);
   }
 });
 

@@ -49,15 +49,63 @@ var Img = storage.newStorage({
       return '1 ad';
     }
     return (count || 0) + ' ads';
+  },
+
+  isReference: function() {
+    return Img.isReferenceID(this.id());
+  },
+
+  isLocal: function() {
+    return !!this.id().match(/image_\d+/);
+  },
+
+  isSavedRemotely: function() {
+    return !this.isReference() &&
+      !this.isLocal();
+  },
+
+  getHashFromReference: function() {
+    return Img.getHashFromReferenceID(this.id());
+  },
+
+  getSourceAccountFromReference: function() {
+    return Img.getSourceAccountFromReferenceID(this.id());
   }
+
 });
+
+Img.getSourceAccountFromReferenceID = function(reference_id) {
+  if (!Img.isReferenceID(reference_id)) {
+    return null;
+  }
+  var matches = /^(\d+):.*/.exec(reference_id);
+  if (matches) {
+    return matches[1];
+  }
+  return null;
+};
+
+Img.getHashFromReferenceID = function(reference_id) {
+  if (!Img.isReferenceID(reference_id)) {
+    return null;
+  }
+  var matches = /^\d+:(.*)$/.exec(reference_id);
+  if (matches) {
+    return matches[1];
+  }
+  return null;
+};
+
+Img.isReferenceID = function(id) {
+  return !!id.match(/\d+:.*/);
+};
 
 Img.generateLocalHash = function() {
   return 'image_' + (+new Date()) + require("../../uki-core/env").guid++;
 };
 
 Img.isHashLocal = function(hash) {
-  return hash && !!hash.match(/image_\d+/);
+  return (hash && !!hash.match(/image_\d+/));
 };
 
 

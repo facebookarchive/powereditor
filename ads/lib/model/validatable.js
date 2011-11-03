@@ -38,7 +38,7 @@ var Validatable = {
       error = prop.validate(this);
     } else if (prop.required) {
       error = !prop.getValue(this);
-      this.toggleError(error, this.name, humanName + ' required');
+      this.toggleError(error, prop.name, humanName + ' required');
     }
     return error;
   },

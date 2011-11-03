@@ -38,6 +38,7 @@ var UserAdClusters = fun.newClass(Base, {
   },
 
   _objectToCommaSeparatedString: function(obj, sort) {
+    if (obj === undefined || !obj.length) { return; }
     var list = obj.map(
       function(cluster) {
         return cluster.id + ":" + cluster.name;

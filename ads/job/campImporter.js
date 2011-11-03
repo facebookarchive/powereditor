@@ -41,11 +41,13 @@ var Importer = fun.newClass(Job,
   account: fun.newProp('account'),
   camps: fun.newProp('camps'),
   propsToCopy: fun.newProp('propsToCopy'),
+  line_number: fun.newProp('line_number'),
 
   // optional in params
   useNameMatching: fun.newProp('useNameMatching'),
   ads: fun.newProp('ads'),
   adPropsToCopy: fun.newProp('adPropsToCopy'),
+  useToplineDates: fun.newProp('useToplineDates'),
 
   // out params
   results: fun.newProp('results'),
@@ -54,7 +56,7 @@ var Importer = fun.newClass(Job,
   mapById: fun.newProp('mapById'),
   mapByName: fun.newProp('mapByName'),
 
-  init: function(account, camps, propsToCopy) {
+  init: function(account, line_number, camps, propsToCopy) {
     Job.prototype.init.call(this);
 
     this
@@ -62,8 +64,10 @@ var Importer = fun.newClass(Job,
 
       .useNameMatching(true)
       .account(account)
+      .line_number(line_number)
       .camps(camps)
-      .propsToCopy(propsToCopy);
+      .propsToCopy(propsToCopy)
+      .useToplineDates(false);
   },
 
   start: function() {
@@ -160,30 +164,31 @@ var Importer = fun.newClass(Job,
    */
   _routeCamp: function(newCamp, index, callback) {
     try {
-    this._status.complete++;
-    this._progress(this._status);
-    var mapById = this.mapById();
-    var mapByName = this.mapByName();
-    var name = (newCamp.name() || '').toLowerCase();
-    if (!this.useNameMatching()) { name = ''; }
+      this._status.complete++;
+      this._progress(this._status);
+      var mapById = this.mapById();
+      var mapByName = this.mapByName();
+      var name = (newCamp.name() || '').toLowerCase();
+      if (!this.useNameMatching()) { name = ''; }
 
-    if (newCamp.id() && mapById[newCamp.id()]) {
-      this._updateCamp(mapById[newCamp.id()], newCamp, callback);
+      var new_camp_id = newCamp.id();
+      var valid_id = new_camp_id && (new_camp_id > 0);
+      if (valid_id && mapById[new_camp_id]) {
+        this._updateCamp(mapById[new_camp_id], newCamp, callback);
 
-    } else if (newCamp.id() && !mapById[newCamp.id()]) {
-      this._failCamp(new MissingCampaignUpdateError(newCamp));
-      callback();
+      } else if (valid_id && !mapById[new_camp_id]) {
+        this._failCamp(new MissingCampaignUpdateError(newCamp));
+        callback();
 
-    } else if (!newCamp.id() && name && mapByName[name]) {
-      this._updateCamp(mapByName[name], newCamp, callback);
+      } else if (!valid_id && name && mapByName[name]) {
+        this._updateCamp(mapByName[name], newCamp, callback);
 
-    } else if (!newCamp.id() && name && !mapByName[name]) {
-      this._createCamp(newCamp, callback);
+      } else if (!valid_id && name && !mapByName[name]) {
+        this._createCamp(newCamp, callback);
 
-    } else {
-      this._createCamp(newCamp, callback);
-
-    }
+      } else {
+        this._createCamp(newCamp, callback);
+      }
     } catch (e) {
       require("../../lib/errorReport").handleException(e, 'ci:route');
     }
@@ -223,44 +228,62 @@ var Importer = fun.newClass(Job,
 
   _createCamp: function(newCamp, callback) {
     try {
-
-    // enforce parent
-    newCamp
-      .id(- new Date() - (env.guid++))
-      .account_id(this.account().id());
-
-
-    // attach the newCamp with its declared line_id (unique)
-    if (newCamp.line_number()) {
-      var line_id =
-        Topline.getIdbyLineNumber(newCamp.account_id(), newCamp.line_number());
-
-      if (line_id) {
-        newCamp.line_id(line_id);
-        // adjusted the camp end_time to the end of last minute
-        // of topline flight end date when the new camp end_time
-        // is later than the topline flight end date.
-        var shifted_flight_end_time =
-          Topline.byId(line_id).shifted_flight_end_date();
-        if (newCamp.adjusted_end_time() > shifted_flight_end_time) {
-          newCamp.adjusted_end_time(shifted_flight_end_time);
-        }
-      } else {
-        // reset the line_number to be empty since the line_id is not found
-        newCamp.line_number('');
+      if (!newCamp.id() || newCamp.id() === '' || newCamp.id() > 0) {
+        newCamp.id(- new Date() - (env.guid++));
       }
-    }
-    if (!this.useNameMatching()) {
-      newCamp.name(uniqName(newCamp.name(), this.mapByName()));
-    }
-    this.mapByName()[newCamp.name().toLowerCase()] = newCamp;
 
-    // update map with new campaign name
-    this.mapById()[newCamp.id()] = newCamp;
-    this.results().push({ action: 'create', id: newCamp.id() });
-    newCamp.validateAll();
+      // enforce parent
+      newCamp.account_id(this.account().id());
 
-    newCamp.store(callback);
+      if (this.line_number() && this.line_number() > 0) {
+        newCamp.line_number(this.line_number());
+      }
+
+      // attach the newCamp with its declared topline_id (unique)
+      if (newCamp.line_number()) {
+        var topline_id = Topline.getIdbyLineNumber(
+          newCamp.account_id(), newCamp.line_number());
+
+        if (topline_id) {
+          newCamp.topline_id(topline_id);
+          var shifted_flight_start_time =
+            Topline.byId(topline_id).shifted_flight_start_date();
+          var shifted_flight_end_time =
+            Topline.byId(topline_id).shifted_flight_end_date();
+
+          if (this.useToplineDates()) {
+            newCamp.adjusted_start_time(shifted_flight_start_time);
+            newCamp.adjusted_end_time(shifted_flight_end_time);
+          } else {
+            // adjusted the camp start_time to the start of the daytime
+            // of topline flight start date when the new camp start_time
+            // is eariler than the topline flight start date.
+            if (newCamp.adjusted_start_time() < shifted_flight_start_time) {
+              newCamp.adjusted_start_time(shifted_flight_start_time);
+            }
+            // adjusted the camp end_time to the end of last minute
+            // of topline flight end date when the new camp end_time
+            // is later than the topline flight end date.
+            if (newCamp.adjusted_end_time() > shifted_flight_end_time) {
+              newCamp.adjusted_end_time(shifted_flight_end_time);
+            }
+          }
+        } else {
+          // reset the line_number to be empty since the topline_id is not found
+          newCamp.line_number('');
+        }
+      }
+      if (!this.useNameMatching()) {
+        newCamp.name(uniqName(newCamp.name(), this.mapByName()));
+      }
+      this.mapByName()[newCamp.name().toLowerCase()] = newCamp;
+
+      // update map with new campaign name
+      this.mapById()[newCamp.id()] = newCamp;
+      this.results().push({ action: 'create', id: newCamp.id() });
+      newCamp.validateAll();
+
+      newCamp.store(callback);
 
     } catch (e) {
       require("../../lib/errorReport").handleException(e, 'ci:create');

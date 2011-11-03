@@ -67,8 +67,8 @@ utils.extend(exports,
     { tokenizer: require("../uki-fb/view/tokenizer/token") },
     require("../uki-fb/view/typeahead"),
 
+    require("./view/accountPane"),
     require("./view/adEditor"),
-
     require("./view/adErrors"),
     require("./view/adPane"),
     require("./view/adPreview"),

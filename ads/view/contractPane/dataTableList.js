@@ -35,6 +35,7 @@ var fun = require("../../../uki-core/function"),
     Pack = require("./pack").Pack;
 
 var DataTableList = view.newClass('app.contractPane.DataTableList', Base, {
+    pasteTarget: true,
 
     _setup: function(initArgs) {
       initArgs.packView = initArgs.packView || Pack;

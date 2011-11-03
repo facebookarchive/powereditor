@@ -89,28 +89,15 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     return this;
   },
 
-  canHideColumns: fun.newProp('canHideColumns'),
-
-  visibleColumnIndexes: function(v) {
-    if (v === undefined) {
-      var result = [];
-      utils.forEach(this.columns(), function(c, i) {
-        if (c.visible) { result.push(i); }
-      });
-      return result;
-    }
-    utils.forEach(this.columns(), function(c) {
-      c.visible = false;
+  columnIndexByKey: function(v) {
+    var col = utils.filter(this.columns(), function(c) {
+      return c.key == v;
     });
-    utils.forEach(v, function(index) {
-      this.columns()[index].visible = true;
-    }, this);
 
-    table.calculateVisibleIndexes(this.columns());
-    this._header.columns(this.columns());
-    this._list.reset();
-    return this;
+    return col.length ? col[0].index : -1;
   },
+
+  canHideColumns: fun.newProp('canHideColumns'),
 
   visibleColumnKeys: function(v) {
     if (v === undefined) {
@@ -160,9 +147,10 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     Container.prototype.destruct.call(this);
   },
 
-
   _createDom: function(initArgs) {
     this._dom = dom.createElement('div', {className: 'ufb-dataTable'});
+    this._absolutePos = initArgs.absolutePos !== undefined ?
+      initArgs.absolutePos : true;
 
     // Temporary solution. TODO(voloko) Fix builder namespacing
     var c = new Builder().build([
@@ -170,7 +158,7 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
         addClass: 'ufb-dataTable-header-container',
         on: { resizeColumn: fun.bind(this._resizeColumn, this) } },
 
-      { view: Container, pos: 't:0 l:0 r:0 b:0',
+      { view: Container,
         addClass: 'ufb-dataTable-container', as: 'container',
         on: { scroll: fun.bind(this._scrollHeader, this) },
         childViews: [
@@ -181,7 +169,9 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
 
     this._header = c.view('header');
     this._header.on('render', fun.bindOnce(this._updateHeaderHeight, this));
-    this.on('sortColumn', fun.bind(this._sortColumn, this));
+    if (this._sortColumn) {
+      this.on('sortColumn', fun.bind(this._sortColumn, this));
+    }
     this._container = c.view('container');
     this._list = c.view('list');
     this._container.on('mousedown', function(e) {
@@ -190,9 +180,13 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
         e.preventDefault();
       }
     });
+    this._absolutePos && this._container.pos('t:0 l:0 r:0 b:0');
   },
 
   _updateHeaderHeight: function() {
+    if (!this._absolutePos) {
+      return;
+    }
     var pos = this._container.pos();
     pos.t = this._header.clientRect().height + 'px';
     this._container.pos(pos);
@@ -218,7 +212,7 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
    * @return none
    */
   sortColumn: function(index, direction) {
-    var DEFAULT_KEY = 'id';
+    var DEFAULT_KEY = this._defaultSortingKey || 'id';
 
     // if we're sorting on an invalid column or if there's nothing, quit
     if (index < 0 || !this.data().length) {
@@ -241,6 +235,24 @@ var DataTable = view.newClass('DataTable', Container, PersistentState, {
     this._header._setSortedColumn(index, direction);
 
   },
+
+  setDefaultSortingKey: function(key) {
+    if (this.columnIndexByKey(key) > -1) {
+      this._defaultSortingKey = key;
+    }
+    return this;
+  },
+
+  sortColumnByKey: function(key, direction) {
+    var index = this.columnIndexByKey(key);
+    if (index > -1) {
+      this._defaultSortingKey = key;
+      this.sortColumn(index, direction);
+    }
+
+    return this;
+  },
+
 
   sortIndex: function() {
     return this._header._sortInfo.sortIndex;
@@ -272,7 +284,7 @@ fun.delegateCall(DataTable.prototype, [
 
 
 
-var DataTableHeader = view.newClass('DataTableHeader', Base, {
+var DataTableHeader = view.newClass('DataTableHeader', Base, Focusable, {
   template: fun.newProp('template'),
   _template: requireText('dataTable/header.html'),
 
@@ -286,6 +298,7 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
     this._prevCell = null;   // header cell for column header previously sorted
     this._sortedCell = null; // header cell for column header currently sorted
     this._sortInfo = { sortIndex: -1, asc: true };
+    this.tabIndex(-1);
   },
 
   scrollTo: function(offset) {
@@ -341,6 +354,8 @@ var DataTableHeader = view.newClass('DataTableHeader', Base, {
    * @return none
    */
   _onClick: function(e) {
+    this.focus();
+
     // This if statement prevents clicks at column boundaries, which indicate
     // adjusting column width, from also triggering a sort
     if (dom.hasClass(e.target, 'ufb-dataTable-resizer')) {

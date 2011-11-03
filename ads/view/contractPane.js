@@ -33,10 +33,10 @@ var fun   = require("../../uki-core/function"),
     formatters = require("../../lib/formatters"),
     compare = require("../../uki-fb/view/dataTable/compare"),
     contractFormatters = require("./contractPane/formatters"),
+    paneFormatters = require("./adPane/formatters"),
 
     CampStat = require("../model/campStat").CampStat,
     Account = require("../model/account").Account,
-    Topline = require("../model/topline").Topline,
     DataTableList =
       require("./contractPane/dataTableList").DataTableList,
 
@@ -64,8 +64,10 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
           .lastClickIndex(0)
           .triggerSelection();
 
-      this.refreshOnDeliveryInfo();
+      this._dataTable.sortColumnByKey('line_number',
+             this._dataTable.sortDirection());
 
+      this.refreshOnDeliveryInfo();
       callback && callback.call(this);
     }),
 
@@ -110,9 +112,9 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
               childViews: [
               { view: 'List', horizontal: true,
                 addClass: 'contractPane-toolbar-list pvs phl', childViews: [
-                { view: 'Button', label: 'Sync Stats to Date',
+                { view: 'Button', label: 'Check Updates',
                   requireActive: true,
-                  on: { click: fun.bindOnce(this._syncToplineStats, this) } },
+                  on: { click: fun.bindOnce(this._checkUpdates, this) } },
                 { view: 'Image', addClass: 'syncLoader mhs', visible: false,
                     src: iconUrl,
                   as: 'loadingImage' }
@@ -155,12 +157,12 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
                   maxWidth: 100, minWidth: 40,
                   compareFn: compare.numbers,
                   sortable: true },
-                { label: 'Flight Start Date', key: 'flight_start_date',
+                { label: 'Line Start', key: 'adjusted_flight_start_date',
                   width: 100, maxWidth: 120, minWidth: 80,
                   compareFn: compare.dates,
                   sortable: true,
                   formatter: contractFormatters.date },
-                { label: 'Flight End Date', key: 'flight_end_date',
+                { label: 'Line End', key: 'adjusted_flight_end_date',
                   width: 100, maxWidth: 120, minWidth: 80,
                   compareFn: compare.dates,
                   sortable: true,
@@ -235,7 +237,8 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
                 { label: 'Product Type', key: 'product_type', width: 80,
                   maxWidth: 120, minWidth: 60 },
                 { label: 'Targets', key: 'targets',
-                  width: 220, minWidth: 150, maxWidth: 300 },
+                  width: 220, minWidth: 150, maxWidth: 300,
+                  formatter: paneFormatters.targets },
                 { label: 'ID', key: 'ID', width: 20, maxWidth: 20, minWidth: 20,
                   visible: false}
             ]}
@@ -243,10 +246,10 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
         ]).appendTo(this);
 
         this._dataTable = find('> DataTable', this)[0];
+        this._dataTable.setDefaultSortingKey('line_number');
     },
 
     _syncToplineStats: function() {
-
       // sync all the topline stats up-to-date
       if (this._contract) {
 
@@ -258,14 +261,16 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
             CampStat.loadFromAccountsAndRange(accounts[0], 0, 0,
               fun.bind(function() {
                 // recalculate the stats and refresh the table
-                Topline.findAllBy(
+                require("../model/topline").Topline.findAllBy(
                   'account_id', this.contract().id(),
                   fun.bind(function(toplines) {
                     toplines && toplines.prefetch();
-                    Topline.loadToplinesStats(toplines,
+                    require("../model/topline").Topline.loadToplinesStats(
+                      toplines,
                       fun.bind(function() {
                         this.loading(false);
                         this.toplines(toplines);
+                        require("../controller/app").App.reload();
                       }, this)
                     );
                   }, this)
@@ -274,11 +279,75 @@ var ContractPane = view.newClass('ads.ContractPane', Container, {
             );
           }, this)
         );
+      }
+    },
+
+    _checkUpdates: function() {
+      var list_type = 'campaignList-list';
+      var parent = view.byId(list_type).selectedRow();
+
+      var act_id = null;
+      var is_corp_act = false;
+      if (parent instanceof Account) {
+        act_id = parent.id();
+        is_corp_act = parent.isCorporate();
+      } else {
+        act_id = parent.account().id();
+        is_corp_act = parent.account().isCorporate();
+      }
+
+      var account_options = {};
+      if (act_id && is_corp_act) {
+        account_options.account_ids = [act_id];
+
+        this.loading(true);
+        // clean up all previous contracts and toplines
+        require("../model/contract").Contract.findAllBy(
+          'id', act_id,
+          function(contracts) {
+            require("../model/topline").Topline.deleteBy('account_id', act_id,
+              function() {
+                require("../model/contract").Contract.deleteBy('id', act_id, function() {}
+              );
+          });
+        });
+
+        require("../model/contract").Contract.loadFromRESTAPI(
+          account_options, fun.bind(function(contracts) {
+          if (contracts.length === 0) {
+            this.loading(false);
+            return;
+          }
+          require("../model/topline").Topline.loadFromRESTAPI(
+            { account_id: contracts[0].id() },
+            fun.bind(function(toplines) {
+              var context = this;
+              require("../model/topline").Topline.prepare(function() {
+                require("../model/campaign").Campaign.findAllBy(
+                  'account_id', contracts[0].id(),
+                  function(camps) {
+                    camps.forEach(function(c) {
+                      c.contract(require("../model/contract").Contract.byId(
+                        contracts[0].id())
+                      );
+                      c.topline(require("../model/topline").Topline.byId(
+                        c.idx_line_id())
+                      );
+                    });
+                    context._syncToplineStats();
+                  }
+                );
+              }, true);
+              this.loading(false);
+            }, this)
+          );
+        }, this));
       } else {
         require("../../uki-fb/view/dialog").Dialog
           .alert(tx('ads:pe:dragon:contract-na'));
       }
     }
+
 
 });
 

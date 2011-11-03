@@ -46,20 +46,23 @@ var fun   = require("../../uki-core/function"),
     Ad            = require("../model/ad").Ad,
     AdRS          = require("../model/ad/resultSet").AdResultSet;
 
-
 var AdPane = view.newClass('ads.AdPane', BasePane, {
   _initDataSetup: function(callback) {
     ResultSet = AdRS;
-    Ad.findAllBy(
-      'campaign_id', utils.pluck(this._campaigns, 'id'),
-      fun.bind(function(ads) {
+    var next = fun.bind(function(ads) {
         this._objects = ads;
         this._setupData(callback);
-      }, this)
-    );
+      }, this);
+
+    if (this._campaigns.length > 500) {
+      Ad.findAll(next);
+    } else {
+      Ad.findAllBy('campaign_id', utils.pluck(this._campaigns, 'id'), next);
+    }
   },
 
   _createDom: function() {
+    this.toggleKey('adPane:toggleshow');
     this._dom = dom.createElement('div', { className: 'adPane' });
     var Revert = require("../controller/revert").Revert,
         Duplicate = require("../controller/duplicate").Duplicate;
@@ -84,7 +87,11 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
                 storage: require("../controller/app")
                   .App.userStorage(),
                 key: 'adPane:dateRange'
-              } }
+              } },
+            { view: 'Button',
+              requireActive: true, action: 'toggle',
+              visible: false,
+              on: { click: fun.bindOnce(this._toggleHandler, this) } }
           ] },
 
         { view: 'SearchInput', placeholder: "Search",
@@ -117,6 +124,18 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
             { label: 'Campaign Name', key: 'campaign_name',
               width: 80, minWidth: 60,
               sortable: true },
+
+            { label: 'Start Date', key: 'adjusted_start_time',
+              minWidth: 40, width: 80,
+              compareFn: compare.dates,
+              sortable: true,
+              formatter: campFormatters.startDate },
+
+            { label: 'End Date', key: 'adjusted_end_time',
+              width: 80, minWidth: 40,
+              compareFn: compare.dates,
+              sortable: true,
+              formatter: campFormatters.endDate },
 
             { label: 'Ad Name', key: 'name', width: 200, minWidth: 60,
               sortable: true,
@@ -190,7 +209,8 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
             { label: 'Related Page', key: 'related_fan_page',
               width: 20, minWidth: 20,
-              sortable: true },
+              sortable: true,
+              corp: true, visible: false },
 
             { label: 'Location', key: 'countries',
               changeOnKeys: ['cities', 'regions'],
@@ -209,13 +229,18 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               sortable: true,
               width: 40, minWidth: 40, maxWidth: 70 },
 
+            { label: 'Demo link', key: 'demo_link',
+              width: 70, minWidth: 60,
+              corp: true, visible: false },
+
             { label: 'Impressions', key: 'impressions',
               width: 80, maxWidth: 150, minWidth: 60,
               className: 'ufb-dataTable-cell_number',
               compareFn: compare.numbers,
               sortable: true,
               formatter: formatters.createNumberFormatter(),
-              visible: false },
+              visible: false,
+              visCategory: 'stat' },
 
             { label: 'Social %', key: 'social_percent',
               width: 60, maxWidth: 60, minWidth: 60,
@@ -223,7 +248,8 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               sortable: true,
               compareFn: compare.numbers,
               formatter: formatters.createPercentFormatter(1),
-              visible: false },
+              visible: false,
+              visCategory: 'stat' },
 
             { label: 'Reach', key: 'unique_impressions',
               width: 60, maxWidth: 150, minWidth: 40,
@@ -231,7 +257,8 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               formatter: formatters.createNumberFormatter(),
               sortable: true,
               compareFn: compare.numbers,
-              visible: false },
+              visible: false,
+              visCategory: 'stat' },
 
             { label: 'Connections', key: 'social_connections',
               width: 80, maxWidth: 150, minWidth: 60,
@@ -239,47 +266,48 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
               formatter: formatters.createNumberFormatter(),
               sortable: true,
               compareFn: compare.numbers,
-              visible: false },
+              visible: false,
+              visCategory: 'stat' },
 
             { label: 'Clicks', key: 'clicks',
               width: 60, maxWidth: 150, minWidth: 60,
               className: 'ufb-dataTable-cell_number',
               sortable: true,
               compareFn: compare.numbers,
-              formatter: formatters.createNumberFormatter() },
+              formatter: formatters.createNumberFormatter(),
+              visCategory: 'stat' },
 
             { label: 'CTR %', key: 'ctr',
               width: 60, maxWidth: 60, minWidth: 60,
               className: 'ufb-dataTable-cell_number',
               sortable: true,
               compareFn: compare.numbers,
-              formatter: formatters.createPercentFormatter(3) },
+              formatter: formatters.createPercentFormatter(3),
+              visCategory: 'stat' },
 
             { label: 'Avg. CPC', key: 'avg_cpc',
               width: 70, maxWidth: 150, minWidth: 60,
               className: 'ufb-dataTable-cell_number',
               sortable: true,
               compareFn: compare.numbers,
-              formatter: paneFormatters.money },
+              formatter: paneFormatters.money,
+              visCategory: 'stat' },
 
             { label: 'Avg. CPM', key: 'avg_cpm',
               width: 70, maxWidth: 150, minWidth: 60,
               className: 'ufb-dataTable-cell_number',
               sortable: true,
               compareFn: compare.numbers,
-              formatter: paneFormatters.money },
-
-            { label: 'Demo links', key: 'demolinks',
-              width: 70, maxWidth: 150, minWidth: 60,
-              formatter: paneFormatters.demolinks },
+              formatter: paneFormatters.money,
+              visCategory: 'stat' },
 
             { label: 'Spent', key: 'spent_100',
               width: 70, maxWidth: 150, minWidth: 60,
-              className: 'ufb-dataTable-cell_number',
               sortable: true,
               compareFn: compare.numbers,
               formatter: paneFormatters.money,
-              visible: false }
+              visible: false,
+              visCategory: 'stat' }
           ]),
       canHideColumns: true,
       persistent: {
@@ -297,7 +325,7 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
       }
     ]).appendTo(this);
 
-    this._addButton = find('Button[action=add]', this)[0];
+    this._toggleButton = find('Button[action=toggle]', this)[0];
     this._dataTable = find('> DataTable', this)[0];
     this._editor = find('> AdEditor', this)[0];
     find('DataTableList', this._dataTable)[0].copySourceId('ads');
@@ -315,8 +343,8 @@ var AdPane = view.newClass('ads.AdPane', BasePane, {
 
   _addAd: function(e) {
     if (!this.campaigns().length) {
-      alert('Cannot create an ad without a campaign. ' +
-        'Create campaign first.');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:no-ads-to-create'));
       return;
     }
 

@@ -139,7 +139,8 @@ var DownloadDialog = view.newClass('ads.DownloadDialog', Dialog,
           return acc.value();
         });
       if (!ids.length) {
-        alert('Please select at least one account');
+        require("../../uki-fb/view/dialog").Dialog
+          .alert(tx('ads:pe:no-account-selected'));
         return;
       }
     } else if (col.view('option-account-id').checked()) {

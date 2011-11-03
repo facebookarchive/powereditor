@@ -2,6 +2,14 @@
     <tbody>
         <tr class="dataRow">
             <th class="label">
+              <label for="{{#io_name__view}}{{id}}{{/io_name__view}}">
+                {{{io_name_label}}}</label></th>
+            <td class="data">
+                {{{io_name}}}
+            </td>
+        </tr>
+        <tr class="dataRow">
+            <th class="label">
               <label for="{{#act_id__view}}{{id}}{{/act_id__view}}">
                 {{{act_id_label}}}</label></th>
             <td class="data">
@@ -14,14 +22,6 @@
                 {{{io_number_label}}}</label></th>
             <td class="data">
                 {{{io_number}}}
-            </td>
-        </tr>
-        <tr class="dataRow">
-            <th class="label">
-              <label for="{{#status__view}}{{id}}{{/status__view}}">
-                {{{status_label}}}</label></th>
-            <td class="data">
-                {{{status}}}
             </td>
         </tr>
         <tr class="dataRow">

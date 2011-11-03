@@ -32,8 +32,8 @@ var fun = require("../../../uki-core/function"),
 var Num = fun.newClass(StorageNum, TabSeparated, {
 
   setTabSeparated: function(obj, value, callback) {
-
     value = (value + '')
+      .trim()
       .replace(/\D(\d\d?)$/, '\u0001$1')  // preserve decimal separator
       .replace(/[^0-9\u0001]/g, '')       // remove everything else
       .replace('\u0001', '.');            // restore decimal separator

@@ -26,8 +26,9 @@ var view = require("../../uki-core/view"),
     env  = require("../../uki-core/env"),
     build   = require("../../uki-core/builder").build,
     models = require("../models"),
-    App = require("./app").App;
-
+    App = require("./app").App,
+    Paste = require("./paste").Paste,
+    bidTypes = require("../lib/bidTypes");
 
 /**
 * Create campaigns and ads
@@ -50,6 +51,9 @@ Mutator.initAdInCampaign = function(camp, ad) {
     .account_id(camp.account_id())
     // pending
     .adgroup_status(ad.adgroup_status() || 4)
+    .bid_type(camp.isCorporate() ?
+      bidTypes.BID_TYPE_MULTI_PREMIUM :
+      bidTypes.BID_TYPE_CPC)
     // negative id => ad is new
     .id(ad.id() || - new Date() - (env.guid++));
 
@@ -76,44 +80,12 @@ Mutator.createCampaignHandler = function() {
 * Creates a new campaign
 */
 Mutator.createCampaign = function(callback) {
-  var listType = 'campaignList-list';
-  var parent = view.byId(listType).selectedRow();
+  var from_list = view.byId('campaignList-list').selectedRow();
 
   
 
-  callback(models.Campaign.create(parent));
+  callback(models.Campaign.create(from_list));
 };
-
-Mutator.selectTopline = function(accountId, lineNumbers, callback) {
-  var dialog = Mutator.selectToplineDialog();
-
-  dialog.view('select').options(
-    [{ text: tx('ads:pe:select-line-number-option'), value: '' }].concat(
-      lineNumbers.map(function(s) {
-        var line_id =
-          models.Topline.getIdbyLineNumber(accountId, s);
-        var topline = models.Topline.byId(line_id);
-        return {
-          text: topline && topline.description() ?
-            (s + ': ' + topline.description() +
-            '-' + topline.targets()) : s,
-          value: s
-        };
-      })
-    )
-  );
-
-  dialog.view('select').value(lineNumbers[0]);
-  dialog.view('ok').removeListener('click').on('click', function() {
-    dialog.visible(false);
-    var line_number = dialog.view('select').value();
-    callback(line_number);
-    return;
-  });
-
-  dialog.visible(true);
-};
-
 
 // Select line_number from the account
 // Give the user's ability to choose the line_number

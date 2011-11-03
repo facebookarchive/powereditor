@@ -27,16 +27,19 @@
 */
 
 var creativeTypesByAnchor_map =
-{"external_webpage":{"facebook_ads":{"standard":[1],"premium":[12,26]}},"1":{"facebook_ads":{"standard":[27,2],"premium":[5,6,7,13,22,24]},"sponsored_stories":{"standard":[9,11,17,25],"premium":[20,23]}},"6":{"facebook_ads":{"standard":[27,2],"premium":[5,6,13,22,24]},"sponsored_stories":{"standard":[9,10,11,17,25],"premium":[20,23]}},"5":{"facebook_ads":{"standard":[2]},"sponsored_stories":{"standard":[10]}},"3":{"facebook_ads":{"standard":[3],"premium":[14]}},"2":{"facebook_ads":{"standard":[4],"premium":[15]},"sponsored_stories":{"standard":[16,8,18]}},"7":{"sponsored_stories":{"standard":[19]}}};
+{"external_webpage":{"facebook_ads":{"standard":[1],"premium":[12,26]}},"1":{"facebook_ads":{"standard":[27,2,11],"premium":[5,6,13,22]},"sponsored_stories":{"standard":[9,17],"premium":[20,23,25]}},"6":{"facebook_ads":{"standard":[27,2,11],"premium":[5,6,13,22]},"sponsored_stories":{"standard":[9,10,17],"premium":[20,23,25]}},"5":{"facebook_ads":{"standard":[2]},"sponsored_stories":{"standard":[10]}},"3":{"facebook_ads":{"standard":[3],"premium":[14]}},"2":{"facebook_ads":{"standard":[4],"premium":[15]},"sponsored_stories":{"standard":[16,8,18]}},"7":{"sponsored_stories":{"standard":[19]}}};
 
 var fieldsByCreativeType_standard_map =
-{"1":["link_url","title","body","related_fan_page"],"27":["url_tags","story_id"],"2":["title","body","link_url"],"3":["title","body"],"4":["link_url","title","body"],"5":["title","body","link_url","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page"],"6":["title","body","link_url"],"7":["title","body","sample_id","sample_name","sample_starting_inventory","sample_target_country","sample_visible_to_friends","sample_link_text","sample_flavour_category","sample_flavour_0","sample_flavour_1","sample_flavour_2","sample_flavour_3","sample_flavour_4"],"16":["url_tags"],"8":["url_tags"],"9":[],"10":[],"11":["url_tags"],"12":["title","body","link_url"],"13":["title","body","link_url"],"14":["title","body","link_url"],"15":["title","body","link_url"],"17":[],"18":["url_tags"],"19":["url_tags"],"20":["question_id"],"22":["story_id","prompt"],"23":["thread_id","prompt"],"24":["liker_page_id","liked_page_id","ab_test_id"],"25":["action_spec"],"26":[],"28":["title","body","link_url"]};
+{"1":["link_url","title","body","related_fan_page"],"27":["url_tags","story_id"],"2":["title","body","link_url"],"3":["title","body"],"4":["link_url","title","body"],"5":["title","body","link_url","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page"],"6":["title","body","link_url"],"16":["url_tags"],"8":["url_tags"],"9":[],"10":[],"11":["url_tags"],"12":["title","body","link_url","related_fan_page"],"13":["title","body","link_url"],"14":["title","body","link_url"],"15":["title","body","link_url"],"17":[],"18":["url_tags"],"19":["url_tags"],"20":["question_id"],"22":["story_id","prompt"],"23":["thread_id","prompt"],"26":[],"28":["title","body","link_url"]};
 
 var fieldsByCreativeType_premium_map =
-{"1":["link_url","title","body","video_id","video_hd","related_fan_page"],"27":["url_tags","story_id"],"2":["title","body","link_url","video_id","video_hd"],"3":["title","body"],"4":["link_url","title","body","video_id","video_hd"],"5":["title","body","link_url","video_id","video_hd","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page"],"6":["title","body","link_url","video_id","video_hd"],"7":["title","body","sample_id","sample_name","sample_starting_inventory","sample_target_country","sample_visible_to_friends","sample_link_text","sample_flavour_category","sample_flavour_0","sample_flavour_1","sample_flavour_2","sample_flavour_3","sample_flavour_4"],"16":["url_tags"],"8":["url_tags"],"9":[],"10":[],"11":["url_tags"],"12":["title","body","link_url","video_id","video_hd"],"13":["title","body","link_url","video_id","video_hd"],"14":["title","body","link_url","video_id","video_hd"],"15":["title","body","link_url","video_id","video_hd"],"17":[],"18":["url_tags"],"19":["url_tags"],"20":["question_id"],"22":["story_id","prompt"],"23":["thread_id","prompt"],"24":["liker_page_id","liked_page_id","ab_test_id"],"25":["action_spec"],"26":[],"28":["title","body","link_url","video_id","video_hd"]};
+{"1":["link_url","title","body","video_id","video_hd","related_fan_page"],"27":["url_tags","story_id"],"2":["title","body","link_url","video_id","video_hd"],"3":["title","body"],"4":["link_url","title","body","video_id","video_hd"],"5":["title","body","link_url","video_id","video_hd","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page"],"6":["title","body","link_url","video_id","video_hd"],"16":["url_tags"],"8":["url_tags"],"9":[],"10":[],"11":["url_tags"],"12":["title","body","link_url","video_id","video_hd","related_fan_page"],"13":["title","body","link_url","video_id","video_hd"],"14":["title","body","link_url","video_id","video_hd"],"15":["title","body","link_url","video_id","video_hd"],"17":[],"18":["url_tags"],"19":["url_tags"],"20":["question_id"],"22":["story_id","prompt"],"23":["thread_id","prompt"],"25":["action_spec","query_templates"],"26":[],"28":["title","body","link_url","video_id","video_hd"]};
 
 var api_fields =
-["object_id","creative_id","type","name","url_tags","link_url","title","body","image_path","image_volume","image_hash","image_url","related_fan_page","video_id","video_hd","view_tag","alt_view_tags","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page","question_id","show_creative","prompt","story_id","thread_id","sample_name","sample_starting_inventory","sample_target_country","sample_visible_to_friends","sample_link_text","sample_flavour_category","sample_flavour_0","sample_flavour_1","sample_flavour_2","sample_flavour_3","sample_flavour_4","sample_dialog_title","sample_dialog_description","sample_id","liker_page_id","liked_page_id","ab_test_id","link_target","conversion_fbid","action_spec"];
+["object_id","creative_id","type","name","url_tags","link_url","title","body","image_path","image_volume","image_hash","image_url","related_fan_page","video_id","video_hd","view_tag","alt_view_tags","poll_id","poll_question","poll_answer_0","poll_answer_1","poll_answer_2","poll_publish_to_page","question_id","show_creative","prompt","story_id","thread_id","liker_page_id","liked_page_id","ab_test_id","link_target","conversion_fbid","action_spec","query_templates"];
+
+var queryTemplateOptions =
+[{"value":1,"text":"Page Likes"},{"value":2,"text":"Wall Posts"},{"value":3,"text":"Checkins"},{"value":4,"text":"App User Actions"},{"value":5,"text":"Page Post Likes"},{"value":6,"text":"Specific Page Post Likes"},{"value":7,"text":"Specific Page Post Comments"},{"value":8,"text":"Event RSVPs"}];
 
 // premium ==> true
 var COMMON_FIELDS = {
@@ -53,9 +56,9 @@ var SUPPRESSED_CREATIVE_TYPE_MAP = {
   // Page Endorsement used as a testing type for now
   // Action Query is still under testing
   7: true,
+  11: true,
   22: true,
-  24: true,
-  25: true
+  24: true
 };
 
 function getFieldsByType(type, is_premium) {
@@ -91,4 +94,5 @@ function getTypesByAnchor(anchor, is_bass, is_premium) {
 
 exports.getFieldsByType = getFieldsByType;
 exports.getTypesByAnchor = getTypesByAnchor;
+exports.queryTemplateOptions = queryTemplateOptions;
 

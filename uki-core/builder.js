@@ -34,7 +34,6 @@
 
 var utils = require("./utils"),
     fun   = require("./function"),
-
     Collection = require("./collection").Collection;
 
 
@@ -85,7 +84,6 @@ var Builder = fun.newClass({
         if (mRow.as) {
             this._references[mRow.as] = result;
         }
-
         copyAttrs(result, mRow);
         return result;
     },
@@ -124,7 +122,12 @@ function withBuilder(builder, callback, context) {
     return result;
 }
 
+/**
+ * We have the ability to work with views that were created with Api's that
+ * deviate from the uki standards. Set the default builder to one that overrides
+ * the buildOne method.
+ */
+exports.setDefault = setDefault;
 exports.Builder = Builder;
 exports.withBuilder = withBuilder;
-// expose defaultBuilder to everyone
 setDefault(new Builder());

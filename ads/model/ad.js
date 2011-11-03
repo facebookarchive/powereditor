@@ -29,9 +29,11 @@ var fun   = require("../../uki-core/function"),
     rs = require("../lib/runStatus"),
     pathUtils = require("../../lib/pathUtils"),
 
-    libUtils       = require("../../lib/utils"),
+    creativeType  = require("../lib/adCreativeType").AD_CREATIVE_TYPE,
+    libUtils      = require("../../lib/utils"),
     BaseModel     = require("./baseModel").BaseModel,
     Changeable    = require("../lib/model/changeable").Changeable,
+    Config = require("../lib/config").Config,
     Validatable   = require("../lib/model/validatable").Validatable,
     TabSeparated  = require("../lib/model/tabSeparated").TabSeparated;
 
@@ -211,7 +213,7 @@ var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
   },
 
   dataForRemoteUpdate: function() {
-    var store = { creative: {}, targeting: {} };
+    var store = {};
 
     if (this.keywords().length === 0) {
       this.interests_toggle(true);
@@ -223,12 +225,25 @@ var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
       this.user_adclusters([]);
     }
 
+
+    
+
     this.storage().props().forEach(function(f) {
       if (f.remote) {
         var value = f.getRemoteValue(this);
+
+        // NOTE - only submit changed fields
+        if (Config.get('SUBMIT_CHANGES_ONLY', false) &&
+          this.id() > 0 &&
+          !this.isChanged(f.name)) {
+          return;
+        }
+
         if (f.creative) {
+          store.creative = store.creative || {};
           store.creative[f.remote] = value;
         } else if (f.targeting) {
+          store.targeting = store.targeting || {};
           store.targeting[f.remote] = value;
         } else {
           store[f.remote] = value;
@@ -244,7 +259,7 @@ var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
       store = new_store;
     }
 
-    if (this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI) {
+    if (this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI_PREMIUM) {
       store.bid_info = {};
       utils.forEach(BID_INFO_MAP, function(prop, key) {
         store.bid_info[key] = this.storage().prop(prop).getRemoteValue(this);
@@ -289,6 +304,8 @@ var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
 
   searchFields: function() {
     return [
+      'id',
+      'campaign_id',
       'name',
       'campaign_name',
       'title',
@@ -306,8 +323,13 @@ var Ad = storage.newStorage(BaseModel, TabSeparated, Changeable, Validatable, {
   },
 
   isMulti: function() {
-    // TODO: Add BID_TYPE_MULTI_SS when we support it
-    return this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI;
+    // TODO: Add BID_TYPE_MULTI_RELATIVE when we support it
+    return this.bid_type() == require("../lib/bidTypes").BID_TYPE_MULTI_PREMIUM;
+  },
+
+  isRelatedFanPageSupported: function() {
+    var t = this.type();
+    return t == creativeType.STANDARD || t == creativeType.PREMIUM_STANDARD;
   },
 
   graphCreatePath: function() {
@@ -334,11 +356,18 @@ var BID_INFO_MAP = {
 
 var proto = Ad.prototype;
 
+// make campaign props accessable through ads
+fun.delegateProp(proto, [
+    'adjusted_start_time',
+    'adjusted_end_time',
+    'topline'
+], 'campaign');
+
 // make topline props accessable through ads
 fun.delegateProp(proto, [
     'line_number', 'line_id',
     'product_type', 'ad_type',
-    'flight_start_date', 'flight_end_date',
+    'adjusted_flight_start_date', 'adjusted_flight_end_date',
     'uom', 'func_price',
     'func_line_amount', 'func_cap_amount',
     'description', 'targets',
@@ -382,6 +411,15 @@ function fixCreative(store) {
       var is_premium = this.is_from_premium_line();
       var fields_by_type =
         require("../lib/creativeMap").getFieldsByType(creative.type, is_premium);
+
+      // TODO: Pefa1. HACK: to temporary support of the hidden auto_update field
+      // should be removed after we open it to public
+      var creative_types = require("../lib/adCreativeType");
+      if (creative.type ==
+        creative_types.AD_CREATIVE_TYPE.PAGE_POSTS_V2 &&
+        fields_by_type.indexOf('auto_update') == -1) {
+          fields_by_type.push('auto_update');
+      }
 
       var fields_to_delete = arrDiff(
         require("../view/adEditor/creative/creativeTypeSpecs").CREATIVE_VIEW_FIELDS,

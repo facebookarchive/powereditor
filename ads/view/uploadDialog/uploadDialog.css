@@ -35,3 +35,7 @@
 .uploadDialog-errorLog .ufb-text-content {
     color: #900;
 }
+
+.uploadDialog-progressMessage {
+  float: left;
+}

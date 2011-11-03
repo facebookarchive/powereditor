@@ -43,3 +43,74 @@
   left: 0;
   top: -9em;
 }
+
+.ufb-dataList_blured .ufb-dataList-row_odd.ufb-dataTable-row_selected .ufb-dataTable-cell,
+.ufb-dataList_blured .ufb-dataTable-row_selected .ufb-dataTable-cell {
+  background-color: #d4d4d4;
+  color: #000;
+}
+
+.ufb-dataList-row_odd.ufb-dataTable-row_selected .ads-dataTable-col_contract,
+.ufb-dataTable-row_selected .ads-dataTable-col_contract,
+.ufb-dataList-row_odd.ufb-dataTable-row_selected .ads-dataTable-col_topline,
+.ufb-dataTable-row_selected .ads-dataTable-col_topline,
+.ufb-dataList-row_odd.ufb-dataTable-row_selected .ads-dataTable-col_campaign,
+.ufb-dataTable-row_selected .ads-dataTable-col_campaign,
+.ufb-dataList-row_odd.ufb-dataTable-row_selected .ads-dataTable-col_ad,
+.ufb-dataTable-row_selected .ads-dataTable-col_ad,
+.ufb-dataList-row_odd.ufb-dataTable-row_selected .ads-dataTable-col_stat,
+.ufb-dataTable-row_selected .ads-dataTable-col_stat
+{
+  background-color: #555;
+  color: #FFF;
+}
+
+.ads-dataTable-col_contract {
+  /* light purple */
+  background: #E0CCE0;
+}
+
+.ufb-dataList-row_odd .ads-dataTable-col_contract {
+  /* lighter purple */
+  background: #F0E6F0;
+}
+
+.ads-dataTable-col_topline {
+  /* light blue */
+  background: #CCD6E0;
+}
+
+.ufb-dataList-row_odd .ads-dataTable-col_topline {
+  /* lighter blue */
+  background: #E6EBF0;
+}
+
+.ads-dataTable-col_campaign {
+  /* light green */
+  background: #CCD6CC;
+}
+
+.ufb-dataList-row_odd .ads-dataTable-col_campaign {
+  /* lighter green */
+  background: #E6EBE6;
+}
+
+.ads-dataTable-col_ad {
+  /* light red */
+  background: #EBD6D6;
+}
+
+.ufb-dataList-row_odd .ads-dataTable-col_ad {
+  /* lighter red */
+  background: #F5EBEB;
+}
+
+.ads-dataTable-col_stat {
+  /* light brown */
+  background: #E0D6CC;
+}
+
+.ufb-dataList-row_odd .ads-dataTable-col_stat {
+  /* lighter brown */
+  background: #F0EBE6;
+}

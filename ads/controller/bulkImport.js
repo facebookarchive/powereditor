@@ -177,8 +177,10 @@ BulkImport.importInto = function(account, text, imageLookup) {
     }
 
     if (parser.camps().length) {
+      var line_number = null;
       var importer = new CampImporterJob(
         account,
+        line_number,
         parser.camps(),
         utils.pluck(parser.foundCampProps(), 'name'));
 

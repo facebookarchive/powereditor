@@ -68,6 +68,15 @@ var Group = fun.newClass(Base, {
       this._allowedStatusTransitions = result;
     }
     return this._allowedStatusTransitions;
+  },
+
+  isRelatedFanPageSupported: function() {
+    for (var i = 0; i < this._items.length; i++) {
+      if (!this._items[i].isRelatedFanPageSupported()) {
+        return false;
+      }
+    }
+    return true;
   }
 
 });
@@ -75,6 +84,17 @@ var Group = fun.newClass(Base, {
 // proxy all props
 Base.addProps(Group.prototype, utils.pluck(Ad.props(), 'name'));
 
+['related_fan_page_wanted', 'related_fan_page_id'].forEach(
+  fun.bind(function(name) {
+    this['_untracked_' + name] = this[name];
+    this[name] = function(value) {
+      var ret = this['_untracked_' + name](value);
+      if (value !== undefined) {
+        this.commitChanges(name);
+      }
+      return ret;
+    };
+  }, Group.prototype));
 
 
 exports.Group = Group;

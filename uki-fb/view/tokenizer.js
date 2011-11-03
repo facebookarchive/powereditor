@@ -39,10 +39,16 @@ var fun   = require("../../uki-core/function"),
 
     Container = require("../../uki-core/view/container").Container,
 
+    Button = require("./button").Button,
     Binding   = require("../binding").Binding,
     Dialog    = require("./dialog").Dialog,
+    DialogHeader  = require("./dialog").DialogHeader,
+    DialogContent = require("./dialog").DialogContent,
+    DialogBody    = require("./dialog").DialogBody,
+    DialogFooter  = require("./dialog").DialogFooter,
     Typeahead = require("./typeahead").Typeahead,
-    Token     = require("./tokenizer/token").Token;
+    Token     = require("./tokenizer/token").Token,
+    Text = require("./text").Text;
 
 
 /**
@@ -96,7 +102,7 @@ proto.value = function(v) {
   (v || []).forEach(function(id) {
     var info = this.value2info()(id);
     if (info) {
-      views.push({ view: 'tokenizer.Token', info: info });
+      views.push({ view: Token, info: info });
     }
   }, this);
   this.childViews(views);
@@ -154,14 +160,14 @@ proto._createDom = function() {
   [this._typeahead.dom(), this._tokenArea]);
 
   // validation dialog for inputting multiple tokens via paste
-  this._validateDialog = build({ view: 'Dialog', childViews: [
-    { view: 'DialogHeader', html: tx('ads:pe:validate-tokenizer-header') },
-    { view: 'DialogContent', childViews: [
-      { view: 'DialogBody', childViews: [
-        { view: 'Text', text: tx('ads:pe:validate-tokenizer') }
+  this._validateDialog = build({ view: Dialog, childViews: [
+    { view: DialogHeader, html: tx('ads:pe:validate-tokenizer-header') },
+    { view: DialogContent, childViews: [
+      { view: DialogBody, childViews: [
+        { view: Text, text: tx('ads:pe:validate-tokenizer') }
       ]},
-      { view: 'DialogFooter', childViews: [
-        { view: 'Button', label: tx('ads:pe:validate-dismiss'),
+      { view: DialogFooter, childViews: [
+        { view: Button, label: tx('ads:pe:validate-dismiss'),
           use: 'confirm', disabled: true, as: 'dismiss',
           on: { click: fun.bindOnce(function() {
             this._validateDialog.visible(false);

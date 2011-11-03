@@ -30,6 +30,8 @@ var fun   = require("../../uki-core/function"),
     userRole = require("../lib/adsUserRole"),
     libUtils = require("../../lib/utils"),
 
+    Changeable = require("../lib/model/changeable").Changeable,
+
     storage = require("../../storage/storage"),
     pathUtils = require("../../lib/pathUtils");
 
@@ -38,7 +40,7 @@ var fun   = require("../../uki-core/function"),
 * Account Model
 * @class
 */
-var Account = storage.newStorage({
+var Account = storage.newStorage(Changeable, {
   init: function() {
     this._children = [];
   },
@@ -93,8 +95,20 @@ var Account = storage.newStorage({
     }
 
     return false;
-  }
+  },
 
+  isNew: function() {
+    // TODO: allow to create new account later.
+    return this.id() < 0;
+  },
+
+  removeSelf: function(callback) {
+    storage.Storable.remove.call(this, callback);
+  },
+
+  remove: function(callback) {
+    Account.dropAccounts([this], callback);
+  }
 });
 
 Account
@@ -225,6 +239,43 @@ Account.hasChangedAct = function(accounts) {
   }
 
   return false;
+};
+
+/**
+ * removing data associated with accounts being dropped
+ */
+Account.dropAccounts = function(accounts, callback) {
+  // clean up all previous contracts/toplines
+  var account_ids = utils.pluck(accounts, 'id');
+  require("./topline").Topline.deleteBy(
+    'account_id',
+    account_ids,
+    function() {
+      require("./contract").Contract.deleteBy(
+        'id',
+        account_ids,
+        function() {
+      });
+  });
+
+  // clean up all previous campaigns/ads
+  require("./ad").Ad.deleteBy(
+    'account_id',
+    account_ids,
+    function() {
+      require("./campaign").Campaign.deleteBy(
+        'account_id',
+        account_ids,
+        function() {
+          // clean up all previous contracts and toplines
+          Account.deleteBy(
+            'id',
+            account_ids,
+            function() {
+              callback(null);
+          });
+      });
+  });
 };
 
 exports.Account = Account;

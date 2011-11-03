@@ -23,10 +23,13 @@
 */
 
 var view  = require("../../uki-core/view"),
+    fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
     env   = require("../../uki-core/env"),
     evt   = require("../../uki-core/event"),
     dom   = require("../../uki-core/dom"),
+    Campaign = require("../model/campaign").Campaign,
+    Topline = require("../model/topline").Topline,
 
     ParserJob = require("../job/tabSeparatedParser").Parser,
     CampImporterJob = require("../job/campImporter").Importer,
@@ -34,10 +37,11 @@ var view  = require("../../uki-core/view"),
     LogDialog = require("../view/logDialog").LogDialog,
     SelectDialog = require("../view/selectDialog").SelectDialog,
 
+    DuplicateUtils =
+        require("./duplicate/DuplicateUtils").DuplicateUtils,
+
     Copy = require("./copy").Copy,
     App  = require("./app").App;
-
-
 
 /**
 * Handle Ad paste
@@ -49,8 +53,8 @@ Paste.init = function() {
   // bind high level paste hanlder, so we can
   // support campaign and ad tab separated pastes
   var normalPasteCompletedBefore = false;
-  this._selectDialog = new SelectDialog('campaign');
-  this._selectDialog.text(tx('ads:pe:select-one-campaign-for-paste'));
+  Paste._selectCampaignDialog = new SelectDialog('campaign');
+  Paste._selectToplineDialog = new SelectDialog('topline');
 
   evt.on(env.doc.body, 'paste', function(e) {
     var pasteView = targetView(e);
@@ -109,6 +113,12 @@ function copyDummy() {
   return _copyDummy;
 }
 
+Paste.getSelectedAccount = function() {
+  var row = view.byId('campaignList-list').selectedRow();
+  var account = row.account ? row.account() : row;
+  return account;
+};
+
 /**
 * Event handler
 *
@@ -119,15 +129,42 @@ Paste.handler = function(v, text) {
   // Windows tends to replace \n -> \r\n during copy
   text = text.replace(/(\r\n|\r|\n)/g, '\n').replace(/\r/g, '\n');
 
-  var row = view.byId('campaignList-list').selectedRow();
-  var account = row.account ? row.account() : row;
+  var account = Paste.getSelectedAccount();
+  var line_number = null;
 
   Paste.resetDialog();
   require("../lib/completions").dialog = Paste.dialog();
-  if (v.copySourceId && v.copySourceId() === 'campaigns') {
-    Paste.pasteIntoCamps(account, text);
+
+  var selected_pane_name = view.byId('content').curSelectedPane();
+
+  if (selected_pane_name == 'contractPane') {
+    var toplines = view.byId('topline-table').selectedRows();
+    if (toplines.length > 0) {
+      line_number = toplines[0].line_number();
+    }
+  }
+
+  if (selected_pane_name != 'adPane') {
+    if (account.hasContract() && !line_number) {
+      Paste.selectTopline(account, function(selected_line_number) {
+        Paste.pasteIntoCamps(account, selected_line_number, text);
+          });
+    } else {
+      Paste.pasteIntoCamps(account, line_number, text);
+    }
   } else {
-    Paste.pasteIntoAds(account, text, view.byId('content').campaigns());
+    var selected_campaigns = view.byId('content').campaigns();
+    if (Copy.isInternalPaste(text, 'ads')) {
+      if (selected_campaigns.length == 1) {
+        Paste.pasteIntoAds(account, text, selected_campaigns[0]);
+      } else {
+        Paste.selectCampaign(account, function(campaign) {
+          Paste.pasteIntoAds(account, text, campaign);
+        });
+      }
+    } else {
+      Paste.pasteIntoAds(account, text, null);
+    }
   }
 };
 
@@ -137,71 +174,100 @@ Paste.handler = function(v, text) {
 // for that error. Dialog will grow with more errors being added.
 // User can close dialog with 'Close' button
 Paste.dialog = function() {
-  return this._dialog ||
-    (this._dialog = new LogDialog().title(tx('ads:pe:paste-title')));
+  return Paste._dialog ||
+    (Paste._dialog = new LogDialog().title(tx('ads:pe:paste-title')));
 };
 
 Paste.resetDialog = function() {
-  if (this._dialog) { this._dialog.clear(); }
+  if (Paste._dialog) { Paste._dialog.clear(); }
 };
 
 Paste.logError = function(error) {
-  this.dialog().visible(true).log(error);
+  Paste.dialog().visible(true).log(error);
 };
 
 // Select campaign
 // If user pastes from power editor and more than one campaign is selected
 // (account is selected) ask which particular campaign user wants to use.
 // Use selected ad as a hint to preselect campaign.
-Paste.selectCampaign = function(callback) {
-  var selectedCampaigns = view.byId('content').campaigns();
-  var selectedAd = view.byId('adPane-data').selectedRow();
-  var dialog = this._selectDialog;
-  dialog.selectOptions(selectedCampaigns.map(function(camp) {
-    return { text: camp.name() + ' (' + camp.id() + ')', value: camp.id() };
-  }));
-  if (selectedAd) {
-    dialog.selectValue(selectedAd.campaign_id());
-  }
-  dialog.on('select.campaign', function handler(e) {
-    dialog.removeListener('select.campaign', handler);
-    e.stopPropagation();
-    dialog.visible(false);
-    var id = dialog.selectValue();
-    for (var i = 0, l = selectedCampaigns.length; i < l; i++) {
-      if (id === selectedCampaigns[i].id()) {
-        callback([selectedCampaigns[i]]);
-        return;
+Paste.selectCampaign = function(account, callback) {
+  Campaign.findAllBy('account_id', account.id(), function(campaigns) {
+    var selectedAd = view.byId('adPane-data').selectedRow();
+    var dialog = Paste._selectCampaignDialog;
+    dialog.text(tx('ads:pe:select-one-campaign-for-paste',
+        {act: account.id()}));
+    dialog.selectOptions(campaigns.map(function(camp) {
+      return { text: camp.name() + ' (' + camp.id() + ')', value: camp.id() };
+    }));
+    if (selectedAd) {
+      dialog.selectValue(selectedAd.campaign_id());
+    }
+    dialog.on('select.campaign', function handler(e) {
+      dialog.removeListener('select.campaign', handler);
+      e.stopPropagation();
+      dialog.visible(false);
+      var id = dialog.selectValue();
+      for (var i = 0, l = campaigns.length; i < l; i++) {
+        if (id === campaigns[i].id()) {
+          callback(campaigns[i]);
+          return;
+        }
       }
-    }
+    });
+    dialog.visible(true);
   });
-  dialog.visible(true);
 };
 
-// Importing ads
-Paste.pasteIntoAds = function(account, text, selectedCamps) {
-  // C&P within App
-  if (Copy.isInternalPaste(text, 'ads')) {
-    if (selectedCamps.length > 1) {
-      Paste.selectCampaign(function(filteredSelectedCamps) {
-        Paste.pasteIntoAdsContinue(account, text, filteredSelectedCamps);
-      });
-    } else if (selectedCamps.length == 1) {
-      Paste.pasteIntoAdsContinue(account, text, selectedCamps);
+Paste.selectTopline = function(account, callback) {
+  var selected_pane_name = view.byId('content').curSelectedPane();
+  var selected_toplines = [];
+  var selected_topline = null;
+  if (selected_pane_name == 'contractPane') {
+    selected_toplines = view.byId('topline-table').selectedRows();
+    if (selected_toplines.length > 0) {
+      selected_topline = selected_toplines[0];
     }
-  } else {
-    Paste.pasteIntoAdsContinue(account, text, null);
   }
+
+  Topline.findAllBy('account_id', account.id(),
+      fun.bind(function(toplines) {
+    var dialog = Paste._selectToplineDialog;
+    Paste._selectToplineDialog.text(
+      tx('ads:pe:select-one-topline-for-paste', { act: account.id() }));
+    dialog.selectOptions(toplines.map(function(topline) {
+      var name = '#' + topline.line_number() +
+        ' ' + topline.product_type();
+      if (topline.description() && topline.description().length > 0) {
+        name += ' - ' + topline.description();
+      }
+      if (topline.targets() && topline.targets().length > 0) {
+        name += ' - ' + topline.targets();
+      }
+      return { text: name, value: topline.line_number() };
+    }));
+    if (selected_topline) {
+      dialog.selectValue(selected_topline.line_number());
+    }
+    dialog.on('select.topline', function handler(e) {
+      dialog.removeListener('select.topline', handler);
+      e.stopPropagation();
+      dialog.visible(false);
+      var line_number = dialog.selectValue();
+      callback(line_number);
+    });
+    dialog.visible(true);
+  }, true));
 };
 
-Paste.pasteIntoAdsContinue = function(account, text, selectedCamps) {
+Paste.pasteIntoAds = function(account, text, to_campaign) {
   var parser = new ParserJob(account, text);
 
   parser.excelPaste(!Copy.isInternalPaste(text, 'ads'));
 
   parser.oncomplete(function() {
     if (parser.errors().length) {
-      alert(parser.errors()[0].message());
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:parse-invalid-header'));
       return;
     }
     if (parser.foundAdProps().length < 2) {
@@ -223,18 +289,18 @@ Paste.pasteIntoAdsContinue = function(account, text, selectedCamps) {
         // when copying within app, use selected campaign as a target
         // override any campaign_id previously selected
         parser.ads().forEach(function(ad) {
-          ad
-            .muteChanges(true)
-            .id('')
-            .campaign_id(selectedCamps[0].id())
-            .muteChanges(false);
+          ad.muteChanges(true)
+            .id('');
+          if (to_campaign) {
+            ad.campaign_id(to_campaign.id());
+          }
+          ad.muteChanges(false);
         });
 
         importer.useNameMatching(false);
       }
 
       importer
-        .selectedCamps(selectedCamps)
         .onerror(function(e) { Paste.logError(e.error.message()); })
         .oncomplete(function() {
           view.byId('adPane').refreshAndSelect(importer.ads());
@@ -249,14 +315,15 @@ Paste.pasteIntoAdsContinue = function(account, text, selectedCamps) {
 
 
 // Importing campaigns
-Paste.pasteIntoCamps = function(account, text) {
+Paste.pasteIntoCamps = function(account, line_number, text) {
   var parser = new ParserJob(account, text);
 
   parser.excelPaste(!Copy.isInternalPaste(text, 'campaigns'));
 
   parser.oncomplete(function() {
     if (parser.errors().length) {
-      alert(parser.errors()[0]);
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:parse-invalid-header'));
       return;
     }
     if (parser.foundCampProps().length < 2) {
@@ -266,31 +333,57 @@ Paste.pasteIntoCamps = function(account, text) {
     }
 
     if (parser.camps().length) {
-      var importer = new CampImporterJob(
-        account,
-        parser.camps(),
-        utils.pluck(parser.foundCampProps(), 'name'));
-
       if (Copy.isInternalPaste(text, 'campaigns')) {
-        parser.camps().forEach(function(camp) {
-          camp.id('');
-        });
-        importer.useNameMatching(false);
+        Paste.pasteFromInternalCopy(account, line_number, parser);
+      } else {
+        Paste.pasteFromExternal(account, line_number, parser);
       }
-
-      if (parser.ads().length && parser.foundAdProps().length > 2) {
-        importer
-          .ads(parser.ads())
-          .adPropsToCopy(utils.pluck(parser.foundAdProps(), 'name'));
-      }
-
-      importer
-        .onerror(function(e) { Paste.logError(e.error.message()); })
-        .oncomplete(function() { App.reload(); }).start();
-    } else {
-      // nothing to paste
     }
   }).start();
+};
+
+Paste.pasteFromInternalCopy = function(account, line_number, parser) {
+  DuplicateUtils.cloneCampaignsWithAds(parser.camps(),
+      function(new_campaigns, new_ads) {
+    var importer = new CampImporterJob(
+      account, line_number, new_campaigns, []);
+    importer
+      .useNameMatching(false)
+      .useToplineDates(true)
+      .ads(new_ads)
+      .onerror(function(e) { Paste.logError(e.error.message()); })
+      .oncomplete(function() {
+        Campaign.prepare(function() {
+          var adimporter = new AdImporterJob(account, new_ads, []);
+            adimporter
+              .useNameMatching(false)
+              .onerror(function(e) { Paste.logError(e.error.message()); })
+              .oncomplete(function() {
+                require("./app").App.reload();
+                })
+              .start();
+        });
+      })
+      .start();
+  });
+};
+
+Paste.pasteFromExternal = function(account, line_number, parser) {
+  var importer = new CampImporterJob(
+    account,
+    line_number,
+    parser.camps(),
+    utils.pluck(parser.foundCampProps(), 'name'));
+
+  if (parser.ads().length && parser.foundAdProps().length > 2) {
+    importer
+      .ads(parser.ads())
+      .adPropsToCopy(utils.pluck(parser.foundAdProps(), 'name'));
+  }
+
+  importer
+    .onerror(function(e) { Paste.logError(e.error.message()); })
+    .oncomplete(function() { App.reload(); }).start();
 };
 
 

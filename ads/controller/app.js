@@ -49,6 +49,7 @@ var dom   = require("../../uki-core/dom"),
     CampResultSet = require("../model/campaign/campResultSet").CampResultSet,
     ResultSet = require("../../storage/resultSet").ResultSet;
 
+var ADPREVIEWSCSS_PATH = '/adpreviewscss/';
 
 var App = {
   userStorage: fun.newProp(),
@@ -163,7 +164,7 @@ function _buildOrRestoreCampaignList(
       !App.isActive());
 
   withCorpAct = models.Account.hasCorpAct();
-  view.byId('content').toggleContractTab(withCorpAct);
+  view.byId('content').toggleCorpActTab(withCorpAct);
 
   var listType = 'campaignList-list';
   var list = view.byId(listType),
@@ -206,9 +207,11 @@ function _buildOrRestoreCampaignList(
     }
   }
 
+  // load the account-pane with account info;
+  view.byId('content').accounts(accounts);
+
   // wrap accounts and camps into something that can talk to DataTree
   var wrapper = new AccountResultWrapper(accounts, campaigns);
-
   list.treeData(wrapper);
 
   // If we want to preserve previous visual state, go through temp items and
@@ -287,6 +290,19 @@ function layout() {
         ]}
   ]).attach();
 
+  /**
+   * fetches css from adpreviewscss api
+   * for all preview ad types
+   */
+  FB.api(ADPREVIEWSCSS_PATH,
+    fun.bind(
+      function(response) {
+        var css = response.result;
+        dom.createStylesheet(css);
+      },
+      this
+    )
+  );
   _initHandler();
 }
 

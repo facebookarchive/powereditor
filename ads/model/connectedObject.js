@@ -24,6 +24,7 @@
 
 var fun   = require("../../uki-core/function"),
     utils = require("../../uki-core/utils"),
+    Dialog = require("../../uki-fb/view/dialog").Dialog,
 
     storage = require("../../storage/storage"),
 
@@ -173,13 +174,40 @@ ConnectedObject.loadExtraFromIds = function(account_id, obj_ids, callback) {
     callback([]);
     return;
   }
-  var paths = ['/act_' + account_id + '/connectionobjects/'];
-  var options = {
-    account_id: account_id,
-    extra_fbids: obj_ids.join(','),
-    extra_only: true
-  };
-  ConnectedObject.fetchAndStoreEdges(paths, options, callback);
+  FB.api(
+    '/act_' + account_id + '/connectionobjects/',
+    'get',
+    {extra_fbids: obj_ids.join(','), extra_only: true},
+      function(resp) {
+        if (!resp && resp.data && resp.data[this.hash]) {
+          throw new Error('Could not find connect object ' + obj_ids.join(','));
+        }
+        var new_connected_objects = [];
+        var missing_object_ids = [];
+        var new_connected_objects_by_id = {};
+        resp.data.forEach(function(remote_obj) {
+          new_connected_objects_by_id[remote_obj.id] = remote_obj;
+        });
+        obj_ids.forEach(function(obj_id) {
+          if (obj_id in new_connected_objects_by_id) {
+            new_connected_objects.push(
+              ConnectedObject.createFromRemote(
+                new_connected_objects_by_id[obj_id]));
+          } else {
+            missing_object_ids.push(obj_id);
+          }
+        });
+        var wrapped = function() {
+          if (missing_object_ids.length > 0) {
+            Dialog.alert('Missing permissions on object ids: ' +
+              missing_object_ids.join(', '));
+          }
+
+          ConnectedObject.prepare(fun.bind(callback, null,
+              new_connected_objects), true);
+        };
+        ConnectedObject.storeMulti(new_connected_objects, wrapped);
+    });
 };
 
 ConnectedObject.loadFromAccountIds = function(account_ids, callback) {

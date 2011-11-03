@@ -85,16 +85,20 @@ function _buildDemoAdLink(base, adgroup_id, hash) {
 }
 
 
-function getDemoLinks(ad) {
-  var links = {};
+function getDemoLink(ad) {
+  var link = null;
   if (!ad.isNew()) {
-    links.PROFILE = _buildDemoAdLink(PROFILE_BASE, ad.id(),
+    var is_home =
+      ad.original().locations &&
+      ad.original().locations.length > 0 &&
+      ad.original().locations[0] == require("./impressionLocation").HOME;
+    link = _buildDemoAdLink(is_home ? HOME_BASE : PROFILE_BASE,
+      ad.id(),
       ad.demolink_hash());
-    links.HOME = _buildDemoAdLink(HOME_BASE, ad.id(), ad.demolink_hash());
   }
 
-  return links;
+  return link;
 }
 
 exports.build = build;
-exports.getDemoLinks = getDemoLinks;
+exports.getDemoLink = getDemoLink;

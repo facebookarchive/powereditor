@@ -67,6 +67,8 @@ var UploadDialog = view.newClass('ads.UploadDialog', Dialog,
         ] },
 
         { view: 'DialogFooter', childViews: [
+          { view: 'Text', addClass: 'uploadDialog-progressMessage',
+            childName: 'progressMessage', html: ''},
           { view: 'Button', label: 'Yes', large: true, use: 'confirm',
             childName: 'yes', action: 'continueErrors',
             on: { click: fun.bindOnce(this._clickYes, this) } },
@@ -100,6 +102,10 @@ var UploadDialog = view.newClass('ads.UploadDialog', Dialog,
         .prop('visible', false);
     find('[childName=stop]', this)[0].visible(true);
     this.trigger({ type: 'continueWithErrors' });
+  },
+
+  updateProgressMessage: function(msg) {
+    find('[childName=progressMessage]', this)[0].visible(true).text(msg);
   },
 
   updateProgress: function(uploaded, ads, campaigns) {

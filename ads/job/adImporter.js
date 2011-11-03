@@ -24,7 +24,10 @@
 
 var fun = require("../../uki-core/function");
 var utils = require("../../uki-core/utils");
+var AdsUtils = require("../../lib/utils");
 var env = require("../../uki-core/env");
+var rs = require("../lib/runStatus");
+var asyncUtils = require("../../lib/async");
 
 var uniqName = require("../lib/uniqName").uniqName;
 var Job = require("./base").Job;
@@ -73,38 +76,36 @@ var Importer = fun.newClass(Job,
   _prepare: function() {
     var next = fun.bind(this._create, this);
     var account_id = this.account().id();
-    if (this.selectedCamps()) {
-      var camps = this.selectedCamps();
-      Ad.findAllBy('campaign_id', utils.pluck(camps, 'id'), function(ads) {
-        next(camps, ads);
+    var campaign_map_by_id = {};
+    var ad_map_by_id = {};
+    var ad_map_by_name = {};
+
+    Campaign.findAllBy('account_id', account_id,
+        fun.bind(function(campaigns) {
+      campaigns.forEach(function(camp) {
+        campaign_map_by_id[camp.id()] = camp;
       });
-    } else {
-      Campaign.findAllBy('account_id', account_id, function(camps) {
-        Ad.findAllBy('campaign_id', utils.pluck(camps, 'id'), function(ads) {
-          next(camps, ads);
+      var chunks = AdsUtils.chunkArray(campaigns, 300); // chunks of 300
+      var existing_ads = [];
+      asyncUtils.forEach(chunks, function(chunk_campaigns, i_chunk, itercb) {
+        Ad.findAllBy('campaign_id', utils.pluck(chunk_campaigns, 'id'),
+            function(ads) {
+          ads.forEach(function(ad) {
+            ad_map_by_id[ad.id()] = ad;
+            ad_map_by_name[nameKey(ad)] = ad;
+          });
+          itercb();
         });
-      });
-    }
+      }, fun.bind(function() {
+        this.campMapById(campaign_map_by_id);
+        this.adMapById(ad_map_by_id);
+        this.adMapByName(ad_map_by_name);
+        next(campaign_map_by_id, ad_map_by_id, ad_map_by_name);
+      }, this));
+    }, this));
   },
 
   _create: function(existingCamps, existingAds) {
-    var mapById = {};
-    var mapByName = {};
-
-    existingCamps.forEach(function(camp) {
-      mapById[camp.id()] = camp;
-    });
-    this.campMapById(mapById);
-
-    mapById = {};
-    mayByName = {};
-    existingAds.forEach(function(ad) {
-      mapById[ad.id()] = ad;
-      mapByName[nameKey(ad)] = ad;
-    });
-    this
-      .adMapById(mapById)
-      .adMapByName(mapByName);
 
     this._status = {
       complete: 0,
@@ -201,7 +202,7 @@ var Importer = fun.newClass(Job,
    * This code is deliberetely explict. I tryed to avoid merging cases for
    * better readability and consistence with camps.
    */
-  _routeAd: function(newAd, index, callback) {
+  _routeAd: function(new_ad, index, callback) {
     try {
 
     this._status.complete++;
@@ -209,63 +210,71 @@ var Importer = fun.newClass(Job,
     var campMapById = this.campMapById();
     var adMapById = this.adMapById();
     var adMapByName = this.adMapByName();
-    var id = newAd.id();
-    var name = (newAd.name() || '').toLowerCase();
-    var key = nameKey(newAd);
-    var referencedCamp = newAd.campaign_id() &&
-      campMapById[newAd.campaign_id()];
+    var id = new_ad.id();
+    var name = (new_ad.name() || '').toLowerCase();
+    var key = nameKey(new_ad);
+    var referencedCamp = new_ad.campaign_id() &&
+      campMapById[new_ad.campaign_id()];
 
     if (!this.useNameMatching()) { key = ''; }
 
     // enforce parent
-    newAd.account_id(this.account().id());
+    new_ad.account_id(this.account().id());
+
+    if (!id || id < 0) {
+      if (new_ad.adgroup_status() == rs.PENDING_REVIEW ||
+          new_ad.adgroup_status() == rs.DELETED ||
+          new_ad.adgroup_status() == rs.DISAPPROVED) {
+        new_ad.adgroup_status(rs.ADGROUP_PAUSED);
+      }
+    }
 
     if (id && adMapById[id] && referencedCamp &&
       adMapById[id].campaign_id() == referencedCamp.id()) {
-      this._updateAd(adMapById[id], newAd, callback);
+      this._updateAd(adMapById[id], new_ad, callback);
 
     } else if (id && adMapById[id] && referencedCamp &&
       adMapById[id].campaign_id() != referencedCamp.id()) {
       this._failAd(new AdCannotBeMovedError({
-        ad: newAd,
+        ad: new_ad,
         oldCamp: campMapById[adMapById[id].campaign_id()],
         newCamp: referencedCamp
       }));
       callback();
 
-    } else if (id && adMapById[id] && newAd.campaign_id() && !referencedCamp) {
+    } else if (id && adMapById[id] && new_ad.campaign_id() && !referencedCamp) {
       this._failAd(new AdCannotBeMovedToNowhereError({
-        ad: newAd,
+        ad: new_ad,
         oldCamp: campMapById[adMapById[id].campaign_id()]
       }));
       callback();
 
-    } else if (id && adMapById[id] && !newAd.campaign_id()) {
-      this._updateAd(adMapById[id], newAd, callback);
+    } else if (id && adMapById[id] && !new_ad.campaign_id()) {
+      this._updateAd(adMapById[id], new_ad, callback);
 
     } else if (id && !adMapById[id]) {
-      this._failAd(new MissingAdUpdateError(newAd));
+      this._failAd(new MissingAdUpdateError(new_ad));
       callback();
 
     } else if (!id && name && adMapByName[key]) {
-      this._updateAd(adMapByName[key], newAd, callback);
+      this._updateAd(adMapByName[key], new_ad, callback);
 
     } else if (!id && name && !adMapByName[key] && referencedCamp) {
-      this._createAd(newAd, referencedCamp, callback);
+      this._createAd(new_ad, referencedCamp, callback);
 
     } else if (!id && name && !adMapByName[key] && !referencedCamp) {
       this._failAd(new CreateAdWithoutCampaignError({
-        ad: newAd,
+        ad: new_ad,
         index: index
       }));
       callback();
 
     } else if (!id && !name && referencedCamp) {
-      this._createAd(newAd, referencedCamp, callback);
+      this._createAd(new_ad, referencedCamp, callback);
 
     } else {
       this._failAd(new CreateAdWithoutCampaignError({
-        ad: newAd,
+        ad: new_ad,
         index: index
       }));
       callback();
@@ -280,7 +289,7 @@ var Importer = fun.newClass(Job,
     this._error(error);
   },
 
-  _updateAd: function(existingAd, newAd, callback) {
+  _updateAd: function(existingAd, new_ad, callback) {
     try {
       this.results().push({ action: 'update', id: existingAd.id() });
 
@@ -293,7 +302,7 @@ var Importer = fun.newClass(Job,
           return;
         }
         updated = true;
-        existingAd[name](newAd[name]());
+        existingAd[name](new_ad[name]());
       });
 
       this.adMapByName()[nameKey(existingAd)] = existingAd;
@@ -311,34 +320,34 @@ var Importer = fun.newClass(Job,
     }
   },
 
-  _createAd: function(newAd, camp, callback) {
+  _createAd: function(new_ad, camp, callback) {
     try {
       // enforce parents
-      newAd
+      new_ad
         .muteChanges(true)
         .id(- new Date() - (env.guid++))
         .account_id(this.account().id())
         .campaign_id(camp.id());
 
       if (!this.useNameMatching()) {
-        newAd.name(uniqName(
-          newAd.name(),
+        new_ad.name(uniqName(
+          new_ad.name(),
           this.adMapByName(),
           function(name) {
-            return newAd.campaign_id() + '_' + name.toLowerCase();
+            return new_ad.campaign_id() + '_' + name.toLowerCase();
           }
         ));
       }
-      this.adMapByName()[nameKey(newAd)] = newAd;
+      this.adMapByName()[nameKey(new_ad)] = new_ad;
 
-      newAd.muteChanges(false);
-      newAd.validateAll();
-      newAd.updateCampaign();
+      new_ad.muteChanges(false);
+      new_ad.validateAll();
+      new_ad.updateCampaign();
 
-      this.adMapById()[newAd.id()] = newAd;
+      this.adMapById()[new_ad.id()] = new_ad;
       this.results().push({ action: 'create' });
 
-      newAd.store(callback);
+      new_ad.store(callback);
     } catch (e) {
       require("../../lib/errorReport").handleException(e, 'ai:create');
     }

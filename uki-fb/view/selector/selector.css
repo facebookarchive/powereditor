@@ -32,6 +32,11 @@
   display: -moz-inline-box;
   display: inline-block;
   vertical-align: top;
+  max-width: 200px;
+}
+
+.ufb-selector .ufb-selector-toggler {
+  z-index: 100;
 }
 
 .ufb-selector-wrapper {
@@ -104,7 +109,9 @@
   left: 0;
   margin-top: -1px;
   min-width: 100%;
+  max-width: 340px;
   position: absolute;
+  z-index: -1;
   right: auto;
   top: 100%;
   visibility: hidden;
@@ -112,7 +119,6 @@
 
 .ufb-selector-toggler .ufb-selector-menu-wrapper {
   visibility: visible;
-  z-index: 10;
 }
 
 .ufb-selector_rigth .ufb-selector-menu-wrapper {

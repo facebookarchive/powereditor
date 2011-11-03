@@ -42,13 +42,16 @@ var Delete = {};
  * @param update_status The status field. For ads it's 'real_adgroup_status'.
  *  For campaigns it's 'campaign-status'
  */
-function delete_items(id, update_status) {
+function delete_items(id, update_status, completeFn) {
   var items = view.byId(id + '-data').selectedRows(),
       deleted = 0,
       deferred = new DeferredList();
 
   items.forEach(function(item) {
-    if (item.isNew()) {
+    if (item.isNew && item.isNew()) {
+      item.remove(deferred.newWaitHandler());
+      deleted++;
+    } else if (id === 'accountPane') {
       item.remove(deferred.newWaitHandler());
       deleted++;
     } else {
@@ -57,6 +60,7 @@ function delete_items(id, update_status) {
     }
   });
 
+  deferred.complete(completeFn);
   view.byId(id).refreshAndSelect(items);
 
   return deleted;
@@ -75,6 +79,11 @@ Delete.init = function() {
           Delete.handleCamps();
         } else if (delView.copySourceId() === 'ads') {
           Delete.handleAds();
+        } else if (delView.copySourceId() === 'accounts') {
+          Delete.handleAccounts();
+        } else {
+          require("../../uki-fb/view/dialog").Dialog
+            .alert('not supported pane type');
         }
 
         // make sure we don't navigate back
@@ -90,9 +99,15 @@ Delete.handleAds = function() {
 
 Delete.handleCamps = function() {
   // reload the app if we actually deleted new campaigns to update left pane
-  if (delete_items('campPane', 'campaign_status')) {
-    require("./app").App.reload();
-  }
+  delete_items('campPane',
+    'campaign_status',
+    require("./app").App.reload);
+};
+
+Delete.handleAccounts = function() {
+  delete_items('accountPane',
+    'account_status',
+    require("./app").App.reload);
 };
 
 exports.Delete = Delete;

@@ -39,7 +39,7 @@ var AD_CREATIVE_TYPE_TS = {
     8:  'App Share Story',
     9:  'Page Like Story',
     10: 'Check-In Story',
-    11: 'Sponsored Page Post',
+    11: 'Page Post Ad',
     12: 'Premium Standard',
     13: 'Premium Fan',
     14: 'Premium Event',
@@ -55,7 +55,7 @@ var AD_CREATIVE_TYPE_TS = {
     24: 'Page Endorsement',
     25: 'Query Based',
     26: 'Ego House Ad',
-    27: 'Page Posts Pinned',
+    27: 'Page Post Ad',
 
     999: 'Invalid'
 };
@@ -154,15 +154,14 @@ var re = /[^a-z]/g;
 function string2id(string) {
   string = string.toLowerCase().replace(re, '');
   var found = 1;
-  try {
-    require("../../uki-core/utils").forEach(AD_CREATIVE_TYPE_TS, function(text, id) {
-      text = text.toLowerCase().replace(re, '');
-      if (text == string) {
-        found = id;
-        throw 'break';
-      }
-    });
-  } catch (e) {}
+  for (var id in AD_CREATIVE_TYPE_TS) {
+    var text = AD_CREATIVE_TYPE_TS[id];
+    text = text.toLowerCase().replace(re, '');
+    if (text == string) {
+      found = id;
+      break;
+    }
+  }
   return found;
 }
 

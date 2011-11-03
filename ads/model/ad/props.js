@@ -24,13 +24,17 @@
 
 var fun   = require("../../../uki-core/function"),
     utils = require("../../../uki-core/utils"),
+    AdsUtils = require("../../../lib/utils"),
     dom   = require("../../../uki-core/dom"),
 
     props   = require("../../lib/props"),
+    ConnectedObject   = require("../connectedObject").ConnectedObject,
+    ImageImporter = require("./image_importer").ImageImporter,
 
     urlToObjectIDSearcher = require("../../lib/fetcher").urlToObjectIDSearcher,
     AdStat          = require("../adStat").AdStat,
     Graphlink       = require("../../../lib/graphlink").Graphlink,
+    FB = require("../../../lib/connect").FB,
     formatters      = require("../../../lib/formatters");
 
 function addProps(Ad) {
@@ -82,6 +86,17 @@ function addProps(Ad) {
     originalName: 'original_status'
   });
 
+  Ad.addProp({
+    name: 'demo_link',
+    getValue: function(obj) {
+      if (!obj.isNew()) {
+        // profile or home
+        return require("../../lib/demoLinkBuilder").getDemoLink(obj);
+      }
+      return null;
+    },
+    tabSeparated: 'Demo Link'
+  });
 
   Ad.addProp({
     type: props.Number,
@@ -107,14 +122,6 @@ function addProps(Ad) {
     db: true,
     indexed: 'INTEGER NOT NULL',
     tabSeparated: 'Campaign ID'
-  });
-
-  Ad.addProp({
-    name: 'topline',
-    getValue: function(obj) {
-      return require("../topline").Topline
-        .byId(obj.campaign().line_id()) || {};
-    }
   });
 
   Ad.addProp({
@@ -179,7 +186,14 @@ function addProps(Ad) {
     db: true,
     trackChanges: true,
     humanName: 'Bid',
-    required: true
+    validate: function(obj) {
+      obj.toggleError(
+        !this.getValue(obj) &&
+        (obj.bid_type() != require("../../lib/bidTypes").BID_TYPE_MULTI_PREMIUM),
+        'max_bid',
+        'Bid required'
+      );
+    }
   });
 
   Ad.addProp({
@@ -441,59 +455,14 @@ function addProps(Ad) {
     creative: true,
     humanName: 'Image',
     tabSeparated: 'Image Hash',
+
+    getTabSeparated: function(obj) {
+      return obj.account_id() + ':' + this.getValue(obj);
+    },
+
     setTabSeparated: function(obj, value, callback) {
-      if (!value || !obj.imageLookup) {
-        callback();
-        return;
-      }
-
-      var imageLookup = obj.imageLookup;
-      var Img = require("../image").Image;
-      if (imageLookup.hashes[value] !== undefined) {
-        obj.image_hash(imageLookup.hashes[value]);
-        callback();
-        return;
-      }
-
-      Img.findAllBy('id', value, fun.bind(function(imgs) {
-        if (imgs.length < 1) {
-          // do nothing, unknown or invalid hash
-          imageLookup.hashes[value] = null;
-          callback();
-          return;
-        }
-        imgs.prefetch();
-
-        for (var i = 0; i < imgs.length; i++) {
-          // we have an image with the given hash in the same account
-          // hash is valid, set it
-          if (imgs[i].account_id() == obj.account_id()) {
-            this.setValue(obj, value);
-            callback();
-            return;
-          }
-        }
-
-        if (!imageLookup.data[imgs[0].url()]) {
-          var image = new Img();
-          image
-            .id(Img.generateLocalHash())
-            .url(imgs[0].url())
-            .account_id(obj.account_id());
-
-          imageLookup.data[imgs[0].url()] = image.id();
-          imageLookup.hashes[value] = image.id();
-
-          image.store(fun.bind(function() {
-            this.setValue(obj, image.id());
-            callback();
-          }, this));
-        } else {
-          this.setValue(obj, imageLookup.data[imgs[0].url()]);
-          callback();
-        }
-
-      }, this));
+      var importer = new ImageImporter(obj, value, obj.imageLookup);
+      importer.run(callback);
     }
   });
 
@@ -565,19 +534,45 @@ function addProps(Ad) {
     validate: function(obj) {
       obj.storage().prop('title').validate(obj);
       obj.storage().prop('link_url').validate(obj);
+      obj.storage().prop('body').validate(obj);
+      obj.storage().prop('image_hash').validate(obj);
       var error = this.getValue(obj) &&
         !require("../connectedObject").ConnectedObject
           .byId(this.getValue(obj));
-      
       obj.toggleError(error,
         'object_id',
         tx('ads:pe:unowned-content')
       );
     },
+
+    setTabSeparated: function(ad, value, callback) {
+      // we expect an "id"
+      value = value.replace(/[^\d\-]/g, '');
+      if (value.length <= 0) {
+        this.setValue(ad, value);
+        callback();
+        return;
+      }
+      var obj = ConnectedObject.byId(value);
+      if (obj) {
+        this.setValue(ad, value);
+        callback();
+        return;
+      } else {
+        var wrapped = fun.bind(function(new_objs) {
+          this.setValue(ad, new_objs[0].id());
+          callback();
+          }, this);
+        ConnectedObject.loadExtraFromIds(ad.account_id(),
+          [value], wrapped);
+      }
+    },
     creative: true
   });
 
   Ad.addProp({
+    type: props.LongNumber,
+    prefix: 's:',
     name: 'story_id',
     db: true,
     remote: true,
@@ -585,6 +580,15 @@ function addProps(Ad) {
     trackChanges: true,
     creative: true,
     tabSeparated: ['Story ID', 'Story']
+  });
+
+  Ad.addProp({
+    name: 'auto_update',
+    db: true,
+    remote: true,
+    trackChanges: true,
+    creative: true,
+    tabSeparated: 'Auto Update'
   });
 
   Ad.addProp({
@@ -598,6 +602,7 @@ function addProps(Ad) {
   });
 
   Ad.addProp({
+    type: props.LongNumber,
     name: 'thread_id',
     db: true,
     remote: true,
@@ -1052,6 +1057,71 @@ function addProps(Ad) {
     db: true
   });
 
+  /**
+   * This class is a temporary solution to batch-ize
+   * keyword validation
+   */
+  var KeywordValidationHack = {
+    toValidate: {},
+    keywordIsValid: {},
+    ads: [],
+    DEBOUNCE_TIME_MS: 2000,
+    CHUNK_SIZE: 100,
+    queue: function(ad, keywords) {
+      utils.forEach(keywords, function(keyword) {
+        keyword = keyword.toLowerCase();
+        KeywordValidationHack.toValidate[keyword] = 1;
+      });
+    },
+
+    clear: function() {
+      KeywordValidationHack.toValidate = {};
+      KeywordValidationHack.ads = [];
+    },
+
+    scheduleRun: function() {
+      fun.debounce(KeywordValidationHack.run,
+        KeywordValidationHack.DEBOUNCE_TIME_MS);
+    },
+
+    run: function(callback) {
+      var to_validate = KeywordValidationHack.toValidate;
+      var ads = KeywordValidationHack.ads;
+      // clear early, to prevent clobbering other runs.
+      KeywordValidationHack.clear();
+      var all_keywords = utils.keys(to_validate);
+      var chunks = AdsUtils.chunkArray(all_keywords,
+          KeywordValidationHack.CHUNK_SIZE);
+      var graphlink = new Graphlink();
+      async.forEach(chunks, function(chunk_keywords, i_chunk, itercb) {
+        graphlink.querysearch('adkeywordvalid',
+          { keyword_list: chunk_keywords }, function(r) {
+            r.data.forEach(function(word_result) {
+              var lcase_keyword = word_result.name.toLowerCase();
+              KeywordValidationHack.keywordIsValid[lcase_keyword] =
+                word_result.valid;
+            });
+            itercb();
+          });
+      }, function() {
+        utils.forEach(ads, function(ad) {
+          var old_keywords = ad.keywords();
+          // only remove keywords if they're in our "keywordIsValid" array
+          // so that we can support partial keyword validation with this
+          // class
+          var new_keywords = old_keywords.filter(
+            function(old_keyword) {
+              var lcase_keyword = old_keyword.toLowerCase();
+              return !(lcase_keyword in KeywordValidationHack.keywordIsValid) ||
+              KeywordValidationHack.keywordIsValid[lcase_keyword];
+            });
+          ad.keywords(new_keywords);
+        });
+        callback && callback();
+      });
+    }
+  };
+
   Ad.addProp({
     type: props.FlatArray,
     name: 'keywords',
@@ -1062,35 +1132,39 @@ function addProps(Ad) {
     setTabSeparated: function(obj, value, callback) {
       // validate keywords on bulk import
       var keywords = value.split(this.delimiter);
-      for (var i = 0; i < keywords.length; i++) {
-        keywords[i] = dom.escapeHTML(keywords[i].trim());
+      keywords = keywords.filter(function(x) { return x && x !== ''; });
+      var new_keywords = [];
+      var to_validate = [];
+      utils.forEach(keywords, function(keyword) {
+        var lcase_keyword = keyword.toLowerCase();
+        if (lcase_keyword in KeywordValidationHack.keywordIsValid) {
+          if (KeywordValidationHack.keywordIsValid[lcase_keyword]) {
+            new_keywords.push(keyword);
+          } else {
+            // keyword is already known to be invalid... do nothing.
+          }
+        } else {
+          to_validate.push(keyword);
+        }
+      });
+
+      new_keywords.push.apply(new_keywords, to_validate);
+      if (keywords.length === 0) {
+        this.setValue(obj, []);
+      } else {
+        this.setValue(obj, new_keywords);
+        KeywordValidationHack.queue(obj, to_validate);
+        KeywordValidationHack.scheduleRun();
       }
-      var graphlink = new Graphlink();
-      graphlink.querysearch('adkeywordvalid', { keyword_list: keywords },
-        fun.bind(function(r) {
-          var tokensObj = { validated: [], invalidated: [] };
-          r.data.forEach(function(word) {
-            word.valid ? tokensObj.validated.push(word.name) :
-                       tokensObj.invalidated.push(word.name);
-          });
-          this.setValue(obj, tokensObj.validated);
-          callback();
-        }, this)
-      );
+      callback();
     },
-    /*
-    validate: function(obj) {
-      // Keyword validation requires using the graph API call
-      // graphlink.querysearch('adkeywordvalid', ...). This is not called during
-      // model validation because graphlink is async, will not be compatible
-      // with current validation process
-    },*/
     targeting: true
   });
 
   Ad.addProp({
     type: props.UserAdClusters,
     name: 'user_adclusters',
+    humanName: 'User AdClusters',
     trackChanges: true,
     db: true,
     remote: true,
@@ -1208,7 +1282,7 @@ function addProps(Ad) {
     type: props.Number,
     name: 'related_fan_page_id',
     setValue: function(obj, value) {
-      if (obj.related_fan_page_wanted() && obj.type() == 1) {
+      if (obj.related_fan_page_wanted() && obj.isRelatedFanPageSupported()) {
         var old_value = obj.related_fan_page();
         if (old_value != value) {
           obj.related_fan_page(value);
@@ -1232,6 +1306,5 @@ function addProps(Ad) {
 
   
 }
-
 
 exports.addProps = addProps;

@@ -85,7 +85,8 @@ var ConnectedObjectDialog = view.newClass('ads.ConnectedObjectDialog', Dialog,
              .split(',');
 
     if (!ids.length) {
-      alert('Please enter at least one object id');
+      require("../../uki-fb/view/dialog").Dialog
+        .alert(tx('ads:pe:no-objectid-selected'));
       return;
     }
 

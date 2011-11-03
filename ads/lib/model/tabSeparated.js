@@ -90,6 +90,9 @@ var TabSeparated = {
         if (prop.exportFormatter) {
           value = prop.exportFormatter(value);
         }
+        if (value === undefined) {
+          value = '';
+        }
         result.push(value);
       }
     }, this);

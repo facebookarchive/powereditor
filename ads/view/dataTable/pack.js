@@ -50,6 +50,10 @@ var Pack = fun.newClass(Base, {
         className += ' ads-dataTable-changed';
       }
 
+      if (col.visCategory) {
+        className += ' ads-dataTable-col_' + col.visCategory;
+      }
+
       cols[i] = {
         value: col.formatter(val || '', row, pos),
         className: className,

@@ -43,6 +43,7 @@ var fun   = require("../../uki-core/function"),
 
     BasePane = require("./basePane").BasePane;
 
+var CAMP_TOGGLE_SHOW = 'campPane:toggleshow';
 
 var CampPane = view.newClass('ads.CampPane', BasePane, {
   _initDataSetup: function(callback) {
@@ -55,8 +56,8 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
     );
   },
 
-
   _createDom: function() {
+    this.toggleKey('campPane:toggleshow');
     this._dom = dom.createElement('div', { className: 'campPane' });
     var Mutator = require("../controller/mutator").Mutator,
       Revert = require("../controller/revert").Revert,
@@ -87,7 +88,11 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
                 storage: require("../controller/app")
                   .App.userStorage(),
                 key: 'campPane:dateRange'
-              } }
+              } },
+            { view: 'Button',
+              requireActive: true, action: 'toggle',
+              visible: false,
+              on: { click: fun.bindOnce(this._toggleHandler, this) } }
         ] },
 
         { view: 'SearchInput', placeholder: "Search",
@@ -102,7 +107,8 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
         editOnEnter: true, redrawOnModelChange: true,
         addClass: 'campPane-data', id: 'campPane-data',
         pos: 'l:0 r:0 t:32px b:261px',
-        multiselect: true, debounce: 42, columns: [
+        multiselect: true, debounce: 42,
+        columns: [
           { desc: 'Changed',
             key: 'isChanged', width: 20, maxWidth: 20, minWidth: 20,
             changeOnKeys: [],
@@ -115,67 +121,66 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
             changeOnKeys: ['errors'],
             sortable: true,
             compareFn: compare.booleans,
-            formatter: campFormatters.errors },
+            formatter: campFormatters.errors }
+          ].concat([
+            { label: 'Campaign', key: 'name', minWidth: 40, width: 200,
+              changeOnKeys: ['name'],
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: { viewEvent: 'keyup change blur paste' }
+              } },
 
-          { label: 'Campaign', key: 'name', minWidth: 40, width: 200,
-            changeOnKeys: ['name'],
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: { viewEvent: 'keyup change blur paste' }
-            } },
+            { desc: 'Status',
+              label: '', key: 'campaign_status',
+              width: 20, maxWidth: 20, minWidth: 20,
+              changeOnKeys: ['campaign_status'],
+              className: 'campPane-cell_status',
+              sortable: true,
+              formatter: campFormatters.status,
+              editor: { view: StatusEditor }
+            },
 
-          { desc: 'Status',
-            label: '', key: 'campaign_status',
-            width: 20, maxWidth: 20, minWidth: 20,
-            changeOnKeys: ['campaign_status'],
-            className: 'campPane-cell_status',
-            sortable: true,
-            formatter: campFormatters.status,
-            editor: { view: StatusEditor }
-          },
+            { label: 'Start Date', key: 'adjusted_start_time',
+              minWidth: 40, width: 80,
+              compareFn: compare.dates,
+              sortable: true,
+              formatter: campFormatters.startDate },
 
-          { label: 'Start Date', key: 'adjusted_start_time',
-            minWidth: 40, width: 80,
-            compareFn: compare.dates,
-            sortable: true,
-            formatter: campFormatters.startDate },
+            { label: 'End Date', key: 'adjusted_end_time',
+              width: 80, minWidth: 40,
+              compareFn: compare.dates,
+              sortable: true,
+              formatter: campFormatters.endDate },
 
-          { label: 'End Date', key: 'adjusted_end_time',
-            width: 80, minWidth: 40,
-            compareFn: compare.dates,
-            sortable: true,
-            formatter: campFormatters.endDate },
-
-          { label: 'Budget', key: 'uninflated_ui_budget_100',
-            width: 80, minWidth: 40,
-            changeOnKeys: ['daily_budget',
-              'lifetime_budget', 'inflation'],
-            className: 'ufb-dataTable-cell_number',
-            formatter: campFormatters.budget,
-            compareFn: compare.numbers,
-            sortable: true,
-            editor: {
-              view: 'dataList.Editor',
-              bindingOptions: {viewEvent: 'keyup change blur paste'}
+            { label: 'Budget', key: 'uninflated_ui_budget_100',
+              width: 80, minWidth: 40,
+              changeOnKeys: ['daily_budget',
+                'lifetime_budget', 'inflation'],
+              className: 'ufb-dataTable-cell_number',
+              formatter: campFormatters.budget,
+              compareFn: compare.numbers,
+              sortable: true,
+              editor: {
+                view: 'dataList.Editor',
+                bindingOptions: {viewEvent: 'keyup change blur paste'}
             }},
 
-          { label: 'Period', key: 'budget_type',
-            width: 60, minWidth: 40,
-            changeOnKeys: ['daily_budget', 'lifetime_budget'],
-            compareFn: compare.dates,
-            sortable: true,
-            formatter: campFormatters.budgetPeriod,
-            editor: { view: PeriodEditor }},
+            { label: 'Period', key: 'budget_type',
+              width: 60, minWidth: 40,
+              changeOnKeys: ['daily_budget', 'lifetime_budget'],
+              compareFn: compare.dates,
+              sortable: true,
+              formatter: campFormatters.budgetPeriod,
+              editor: { view: PeriodEditor }},
 
-          { label: 'Remaining', key: 'budget_remaining_100',
-            width: 70, maxWidth: 150, minWidth: 60,
-            className: 'ufb-dataTable-cell_number',
-            compareFn: compare.numbers,
-            sortable: true,
-            formatter: paneFormatters.money }
-
-         ],
+            { label: 'Remaining', key: 'budget_remaining_100',
+              width: 70, maxWidth: 150, minWidth: 60,
+              className: 'ufb-dataTable-cell_number',
+              compareFn: compare.numbers,
+              sortable: true,
+              formatter: paneFormatters.money }
+           ]),
          canHideColumns: true,
          persistent: {
            storage: require("../controller/app").App.userStorage(),
@@ -194,6 +199,7 @@ var CampPane = view.newClass('ads.CampPane', BasePane, {
     ]).appendTo(this);
 
     this._dataTable = find('> DataTable', this)[0];
+    this._toggleButton = find('Button[action=toggle]', this)[0];
     find('DataTableList', this._dataTable)[0].copySourceId('campaigns');
     this._searchInput = this._refs.view('search');
     this._statDates = this._refs.view('statDates');

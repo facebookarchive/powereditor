@@ -113,7 +113,7 @@ var Base = fun.newClass(HTMLLayout, {
 
 
     /**
-    * Same as _modelChange but will not recieve 'changed'
+    * Same as _modelChange but will not receive 'changed'
     * events causes by itself
     */
     _lockedModelChange: function(e) {},

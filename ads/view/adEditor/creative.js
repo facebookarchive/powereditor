@@ -88,6 +88,11 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
       model: m,
       modelProp: 'type'
     });
+    if (this.child('url_tags')) {
+      this.child('url_tags')
+        .binding({ model: m, modelProp: 'url_tags' });
+    }
+
 
     
   },
@@ -317,6 +322,8 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
       this.model().commitChanges('object_id');
     }, this));
 
+
+    
     this.child('category').addListener('change',
       fun.bindOnce(this._onCategoryTypeChange, this));
 
@@ -357,7 +364,7 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
     var anchorType = obj && obj.type();
     this._updateCreativeOption(anchorType);
 
-    this._togglePremiumAndInternFields();
+    
     this._onCreativeTypeChange();
 
     this.model().type(this.child('story_type').value());
@@ -436,14 +443,12 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
   _updateRelatedFanPage: function() {
     var model = this.model();
-    // sometimes the "model" is not complete because the user
-    // has selected a group of rows.
-    // In this case, isNew isn't defined.
-    if (!model || !model.isNew || !model.type || model.type() != 1) {
+    if (!model || !model.isRelatedFanPageSupported()) {
       return;
     }
     fun.defer(fun.bind(function() {
-      if (!model.isNew() && !model.isChanged('link_url') &&
+      if ((!model.isNew || !model.isNew()) &&
+          model.isChanged && !model.isChanged('link_url') &&
           !model.isChanged('related_fan_page') &&
           model.related_fan_page()) {
         // skip search, update display
@@ -458,14 +463,22 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
   },
 
   _relatedFanPageCallback: function(data) {
+    if (!this.model()) { return; }
     // not use passed-in data but get result by fromCache, in case model changed
-    var result = urlToObjectIDSearcher.fromCache(this.model().link_url());
+    var link_url = this.model().link_url();
+    var result = urlToObjectIDSearcher.fromCache(link_url);
     var object_id = (result && result.id) || 0;
-    this.model().related_fan_page_id(object_id);
+    // note: Not write back to related_fan_page_id when link_url is empty and
+    // it is in group mode. It typically happens when one select multiple ads
+    // of different link_url. Undefined isChanged is an indicator of group mode.
+    if (link_url || this.model().isChanged !== undefined) {
+      this.model().related_fan_page_id(object_id);
+    }
     this._updateRelatedFanPageInfo();
   },
 
   _updateRelatedFanPageInfo: function(data) {
+    if (!this.model()) { return; }
     var object_id = this.model().related_fan_page_id();
     if (!object_id) {
       this.child('related_fan_page_info').text('(No Page)');
@@ -507,9 +520,18 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
       this._toggleRow(key, !displayMap[key]);
     };
 
-    // SPECIAL-case hide title deliberately when
+    // SPECIAL-case hide title, link_url and image deliberately when
     // we are dealing with objects.
     this._toggleRow('title', this.model().object_id());
+    this._toggleRow('link_url', type != creativeType.AD_CREATIVE_TYPE.STANARD);
+    this._toggleRow('image',
+      type == creativeType.AD_CREATIVE_TYPE.PAGE_POSTS_V2 ||
+      this.category() == creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES);
+    // Special case the template queries, because they're handled
+    // differently.
+    if (this.model().query_type) {
+      this._syncQueryRows(displayMap.query_type);
+    }
   },
 
   _updateLayout: function(type) {
@@ -536,12 +558,7 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
 
     this._onCreativeTypeChange();
 
-    // build the creative fields map
-    if (type != LAYOUT.BASS_NO_OBJECT && type != LAYOUT.BASS) {
-      this._togglePremiumAndInternFields(false);
-    } else {
-      this._togglePremiumAndInternFields(true);
-    }
+    
 
     // toggle destination selector
     this._toggleRow('facebook',
@@ -638,7 +655,8 @@ var Creative = view.newClass('ads.adEditor.Creative', Base, {
           var is_bass = (this.category() ==
             creativeType.AD_CREATIVE_CATEGORY.SPONSORED_STORIES);
 
-          model.type(obj.defaultCreativeType(is_bass, is_premium));
+          model.type(this.child('story_type').value() ||
+            obj.defaultCreativeType(is_bass, is_premium));
           model.title(obj.name() || '');
 
           // Set default URL if the prefix is invalid (object URL not substring

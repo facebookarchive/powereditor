@@ -65,6 +65,8 @@
     white-space: nowrap;
 }
 
-.adPreview-warnign {
-    color: #777;
+.adPreview-loading {
+  background-image: url(./indicator_blue_small.gif);
+  background-position: 0 20px;
+  background-repeat: no-repeat;
 }

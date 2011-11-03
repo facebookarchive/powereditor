@@ -33,7 +33,7 @@ requireCss("./textArea/textArea.css");
 var fun   = require("../../uki-core/function"),
     dom   = require("../../uki-core/dom"),
     view  = require("../../uki-core/view"),
-
+    utils = require("../../uki-core/utils"),
     TextInput = require("./textInput").TextInput;
 
 
@@ -46,7 +46,25 @@ proto._createDom = function() {
     { type: 'text', className: 'ufb-text-input ufb-text-area' });
 };
 
-fun.delegateProp(proto, ['cols', 'rows', 'value', 'name'], '_dom');
+// you can specify the delimiter for your viewed data.
+proto._arrayDelimiter = '\n';
+fun.addProp(proto, 'arrayDelimiter', function(val) {
+  this._arrayDelimiter = val;
+});
+
+proto.value = function(v) {
+  if (v === undefined) {
+    return this._dom.value;
+  }
+  if (utils.isArray(v)) {
+    this._dom.value = v.join(this._arrayDelimiter);
+  } else {
+    this._dom.value = v;
+  }
+  return this;
+};
+
+fun.delegateProp(proto, ['cols', 'rows', 'name'], '_dom');
 
 proto.noresize = view.newToggleClassProp('ufb-text-area_noresize');
 

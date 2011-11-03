@@ -30,3 +30,11 @@
 .adEditor-pricing-title {
   font-weight: bold;
 }
+
+.DSPricing-impression .ufb-text {
+    display: inline;
+}
+
+.DSPricing-input {
+    width: 80px;
+}

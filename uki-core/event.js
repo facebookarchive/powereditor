@@ -100,13 +100,16 @@ function normalize(e) {
     // Calculate pageX/Y if missing and clientX/Y available
     if (e.pageX == null && e.clientX != null) {
         var doc = env.doc,
+            docElem = env.docElem,
             body = doc.body;
 
         e.pageX = e.clientX +
-            (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+            (doc && doc.scrollLeft || body && body.scrollLeft ||
+                docElem && docElem.scrollLeft || 0) -
             (doc && doc.clientLeft || body && body.clientLeft || 0);
         e.pageY = e.clientY +
-            (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+            (doc && doc.scrollTop  || body && body.scrollTop  ||
+                docElem && docElem.scrollTop || 0) -
             (doc && doc.clientTop  || body && body.clientTop  || 0);
     }
 

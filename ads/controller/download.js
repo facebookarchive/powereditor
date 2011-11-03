@@ -35,6 +35,7 @@ var utils   = require("../../uki-core/utils"),
     graphlink = require("../../lib/graphlink").gl,
     pathUtils = require("../../lib/pathUtils"),
     conflicter = require("../../lib/conflicter").cc,
+    Config = require("../lib/config").Config,
 
     App     = require("./app").App,
     DownloadDialog = require("../view/downloadDialog").DownloadDialog,
@@ -498,22 +499,56 @@ function fetchAdCreatives(account_ids, ads, progress, callback) {
         fetchedIdMap[creative.id * 1] = creative;
       });
 
+      var missing_objs_by_account = {};
       ads.forEach(function(ad) {
         var creative_id = ad.creative_ids();
-        utils.isArray(creative_id) ? creative_id[0] : creative_id;
+        creative_id = utils.isArray(creative_id) ? creative_id[0] : creative_id;
         var creative = fetchedIdMap[creative_id];
-        if (creative) {
-          delete creative.name;
-          ad
-            .muteChanges(true)
-            .fromRemoteObject(creative)
-            .muteChanges(false);
+        if (!creative) {
+          return;
+        }
+        var obj_id = creative.object_id;
+        var account_id = ad.account_id();
+        if (obj_id) {
+          var connected_object = ConnectedObject.byId(obj_id);
+          if (!connected_object) {
+            if (!missing_objs_by_account[account_id]) {
+              missing_objs_by_account[account_id] = {};
+            }
+            missing_objs_by_account[account_id][obj_id] = 1;
+          }
         }
       });
 
-      progress.completeStep('adcreatives');
-      // finish with Ad Images before storing ads
-      updateAdImages(account_ids, ads, progress, callback);
+      var account_ids_with_missing_objs = utils.keys(missing_objs_by_account);
+      // fyi - asyncUtils.forEach takes two functions as paramters...
+      // ... one that runs on each iteraction, and one that runs
+      // after all iterations are done.
+      asyncUtils.forEach(account_ids_with_missing_objs,
+          function(account_id, i, iteratorcb) {
+        var obj_ids = utils.keys(missing_objs_by_account[account_id]);
+        ConnectedObject.loadExtraFromIds(account_id,
+          obj_ids, iteratorcb);
+      }, function() {
+        ads.forEach(function(ad) {
+          var creative_id = ad.creative_ids();
+          utils.isArray(creative_id) ? creative_id[0] : creative_id;
+          var creative = fetchedIdMap[creative_id];
+          if (creative) {
+            delete creative.name;
+            ad
+              .muteChanges(true)
+              .fromRemoteObject(creative)
+              .muteChanges(false);
+            // revalidate the ad, now that we have our connected objects.
+            Ad.prop('object_id').validate(ad);
+          }
+        });
+
+        progress.completeStep('adcreatives');
+        // finish with Ad Images before storing ads
+        updateAdImages(account_ids, ads, progress, callback);
+      });
     }
   );
   // end load creatives

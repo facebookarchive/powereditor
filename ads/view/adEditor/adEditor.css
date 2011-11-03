@@ -36,7 +36,7 @@
     position: absolute;
     left: 0; top: 0;
     right: 0; bottom: 0;
-    padding-right: 180px;
+    padding-right: 277px;
     z-index: 200;
 }
 
@@ -69,8 +69,8 @@
     z-index: 2;
 }
 
-.adEditor-editor .textField {
-  width: 328px;
+.adEditor-editor .textField, .textArea {
+  width: 100%;
 }
 
 .adEditor-editor .select_wide {
@@ -91,7 +91,7 @@
 }
 
 .adEditor .interests-tokenizer {
-    width: 458px;
+    width: 361px;
     margin-top: 9px;
 }
 
@@ -113,3 +113,9 @@
 .addClass-adlink {
     z-index: 201;
 }
+
+.addClass-adPreviewTitle {
+    color: #777;
+}
+
+

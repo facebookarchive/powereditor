@@ -40,6 +40,7 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
     pane: fun.newProp('pane'),
 
     campaigns: function(value) {
+
       if (value === undefined) {
         return this.pane().campaigns();
       }
@@ -72,6 +73,19 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
       return this;
     },
 
+    accounts: function(value) {
+      this._accounts = value;
+
+      if (value === undefined) {
+        this.accountPane().accounts();
+      }
+
+      if (this.curSelectedPane() === 'accountPane') {
+        this.accountPane().accounts(value);
+      }
+      return this;
+    },
+
     cleanupContract: function() {
       this.contractPane().cleanup();
     },
@@ -89,12 +103,15 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
                 { view: 'PillButton', label: 'Campaigns',
                   paneType: 'CampPane' },
                 { view: 'PillButton', label: 'Contract/Toplines',
-                  paneType: 'ContractPane' }
+                  paneType: 'ContractPane' },
+                { view: 'PillButton', label: 'Accounts',
+                  paneType: 'AccountPane' }
               ] }
 
         ]).appendTo(this);
 
         this._panes = {};
+        this.selectPane('AccountPane');
         this.selectPane('CampPane');
         this.selectPane('ContractPane');
         this.selectPane('AdPane');
@@ -155,6 +172,10 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
           this.contractPane().contract(this._contract);
         }
 
+        if (type === 'AccountPane') {
+          this.accountPane().accounts(this._accounts);
+        }
+
         find('> PillList > PillButton[paneType=' + type + ']', this)
             .prop('selected', true);
 
@@ -164,7 +185,7 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
         });
     },
 
-    toggleContractTab: function(show) {
+    toggleCorpActTab: function(show) {
       find('> PillList > PillButton[paneType=ContractPane]', this)
           .visible(show);
     },
@@ -186,7 +207,11 @@ var Content = view.newClass('ads.Content', Container, PersistentState, {
 
     contractPane: function() {
       return this._panes.ContractPane;
-    }
+    },
+
+    accountPane: function() {
+      return this._panes.AccountPane;
+   }
 });
 
 

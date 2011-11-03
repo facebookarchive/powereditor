@@ -33,15 +33,28 @@ var fun   = require("../../uki-core/function"),
     Search    = require("../../lib/searcher").Searcher,
     ResultSet = require("../model/resultSet").ResultSet;
 
+var PREFIX_KEY = 'settingIndexes:';
+
 var BasePane = view.newClass('ads.BasePane', Container, {
   campaigns: fun.newProp('campaigns', function(camps, callback) {
+
+    if (!this.userStorage()) {
+      var userStorage = require("../controller/app").App.userStorage();
+      this.userStorage(userStorage);
+    }
     this._campaigns = camps;
     if (camps[0]) {
-      this.toggleColumns(camps[0].account());
+      this._toggleButton.visible(
+        camps[0].isCorporate() || false
+      );
+      this._renderColumns(camps[0].account());
     }
 
     this._initDataSetup(callback);
   }),
+
+  userStorage: fun.newProp('userStorage'),
+  toggleKey: fun.newProp('toggleKey'),
 
   // should be implemented by child class
   _initDataSetup: function(callback) {},
@@ -217,25 +230,68 @@ var BasePane = view.newClass('ads.BasePane', Container, {
     }
   },
 
-  toggleColumns: function(act) {
+  _renderColumns: function(act) {
     var columns = this._dataTable.columns();
-    var v_indexes = this._dataTable.visibleColumnIndexes();
+    var  v_keys =
+      this._dataTable.visibleColumnKeys();
 
+    var toggleShow = this.userStorage().getItem(this.toggleKey())
+                     || undefined;
+    this._toggleButton.label(toggleShow ? '-' : '+');
     var corp_columns = columns.filter(function(column) {
       return column.corp;
     });
-    var corp_indexes = utils.pluck(corp_columns, 'index');
+    var corp_keys = utils.pluck(corp_columns, 'key');
+
+    // update the io_keys and corp_keys based on the setting keys
+    // if the keys (setting dlg) does not contain any key of
+    // io_keys and corp_keys, then we will remove them from the array.
+    var key = PREFIX_KEY + this.parent().curSelectedPane();
+    var setting_keys = this.userStorage().getItem(key) || [];
 
     if (act.isCorporate()) {
       // have to save the original visible state of the columns
-      v_indexes = utils.unique(v_indexes.concat(corp_indexes));
+      corp_keys = corp_keys.filter(function(i) {
+        return setting_keys.indexOf(i) > -1;
+      });
+
+      v_keys = utils.unique(v_keys.concat(corp_keys));
     } else {
-      v_indexes = v_indexes.filter(function(i) {
-        return corp_indexes.indexOf(i) == -1;
+      v_keys = v_keys.filter(function(i) {
+        return corp_keys.indexOf(i) == -1;
       });
     }
 
-    this._dataTable.visibleColumnIndexes(v_indexes);
+    this._dataTable.visibleColumnKeys(v_keys);
+  },
+
+  _toggleHandler: function() {
+    // true ==> show all the IO columns
+    // false ==> hide all the IO columns
+    var key = this.toggleKey();
+    var new_state = !this.userStorage().getItem(key);
+    this.userStorage().setItem(key, new_state);
+
+    this._toggleButton.label(new_state ? '-' : '+');
+    var columns = this._dataTable.columns();
+    var v_keys = this._dataTable.visibleColumnKeys();
+
+    var io_columns = columns.filter(function(column) {
+      return (column.visCategory == 'topline' ||
+      column.visCategory == 'contract');
+    });
+    var io_keys = utils.pluck(io_columns, 'key');
+
+    if (new_state) {
+      // have to save the original visible state of the columns
+      v_keys = utils.unique(v_keys.concat(io_keys));
+    } else {
+      v_keys = v_keys.filter(function(i) {
+        return io_keys.indexOf(i) == -1;
+      });
+    }
+
+    this._dataTable.visibleColumnKeys(v_keys);
   }
 });
 

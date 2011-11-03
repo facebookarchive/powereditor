@@ -164,6 +164,20 @@ utils.forEach = function(object, callback, context) {
 };
 
 /**
+ * Iterates through an object and returns an array containing the values
+ *
+ * @param     {object}  object  Object of key/value pairs
+ * @returns   {array}
+ */
+utils.values = function(object) {
+  var array = [];
+  utils.forEach(object, function(value) {
+    array.push(value);
+  });
+  return array;
+};
+
+/**
  * Returns unique elements in array
  *
  * @param {Array} array

@@ -23,11 +23,11 @@
 */
 
 
-var BID_TYPE_CPC      = 1;
-var BID_TYPE_CPM      = 2;
-var BID_TYPE_FCPM     = 4;
-var BID_TYPE_MULTI    = 5;
-var BID_TYPE_MULTI_SS = 6;
+var BID_TYPE_CPC            = 1;
+var BID_TYPE_CPM            = 2;
+var BID_TYPE_FCPM           = 4;
+var BID_TYPE_MULTI_PREMIUM  = 5;
+var BID_TYPE_MULTI_RELATIVE = 6;
 
 function options(isCorporate) {
   var result = [
@@ -35,18 +35,20 @@ function options(isCorporate) {
       tabSeparated: 'cpc' },
     { text: tx('ads:pe:bid-type:cpm'), value: BID_TYPE_CPM,
       tabSeparated: 'cpm' }
-// Uncomment when we're ready to release BBB to self server
-//  { text: 'Multi', value: BID_TYPE_MULTI_SS, tabSeparated: 'multi_ss' }
+// Uncomment when we're ready to release BBB to self serve
+//  { text: 'Multi', value: BID_TYPE_MULTI_RELATIVE,
+//    tabSeparated: 'multi_relative' }
   ];
 
   if (global.INTERN && isCorporate) {
-    // remove multi_ss, DSO has a different multi
+    // remove multi_relative, DSO has a different multi
     // result = result.slice(0, 2);
 
     result.push({ text: tx('ads:pe:bid-type:fcpm'), value: BID_TYPE_FCPM,
       tabSeparated: 'cpm_fixed' });
-    result.push({ text: tx('ads:pe:bid-type:multi'), value: BID_TYPE_MULTI,
-      tabSeparated: 'multi' });
+    result.push({ text: tx('ads:pe:bid-type:multi_premium'),
+          value: BID_TYPE_MULTI_PREMIUM,
+          tabSeparated: 'multi_premium' });
   }
 
   return result;
@@ -70,8 +72,8 @@ function getTabSeparatedName(id, isCorporate) {
 exports.BID_TYPE_CPC      = BID_TYPE_CPC;
 exports.BID_TYPE_CPM      = BID_TYPE_CPM;
 exports.BID_TYPE_FCPM     = BID_TYPE_FCPM;
-exports.BID_TYPE_MULTI    = BID_TYPE_MULTI;
-exports.BID_TYPE_MULTI_SS = BID_TYPE_MULTI_SS;
+exports.BID_TYPE_MULTI_PREMIUM  = BID_TYPE_MULTI_PREMIUM;
+exports.BID_TYPE_MULTI_RELATIVE = BID_TYPE_MULTI_RELATIVE;
 
 exports.options = options;
 exports.getName = getName;

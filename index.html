@@ -13,10 +13,10 @@
       var appId = location.host.match(/localhost/) ? '145628035517241' : '151391901605088';
       FB.init({appId: appId, xfbml: false });
       FB.getLoginStatus(function(response) {
-        if (!response.perms) {
+        if (response.status === 'not_authorized') {
           location.href = '/login.html';
         } else {
-          App.init(FB.getSession().uid);
+          App.init(FB.getUserID());
         }
       });
     </script>

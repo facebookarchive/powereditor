@@ -9,7 +9,7 @@ Power Editor
 ============
 Power Editor is an HTML5 based application for managing Facebook ads. It's built entirely on the Facebook Ads API.
 
-This is not only an example application. It's the same code that we use at Facebook to build our production Power Editor software which can be found at  https://www.facebook.com/ads/manage/powereditor. We've also set up a demo install at http://www.fbadsapp.com/.
+This is not only an example application. It's the same code that we use at Facebook to build our production Power Editor software which can be found at  https://www.facebook.com/ads/manage/powereditor.
 
 Running locally
 ==============
